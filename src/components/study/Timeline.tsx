@@ -12,7 +12,7 @@ export interface TimelineProps {
   ariaLabel?: string;
 }
 
-const MARKER = "TimelineChart-v6-2026-06-30-BLACKBOX";
+const MARKER = "TimelineChart-v8-2026-06-30-SVG-30VH";
 
 if (typeof window !== "undefined") {
   // eslint-disable-next-line no-console
@@ -48,8 +48,6 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
 
   return (
     <div
-      role="img"
-      aria-label={label}
       data-condition={layout.condition}
       data-pattern={layout.pattern}
       data-intervals={layout.intervalCount}
@@ -60,29 +58,62 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
       data-timeline-h={h}
       style={{
         display: "block",
-        width: `${w}px`,
-        height: `${h}px`,
-        maxWidth: "100%",
-        background: "#000000",
-        color: "#ffffff",
-        fontFamily: "monospace",
-        fontSize: "14px",
-        lineHeight: 1.2,
-        padding: "8px",
-        boxSizing: "border-box",
+        width: "100%",
+        height: "30vh",
+        minHeight: "220px",
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
         borderRadius: "4px",
         overflow: "hidden",
         flexShrink: 0,
         alignSelf: "stretch",
       }}
     >
-      <strong>BLACKBOX</strong>
-      <div>w={w} h={h}</div>
-      <div>condition={layout.condition}</div>
-      <div>pattern={layout.pattern}</div>
-      <div>intervals={layout.intervalCount}</div>
-      <div>bands={validBands.length}</div>
-      <div>rug={validRug.length}</div>
+      <svg
+        role="img"
+        aria-label={label}
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block" }}
+      >
+        <g aria-hidden="true">
+          {validBands.map((band) => (
+            <rect
+              key={`band-${band.index}`}
+              x={safe(band.x, 0)}
+              y={safe(band.y, 0)}
+              width={safe(band.width, 1)}
+              height={safe(band.height, 1)}
+              fill="#cbd5e1"
+              stroke="#475569"
+              strokeWidth={1}
+              shapeRendering="crispEdges"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </g>
+        <g aria-hidden="true">
+          {validRug.map((point, idx) => {
+            const px = safe(point.x, 0);
+            const py = safe(point.y, 0);
+            return (
+              <line
+                key={`rug-${idx}-${point.eventTime}`}
+                x1={px}
+                x2={px}
+                y1={safe(py - 6, 0)}
+                y2={safe(py + 6, h)}
+                stroke="#0f172a"
+                strokeWidth={1}
+                shapeRendering="crispEdges"
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
+        </g>
+      </svg>
     </div>
   );
 }

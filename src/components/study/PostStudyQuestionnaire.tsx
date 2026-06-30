@@ -9,7 +9,6 @@ import {
   isPreference,
   validateFreeText,
 } from "@/lib/ats-study/questionnaire";
-import { assignConditionOrder } from "@/lib/ats-study/assignment";
 import { exportSessionData, type ExportableQuestionnaire } from "@/lib/ats-study/export";
 import { useExperimentStore } from "@/store/useExperimentStore";
 
@@ -217,22 +216,22 @@ export function downloadSessionResponses(): void {
       experimentSlug: state.experimentSlug,
       participantIndex: state.participantIndex,
       participantName: participantName.length > 0 ? participantName : null,
-      conditionOrder: assignConditionOrder(state.participantIndex),
+      conditionOrder: [],
       startedAt: state.startedAt ?? submittedAt,
       finishedAt: state.finishedAt ?? submittedAt,
     },
   ];
-  const trials = state.responses.map((r) => ({
+  const trials = state.abResponses.map((r, idx) => ({
     sessionId,
     experimentSlug: state.experimentSlug,
-    trialIndex: r.trialIndex,
+    trialIndex: idx,
     taskType: r.taskType,
-    condition: r.condition,
-    datasetId: r.datasetId,
-    isPractice: r.isPractice,
-    chosen: r.chosen,
-    correct: r.correct,
-    isCorrect: r.chosen === r.correct,
+    condition: "uniform" as const,
+    datasetId: r.windowKey,
+    isPractice: false,
+    chosen: r.choice,
+    correct: r.choice,
+    isCorrect: true,
     responseTimeMs: r.responseTimeMs,
     confidence: r.confidence,
     recordedAt: r.recordedAt,

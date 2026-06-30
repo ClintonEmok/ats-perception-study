@@ -63,16 +63,18 @@ describe("buildStimulusLayout", () => {
     }
   });
 
-  it("emits only finite coordinates for the registered practice trials", () => {
-    const cfg = requireExperiment("ats-perception-v4");
-    for (const p of cfg.practiceTrials) {
-      const datasetId = `${p.baseDatasetId}--${p.condition}`;
-      const v = getVariantByDatasetId(datasetId);
-      const layout = buildStimulusLayout(v);
-      expect(layout.bands.length).toBeGreaterThan(0);
-      for (const band of layout.bands) {
-        expect(Number.isFinite(band.x)).toBe(true);
-        expect(Number.isFinite(band.width)).toBe(true);
+  it("emits only finite coordinates for the registered v5 experiment windows", () => {
+    const cfg = requireExperiment("ats-perception-v5");
+    for (const w of cfg.windows) {
+      for (const suffix of ["uniform", "ats"] as const) {
+        const datasetId = `${w.windowKey}--${suffix}`;
+        const v = getVariantByDatasetId(datasetId);
+        const layout = buildStimulusLayout(v);
+        expect(layout.bands.length).toBeGreaterThan(0);
+        for (const band of layout.bands) {
+          expect(Number.isFinite(band.x)).toBe(true);
+          expect(Number.isFinite(band.width)).toBe(true);
+        }
       }
     }
   });

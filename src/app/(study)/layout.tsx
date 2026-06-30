@@ -13,7 +13,7 @@ const noopWrites: ConvexWrites = {
   submitQuestionnaire: async () => undefined,
 };
 
-export default function ExperimentLayout({ children }: { children: ReactNode }) {
+export default function StudyLayout({ children }: { children: ReactNode }) {
   const sessionId = useExperimentStore((state) => state.sessionId);
   const consentAccepted = useExperimentStore((state) => state.consentAccepted);
   const participantIndex = useExperimentStore((state) => state.participantIndex);

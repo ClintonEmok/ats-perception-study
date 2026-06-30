@@ -18,8 +18,8 @@ export function InstructionsScreen({ onBegin }: InstructionsScreenProps) {
     <section className="flex flex-col gap-4" data-testid="instructions-screen">
       <h1 className="text-2xl font-semibold">Instructions</h1>
       <p className="text-sm text-slate-700">
-        You will complete 2 short practice trials, then 24 experimental trials. Each trial shows a single
-        timeline and a short question. Press a button to respond as quickly and accurately as you can.
+        You will complete 12 experimental trials. Each trial shows two anonymous time allocations side by side.
+        Pick A or B, then continue when you are ready.
       </p>
       <button
         type="button"
@@ -28,9 +28,9 @@ export function InstructionsScreen({ onBegin }: InstructionsScreenProps) {
           onBegin();
         }}
         className="self-start rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        data-testid="begin-practice"
+        data-testid="begin-trials"
       >
-        Begin practice
+        Begin trials
       </button>
     </section>
   );

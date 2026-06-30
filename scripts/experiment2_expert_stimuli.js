@@ -30,12 +30,18 @@ const RUG_COLOR = '#475569';
 const MUTED_COLOR = '#64748b';
 
 const SELECTED_WINDOWS = [
-  [14, 1],
-  [30, 1],
-  [30, 5],
+  [1, 1],
+  [1, 3],
   [1, 5],
+  [14, 1],
+  [14, 3],
+  [14, 5],
+  [30, 1],
+  [30, 3],
+  [30, 5],
+  [90, 1],
   [90, 3],
-  [90, 2],
+  [90, 5],
 ];
 
 const STRATEGY_SPECS = {
@@ -50,19 +56,25 @@ const STRATEGY_LABELS = Object.fromEntries(
 );
 
 const WINDOW_STRATEGIES = {
-  '14,1': ['uniform', 'raw_density'],
-  '30,1': ['uniform', 'density_mild'],
-  '30,5': ['density_mild', 'raw_density'],
+  '1,1': ['uniform', 'raw_density'],
+  '1,3': ['uniform', 'density_mild'],
   '1,5': ['uniform', 'density_firm'],
+  '14,1': ['uniform', 'raw_density'],
+  '14,3': ['density_mild', 'raw_density'],
+  '14,5': ['uniform', 'density_firm'],
+  '30,1': ['uniform', 'density_mild'],
+  '30,3': ['density_mild', 'density_firm'],
+  '30,5': ['density_mild', 'raw_density'],
+  '90,1': ['uniform', 'density_mild'],
   '90,3': ['density_mild', 'density_firm'],
-  '90,2': ['raw_density', 'density_firm'],
+  '90,5': ['density_mild', 'raw_density'],
 };
 
 const SESSION_PROTOCOL = `# Expert Interview — Session Protocol
 
 ## Stimuli
 
-Six figures, each comparing two visualizations of the same time window:
+Twelve figures, each comparing two visualizations of the same time window:
 
 - **Visualization A** and **Visualization B** are anonymous. They are
   randomization-keyed (see \`REVEAL_KEY.md\` for the mapping).
@@ -100,7 +112,7 @@ While the expert is looking at the figure:
 
 ## Closing bridge to the prototype
 
-After all six figures have been discussed:
+After all twelve figures have been discussed:
 
 > "Now that you've seen the underlying visualization concept, here's
 >  how it is integrated into the interactive prototype."
@@ -622,7 +634,7 @@ async function renderIndexSheet(outPath, windowDirs) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('Index sheet — all six stimuli (moderator reference)', W / 2, 22);
+  ctx.fillText('Index sheet — all twelve stimuli (moderator reference)', W / 2, 22);
 
   for (let i = 0; i < windowDirs.length; i += 1) {
     const row = Math.floor(i / nCols);
@@ -654,10 +666,24 @@ function writeRevealKey(outPath, results) {
   fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 }
 
-function writeDataJson(outPath, seed, results) {
+function generateOrderings(numOrderings, windowKeys, baseSeed) {
+  const out = new Array(numOrderings);
+  for (let s = 0; s < numOrderings; s += 1) {
+    const rng = mulberry32(baseSeed + s * 7919);
+    const mapping = {};
+    for (const key of windowKeys) {
+      mapping[key] = rng() < 0.5 ? 'AB' : 'BA';
+    }
+    out[s] = mapping;
+  }
+  return out;
+}
+
+function writeDataJson(outPath, seed, results, orderings) {
   const payload = {
     seed,
     generatedAt: new Date().toISOString(),
+    orderings,
     windows: results.map((r) => ({
       key: `${r.window.windowDays},${r.window.rank}`,
       windowDays: r.window.windowDays,
@@ -792,7 +818,7 @@ async function main() {
       `window_${String(i + 1).padStart(2, '0')}_${size}d_rank${rank}`,
     );
     process.stdout.write(
-      `\n[window ${i + 1}/6] ${size}d #${rank}  ${data.window.start} → ${data.window.end}  ` +
+      `\n[window ${i + 1}/12] ${size}d #${rank}  ${data.window.start} → ${data.window.end}  ` +
         `(${data.timestamps.length.toLocaleString('en-US')} events)\n`,
     );
     const result = await runForWindow(data, outDir, rng);
@@ -821,7 +847,12 @@ async function main() {
   process.stdout.write(`[write] ${revealPath}\n`);
 
   const dataJsonPath = path.join(args.outputDir, 'data.json');
-  writeDataJson(dataJsonPath, args.seed, results);
+  const orderings = generateOrderings(
+    6,
+    results.map((r) => `${r.window.windowDays},${r.window.rank}`),
+    args.seed,
+  );
+  writeDataJson(dataJsonPath, args.seed, results, orderings);
   process.stdout.write(`[write] ${dataJsonPath}\n`);
 
   process.stdout.write('\nDone.\n');

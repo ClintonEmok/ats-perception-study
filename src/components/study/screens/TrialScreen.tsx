@@ -1,15 +1,10 @@
 "use client";
 
 import { useShallow } from "zustand/react/shallow";
-import {
-  useExperimentStore,
-  getCurrentCondition,
-} from "@/store/useExperimentStore";
-import { TrialRunner } from "@/components/study/TrialRunner";
-import { TASK_LABELS } from "@/lib/ats-study/protocol";
-import { getVariantByDatasetId } from "@/lib/ats-study/datasets";
-import { pickCorrectAnswer } from "@/lib/ats-study/correctAnswers";
+import { useExperimentStore } from "@/store/useExperimentStore";
 import { requireExperiment } from "@/lib/ats-study/experiments";
+import { taskForWindow } from "@/lib/ats-study/assignment";
+import { ABComparisonScreen } from "@/components/study/ABComparisonScreen";
 
 export interface TrialScreenProps {
   onFinish: () => void;
@@ -21,22 +16,15 @@ export function TrialScreen({ onFinish }: TrialScreenProps) {
       experimentSlug: state.experimentSlug,
       trialCursor: state.trialCursor,
       participantIndex: state.participantIndex,
-      recordTrialOnset: state.recordTrialOnset,
-      recordTrialResponse: state.recordTrialResponse,
       advanceTrial: state.advanceTrial,
     })),
   );
 
   const config = requireExperiment(view.experimentSlug);
-  const spec = config.experimentalTrials[view.trialCursor] ?? null;
+  const spec = config.windows[view.trialCursor] ?? null;
   if (!spec) return null;
-  const condition = getCurrentCondition({
-    participantIndex: view.participantIndex,
-    trialCursor: view.trialCursor,
-  });
-  const datasetId = `${spec.baseDatasetId}--${condition}`;
-  const variant = getVariantByDatasetId(datasetId);
-  const correct = pickCorrectAnswer({ variant, taskType: spec.taskType });
+  const taskType = taskForWindow(view.participantIndex, view.trialCursor);
+  const isLast = view.trialCursor + 1 >= config.windows.length;
 
   return (
     <section
@@ -44,31 +32,18 @@ export function TrialScreen({ onFinish }: TrialScreenProps) {
       data-phase="trial"
       data-testid="trial-screen"
       data-experiment-slug={view.experimentSlug}
-      data-condition={condition}
     >
-      <h2 className="text-lg font-semibold">
-        {config.title} — trial {view.trialCursor + 1} of {config.experimentalTrials.length} ({condition})
-      </h2>
-      <p className="text-xs uppercase tracking-wide text-slate-500">{TASK_LABELS[spec.taskType]}</p>
-      <TrialRunner
-        variant={variant}
-        taskType={spec.taskType}
-        correctAnswer={correct}
-        onResponse={({ chosen, correct: c, responseTimeMs, confidence }) => {
-          const wasLast = view.trialCursor + 1 >= config.experimentalTrials.length;
-          void view.recordTrialResponse({
-            trialIndex: view.trialCursor,
-            chosen,
-            correct: c,
-            responseTimeMs,
-            confidence,
-          });
+      <ABComparisonScreen
+        windowKey={spec.windowKey}
+        windowDays={spec.windowDays}
+        windowIndex={spec.windowIndex}
+        taskType={taskType}
+        isLast={isLast}
+        onAdvance={() => {
+          const nextIndex = view.trialCursor + 1;
           view.advanceTrial();
-          if (wasLast) onFinish();
+          if (nextIndex >= config.windows.length) onFinish();
         }}
-        onOnset={({ datasetId: onsetDatasetId }) =>
-          view.recordTrialOnset(view.trialCursor, onsetDatasetId)
-        }
       />
     </section>
   );

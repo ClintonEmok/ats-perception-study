@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildExperimentalTrialOrder, EXPERIMENTAL_TRIAL_COUNT } from "@/lib/ats-study/protocol";
 import { ATS_PERCEPTION_SLUG, getExperiment } from "@/lib/ats-study/experiments";
 import type { ConvexWrites } from "@/store/useExperimentStore";
 
@@ -17,8 +16,7 @@ import { useExperimentStore } from "./useExperimentStore";
 const makeWrites = (): ConvexWrites => ({
   startSession: vi.fn().mockResolvedValue(undefined),
   completeSession: vi.fn().mockResolvedValue(undefined),
-  startTrial: vi.fn().mockResolvedValue(undefined),
-  completeTrial: vi.fn().mockResolvedValue(undefined),
+  recordAbResponse: vi.fn().mockResolvedValue(undefined),
   submitQuestionnaire: vi.fn().mockResolvedValue(undefined),
 });
 
@@ -31,8 +29,7 @@ const makeWritesWithNameCheck = (): ConvexWrites & {
   return {
     startSession: startSessionMock,
     completeSession: vi.fn().mockResolvedValue(undefined),
-    startTrial: vi.fn().mockResolvedValue(undefined),
-    completeTrial: vi.fn().mockResolvedValue(undefined),
+    recordAbResponse: vi.fn().mockResolvedValue(undefined),
     submitQuestionnaire: submitQuestionnaireMock,
     startSessionMock,
     submitQuestionnaireMock,
@@ -66,16 +63,17 @@ describe("useExperimentStore", () => {
     expect(after.phase).toBe("instructions");
   });
 
-  it("transitions through instructions to practice", () => {
+  it("transitions through instructions straight to trial (no practice phase in v5)", () => {
     const s = useExperimentStore.getState();
     s.acceptConsent();
     s.beginInstructions();
     expect(useExperimentStore.getState().phase).toBe("instructions");
     s.completeInstructions();
-    expect(useExperimentStore.getState().phase).toBe("practice");
+    expect(useExperimentStore.getState().instructionsSeen).toBe(true);
+    expect(useExperimentStore.getState().phase).toBe("trial");
   });
 
-  it("starts a session with the counterbalanced condition order", async () => {
+  it("starts a session with the v5 slug", async () => {
     const writes = makeWrites();
     await useExperimentStore.getState().startSession(0, writes);
     const s = useExperimentStore.getState();
@@ -83,73 +81,69 @@ describe("useExperimentStore", () => {
     expect(writes.startSession).toHaveBeenCalled();
   });
 
-  it("starts on the ats-perception-v4 experiment by default", () => {
+  it("starts on the ats-perception-v5 experiment by default with 12 windows", () => {
     expect(useExperimentStore.getState().experimentSlug).toBe(ATS_PERCEPTION_SLUG);
     const config = getExperiment(ATS_PERCEPTION_SLUG);
     expect(config).not.toBeNull();
+    expect(config?.windows).toHaveLength(12);
+    expect(config?.totalTrials).toBe(12);
   });
 
-  it("advances through practice trials and into the trial phase", () => {
-    const s = useExperimentStore.getState();
-    s.acceptConsent();
-    s.beginInstructions();
-    s.completeInstructions();
-    const config = getExperiment(ATS_PERCEPTION_SLUG)!;
-    for (let i = 0; i < config.practiceTrials.length; i++) {
-      s.recordPracticeOnset(`practice-${i}`);
-      s.recordPracticeResponse({ chosen: "A", correct: "A", responseTimeMs: 500, confidence: 3 });
-      s.advancePractice();
-    }
-    expect(useExperimentStore.getState().phase).toBe("trial");
-  });
-
-  it("captures onset and response as separate events per trial", async () => {
-    const config = getExperiment(ATS_PERCEPTION_SLUG)!;
-    await useExperimentStore.getState().startSession(0, makeWrites());
+  it("recordAbResponse appends to abResponses and calls the writes stub with the right shape", async () => {
+    const writes = makeWrites();
+    await useExperimentStore.getState().startSession(0, writes);
     useExperimentStore.getState().acceptConsent();
     useExperimentStore.getState().beginInstructions();
     useExperimentStore.getState().completeInstructions();
-    for (let i = 0; i < config.practiceTrials.length; i++) {
-      useExperimentStore.getState().recordPracticeOnset(`practice-${i}`);
-      useExperimentStore.getState().recordPracticeResponse({
-        chosen: "A",
-        correct: "A",
-        responseTimeMs: 600,
-        confidence: 4,
-      });
-      useExperimentStore.getState().advancePractice();
-    }
-    const order = buildExperimentalTrialOrder();
-    const writes = useExperimentStore.getState().convexWrites!;
-    await useExperimentStore.getState().recordTrialResponse({
-      trialIndex: 0,
-      chosen: "A",
-      correct: "A",
-      responseTimeMs: 700,
-      confidence: 5,
+
+    await useExperimentStore.getState().recordAbResponse({
+      windowKey: "1,1",
+      taskType: "peak",
+      choice: "A",
+      rationale: "ATS felt clearer",
+      responseTimeMs: 1234,
+      confidence: 4,
     });
-    expect(writes.completeTrial).toHaveBeenCalled();
-    expect(order).toHaveLength(EXPERIMENTAL_TRIAL_COUNT);
+
+    const state = useExperimentStore.getState();
+    expect(state.abResponses).toHaveLength(1);
+    expect(state.abResponses[0]?.windowKey).toBe("1,1");
+    expect(state.abResponses[0]?.taskType).toBe("peak");
+    expect(state.abResponses[0]?.choice).toBe("A");
+    expect(state.phase).toBe("trial");
+    expect(state.trialCursor).toBe(0);
+    expect(writes.recordAbResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        windowKey: "1,1",
+        taskType: "peak",
+        choice: "A",
+        responseTimeMs: 1234,
+        confidence: 4,
+      }),
+    );
   });
 
-  it("moves to questionnaire after all trials complete", async () => {
-    const config = getExperiment(ATS_PERCEPTION_SLUG)!;
-    await useExperimentStore.getState().startSession(0, makeWrites());
+  it("does NOT auto-advance after recordAbResponse", async () => {
+    const writes = makeWrites();
+    await useExperimentStore.getState().startSession(0, writes);
     useExperimentStore.getState().acceptConsent();
     useExperimentStore.getState().beginInstructions();
     useExperimentStore.getState().completeInstructions();
-    for (let i = 0; i < config.practiceTrials.length; i++) {
-      useExperimentStore.getState().recordPracticeOnset(`practice-${i}`);
-      useExperimentStore.getState().recordPracticeResponse({ chosen: "A", correct: "A", responseTimeMs: 400, confidence: 3 });
-      useExperimentStore.getState().advancePractice();
-    }
-    useExperimentStore.getState().finishTrials();
-    expect(useExperimentStore.getState().phase).toBe("questionnaire");
+
+    await useExperimentStore.getState().recordAbResponse({
+      windowKey: "1,1",
+      taskType: "peak",
+      choice: "A",
+      rationale: "",
+      responseTimeMs: 800,
+      confidence: 3,
+    });
+    expect(useExperimentStore.getState().trialCursor).toBe(0);
   });
 
-  it("advanceTrial rolls into questionnaire after the last trial", () => {
+  it("advanceTrial rolls into questionnaire after the 12th trial", () => {
     const config = getExperiment(ATS_PERCEPTION_SLUG)!;
-    useExperimentStore.setState({ phase: "trial", trialCursor: config.experimentalTrials.length - 1 });
+    useExperimentStore.setState({ phase: "trial", trialCursor: config.windows.length - 1 });
     useExperimentStore.getState().advanceTrial();
     expect(useExperimentStore.getState().phase).toBe("questionnaire");
   });
@@ -200,7 +194,7 @@ describe("useExperimentStore", () => {
     expect(useExperimentStore.getState().participantName).toBe("");
     expect(useExperimentStore.getState().consentAccepted).toBe(false);
     expect(useExperimentStore.getState().phase).toBe("consent");
-    expect(useExperimentStore.getState().responses).toEqual([]);
+    expect(useExperimentStore.getState().abResponses).toEqual([]);
     expect(useExperimentStore.getState().questionnaire).toEqual({ preference: null, freeText: "" });
     expect(useExperimentStore.getState().convexWrites).toBe(writes);
   });
