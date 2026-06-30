@@ -49,14 +49,16 @@ export function TimelineStimulus({ variant, width, height, bandHeight, ariaLabel
   const label = ariaLabel ?? `Timeline stimulus: ${variant.condition} (${variant.pattern})`;
   const safeBands = layout.bands.filter(isFiniteBand);
   const safeRug = layout.rug.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+  const safeNum = (value: number, fallback: number): number =>
+    Number.isFinite(value) ? value : fallback;
 
   return (
     <svg
       role="img"
       aria-label={label}
-      width={layout.width}
-      height={layout.height}
-      viewBox={`0 0 ${layout.width} ${layout.height}`}
+      width={safeNum(layout.width, 0)}
+      height={safeNum(layout.height, 0)}
+      viewBox={`0 0 ${safeNum(layout.width, 0)} ${safeNum(layout.height, 0)}`}
       data-condition={layout.condition}
       data-pattern={layout.pattern}
       data-intervals={layout.intervalCount}
@@ -66,10 +68,10 @@ export function TimelineStimulus({ variant, width, height, bandHeight, ariaLabel
         {safeBands.map((band) => (
           <rect
             key={`band-${band.index}`}
-            x={band.x}
-            y={band.y}
-            width={band.width}
-            height={band.height}
+            x={safeNum(band.x, 0)}
+            y={safeNum(band.y, 0)}
+            width={safeNum(band.width, 0)}
+            height={safeNum(band.height, 0)}
             fill="var(--study-band, #cbd5e1)"
             stroke="var(--study-band-stroke, #94a3b8)"
             strokeWidth={1}
@@ -79,19 +81,23 @@ export function TimelineStimulus({ variant, width, height, bandHeight, ariaLabel
         ))}
       </g>
       <g aria-hidden="true">
-        {safeRug.map((point, idx) => (
-          <line
-            key={`rug-${idx}-${point.eventTime}`}
-            x1={point.x}
-            x2={point.x}
-            y1={point.y - 6}
-            y2={point.y + 6}
-            stroke="var(--study-rug, #0f172a)"
-            strokeWidth={1}
-            shapeRendering="crispEdges"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
+        {safeRug.map((point, idx) => {
+          const x = safeNum(point.x, 0);
+          const y = safeNum(point.y, 0);
+          return (
+            <line
+              key={`rug-${idx}-${point.eventTime}`}
+              x1={x}
+              x2={x}
+              y1={y - 6}
+              y2={y + 6}
+              stroke="var(--study-rug, #0f172a)"
+              strokeWidth={1}
+              shapeRendering="crispEdges"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
       </g>
     </svg>
   );
