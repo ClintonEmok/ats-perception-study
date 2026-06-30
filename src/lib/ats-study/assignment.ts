@@ -1,12 +1,21 @@
 export type Condition = "uniform" | "ats";
 export type ConditionOrder = readonly Condition[];
 
-export const CONDITION_ORDERS: readonly ConditionOrder[] = [
-  ["uniform", "ats", "ats", "uniform", "uniform", "ats", "ats", "uniform"],
-  ["ats", "uniform", "uniform", "ats", "ats", "uniform", "uniform", "ats"],
-] as const;
+const TRIALS_PER_CONDITION = 12;
+export const TOTAL_EXPERIMENTAL_TRIALS = TRIALS_PER_CONDITION * 2;
 
-export const TOTAL_EXPERIMENTAL_TRIALS = 8;
+const conditionSequence = (first: Condition, second: Condition): Condition[] => {
+  const out: Condition[] = [];
+  for (let i = 0; i < TRIALS_PER_CONDITION; i += 1) {
+    out.push(i % 2 === 0 ? first : second);
+  }
+  return out;
+};
+
+const orderA = conditionSequence("uniform", "ats");
+const orderB = conditionSequence("ats", "uniform");
+
+export const CONDITION_ORDERS: readonly ConditionOrder[] = [orderA, orderB] as const;
 
 export function assignConditionOrder(participantIndex: number): ConditionOrder {
   if (!Number.isInteger(participantIndex) || participantIndex < 0) {
@@ -22,6 +31,15 @@ export function conditionForTrial(participantIndex: number, trialIndex: number):
   }
   const order = assignConditionOrder(participantIndex);
   return order[trialIndex]!;
+}
+
+export function conditionForTrialInBlock(
+  participantIndex: number,
+  block: "a" | "b",
+  blockCursor: number,
+): Condition {
+  const trialIndex = block === "a" ? blockCursor : TRIALS_PER_CONDITION + blockCursor;
+  return conditionForTrial(participantIndex, trialIndex);
 }
 
 export function balanceReport(): {

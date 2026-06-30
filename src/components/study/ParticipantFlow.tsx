@@ -7,8 +7,10 @@ import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { TrialRunner } from "./TrialRunner";
 import { PracticeFeedback } from "./PracticeFeedback";
 import { DebriefPanel, PostStudyQuestionnaire, downloadSessionResponses } from "./PostStudyQuestionnaire";
-import { buildExperimentalTrialOrder, buildPracticeTrials, TASK_LABELS, type TaskType } from "@/lib/ats-study/protocol";
+import { buildExperimentalTrialOrder, buildPracticeTrials, TASK_LABELS } from "@/lib/ats-study/protocol";
 import { getVariantByDatasetId } from "@/lib/ats-study/datasets";
+import { conditionForTrialInBlock, type Condition } from "@/lib/ats-study/assignment";
+import { pickCorrectAnswer } from "@/lib/ats-study/correctAnswers";
 
 const EXPERIMENTAL_ORDER = buildExperimentalTrialOrder();
 const PRACTICE_TRIALS = buildPracticeTrials();
@@ -18,29 +20,22 @@ const PRACTICE_DATASET_IDS = [
   "single-burst-single-burst--ats",
 ];
 
-const TASK_CORRECT_ANSWERS: Record<TaskType, string[]> = {
-  peak: ["A", "B", "C"],
-  comparison: ["first", "second"],
-  pattern: ["uniform", "single-burst", "multi-burst", "gradual-change"],
-};
+const BASE_DATASETS = [
+  "uniform-uniform",
+  "single-burst-single-burst",
+  "multi-burst-multi-burst-1",
+  "multi-burst-multi-burst-2",
+  "gradual-change-gradual-change",
+  "single-burst-heavy-single-burst-heavy",
+];
 
 function pickPracticeVariant(taskIndex: number) {
   const id = PRACTICE_DATASET_IDS[taskIndex] ?? PRACTICE_DATASET_IDS[0]!;
   return getVariantByDatasetId(id) ?? null;
 }
 
-function pickExperimentalVariant(trialIndex: number, blockACondition: "uniform" | "ats" | null) {
-  const spec = EXPERIMENTAL_ORDER[trialIndex];
-  if (!spec) return null;
-  const baseId = [
-    "uniform-uniform",
-    "single-burst-single-burst",
-    "multi-burst-multi-burst-1",
-    "multi-burst-multi-burst-2",
-    "gradual-change-gradual-change",
-    "single-burst-heavy-single-burst-heavy",
-  ][trialIndex % 6]!;
-  const condition = blockACondition === "ats" && trialIndex < 12 ? "uniform" : "ats";
+function pickExperimentalVariant(absoluteTrialIndex: number, condition: Condition) {
+  const baseId = BASE_DATASETS[absoluteTrialIndex % BASE_DATASETS.length]!;
   return getVariantByDatasetId(`${baseId}--${condition}`);
 }
 
@@ -100,6 +95,7 @@ function PhaseView({ feedback, setFeedback }: PhaseViewProps) {
       practiceCursor: state.practiceCursor,
       blockCursor: state.blockCursor,
       blockACondition: state.blockACondition,
+      participantIndex: state.participantIndex,
       questionnaire: state.questionnaire,
       acceptConsent: state.acceptConsent,
       completeInstructions: state.completeInstructions,
@@ -157,7 +153,7 @@ function PhaseView({ feedback, setFeedback }: PhaseViewProps) {
     if (!trial) return null;
     const variant = pickPracticeVariant(view.practiceCursor);
     if (!variant) return null;
-    const correct = TASK_CORRECT_ANSWERS[trial.taskType][view.practiceCursor % 2] ?? "A";
+    const correct = pickCorrectAnswer({ variant, taskType: trial.taskType });
     return (
       <section className="flex flex-col gap-4" data-phase="practice">
         <h2 className="text-lg font-semibold">Practice trial {view.practiceCursor + 1} of {PRACTICE_TRIALS.length}</h2>
@@ -191,15 +187,18 @@ function PhaseView({ feedback, setFeedback }: PhaseViewProps) {
   }
 
   if (view.phase === "block-a" || view.phase === "block-b") {
-    const trial = EXPERIMENTAL_ORDER[view.blockCursor];
+    const block: "a" | "b" = view.phase === "block-a" ? "a" : "b";
+    const absoluteIndex = view.phase === "block-a" ? view.blockCursor : EXPERIMENTAL_ORDER.length / 2 + view.blockCursor;
+    const trial = EXPERIMENTAL_ORDER[absoluteIndex];
     if (!trial) return null;
-    const variant = pickExperimentalVariant(view.blockCursor, view.blockACondition);
+    const condition = conditionForTrialInBlock(view.participantIndex, block, view.blockCursor);
+    const variant = pickExperimentalVariant(absoluteIndex, condition);
     if (!variant) return null;
-    const correct = TASK_CORRECT_ANSWERS[trial.taskType][0] ?? "A";
+    const correct = pickCorrectAnswer({ variant, taskType: trial.taskType });
     return (
       <section className="flex flex-col gap-4" data-phase={view.phase}>
         <h2 className="text-lg font-semibold">
-          {view.phase === "block-a" ? "Block A" : "Block B"} — trial {view.blockCursor + 1} of {EXPERIMENTAL_ORDER.length / 2}
+          {view.phase === "block-a" ? "Block A" : "Block B"} — trial {view.blockCursor + 1} of {EXPERIMENTAL_ORDER.length / 2} ({condition})
         </h2>
         <p className="text-xs uppercase tracking-wide text-slate-500">{TASK_LABELS[trial.taskType]}</p>
         <TrialRunner

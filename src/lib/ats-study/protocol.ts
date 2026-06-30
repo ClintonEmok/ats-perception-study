@@ -52,11 +52,9 @@ export type ProtocolPhase = (typeof PROTOCOL_PHASES)[number];
 
 export function buildExperimentalTrialOrder(): TrialSpec[] {
   const order: TrialSpec[] = [];
-  let idx = 0;
-  for (const task of ["peak", "comparison", "pattern"] as TaskType[]) {
-    for (let i = 0; i < TRIALS_PER_TASK; i++) {
-      order.push({ trialIndex: idx++, taskType: task, isPractice: false });
-    }
+  for (let i = 0; i < EXPERIMENTAL_TRIAL_COUNT; i += 1) {
+    const task: TaskType = i % 3 === 0 ? "peak" : i % 3 === 1 ? "comparison" : "pattern";
+    order.push({ trialIndex: i, taskType: task, isPractice: false });
   }
   return order;
 }

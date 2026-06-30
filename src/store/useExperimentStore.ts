@@ -184,20 +184,31 @@ export const useExperimentStore = create<ExperimentStore>()(
         }
       },
       startBlock: (block) => set({ phase: block === "a" ? "block-a" : "block-b", blockCursor: 0 }),
-      recordTrialOnset: (trialIndex, datasetId) =>
-        set({ currentTrialIndex: trialIndex, currentDatasetId: datasetId, currentOnsetAt: performance.now() }),
+      recordTrialOnset: (trialIndex, datasetId) => {
+        const state = get();
+        const halfLength = experimentalOrder.length / 2;
+        const absoluteIndex = state.phase === "block-b" ? halfLength + trialIndex : trialIndex;
+        set({
+          currentTrialIndex: absoluteIndex,
+          currentDatasetId: datasetId,
+          currentOnsetAt: performance.now(),
+        });
+      },
       recordTrialResponse: async ({ trialIndex, chosen, correct, responseTimeMs, confidence }) => {
         const state = get();
-        const spec = experimentalOrder[trialIndex];
+        const halfLength = experimentalOrder.length / 2;
+        const absoluteIndex =
+          state.phase === "block-a" ? trialIndex : halfLength + trialIndex;
+        const spec = experimentalOrder[absoluteIndex];
         if (!spec) return;
-        const condition = conditionForTrial(state.participantIndex, trialIndex);
+        const condition = conditionForTrial(state.participantIndex, absoluteIndex);
         const isCorrect = scoreTrial(spec.taskType, { chosen, correct });
         const recordedAt = Date.now();
         const response: TrialResponse = {
-          trialIndex,
+          trialIndex: absoluteIndex,
           taskType: spec.taskType,
           condition,
-          datasetId: state.currentDatasetId ?? `trial-${trialIndex}`,
+          datasetId: state.currentDatasetId ?? `trial-${absoluteIndex}`,
           chosen,
           correct,
           responseTimeMs,
@@ -210,7 +221,7 @@ export const useExperimentStore = create<ExperimentStore>()(
           try {
             await state.convexWrites.completeTrial({
               sessionId: state.sessionId,
-              trialIndex,
+              trialIndex: absoluteIndex,
               correct: isCorrect,
               chosen,
               responseTimeMs,
@@ -225,9 +236,10 @@ export const useExperimentStore = create<ExperimentStore>()(
       advanceTrial: () => {
         const state = get();
         const next = state.blockCursor + 1;
-        if (state.phase === "block-a" && next >= experimentalOrder.length / 2) {
+        const halfLength = experimentalOrder.length / 2;
+        if (state.phase === "block-a" && next >= halfLength) {
           set({ blockCursor: 0, phase: "block-b" });
-        } else if (state.phase === "block-b" && next >= experimentalOrder.length) {
+        } else if (state.phase === "block-b" && next >= halfLength) {
           set({ blockCursor: 0, phase: "questionnaire" });
         } else {
           set({ blockCursor: next });
