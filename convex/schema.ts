@@ -45,7 +45,7 @@ export default defineSchema({
     completedAt: v.optional(v.number()),
   })
     .index("by_session", ["sessionId"])
-    .index("by_session_index", ["sessionId", "trialIndex"]),
+    .index("by_session_trialIndex", ["sessionId", "trialIndex"]),
 
   studyResponses: defineTable({
     trialId: v.id("studyTrials"),
