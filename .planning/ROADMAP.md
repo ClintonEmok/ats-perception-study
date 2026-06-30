@@ -18,7 +18,8 @@ v4.0 turns the prototype into a self-contained ATS perception study built on the
 **Goal**: The study has a Convex-only data backbone, committed counterbalancing, client-side ATS mapping, and reusable base datasets before any participant-facing UI is built.
 **Depends on**: Phase 86
 **Requirements**: DATA-01, DATA-03, EXPMT-04, EXPMT-07
-**Plans**: TBD
+**Plans**: 1 (commit `9c165b0`)
+**Status**: Complete
 **Success Criteria**:
 
   1. A participant/session can be assigned a precomputed counterbalanced condition order from a Latin square committed in the repo, without runtime randomization.
@@ -75,7 +76,7 @@ Phases execute in numeric order: 87 → 88 → 89 → 90
 
 | Phase | Milestone | Status | Requirements | Success Criteria |
 |-------|-----------|--------|--------------|------------------|
-| 87. Infrastructure & Core Logic | v4.0 | Not started | 4 | 4 |
+| 87. Infrastructure & Core Logic | v4.0 | Complete | 4 | 4 |
 | 88. Stimulus Rendering & RT Measurement | v4.0 | Not started | 3 | 5 |
 | 89. Experiment Flow & Trial Engine | v4.0 | Not started | 6 | 5 |
 | 90. Deployment / Route Stripping / Pilot | v4.0 | Not started | 6 | 5 |
