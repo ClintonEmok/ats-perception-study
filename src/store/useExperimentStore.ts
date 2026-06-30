@@ -123,7 +123,7 @@ export const useExperimentStore = create<ExperimentStore>()(
       ...initialState,
       setConvexWrites: (writes) => set({ convexWrites: writes }),
       setParticipantName: (name) => set({ participantName: name }),
-      acceptConsent: () => set({ consentAccepted: true }),
+      acceptConsent: () => set({ consentAccepted: true, phase: "instructions" }),
       beginInstructions: () => set({ phase: "instructions" }),
       completeInstructions: () => set({ phase: "practice" }),
       startSession: async (participantIndex, writes) => {

@@ -47,6 +47,7 @@ export interface ParticipantFlowProps {
 export function ParticipantFlow({ convexWrites, participantIndex }: ParticipantFlowProps) {
   const phase = useExperimentStore((state) => state.phase);
   const sessionId = useExperimentStore((state) => state.sessionId);
+  const consentAccepted = useExperimentStore((state) => state.consentAccepted);
   const startSession = useExperimentStore((state) => state.startSession);
   const setConvexWrites = useExperimentStore((state) => state.setConvexWrites);
 
@@ -63,12 +64,16 @@ export function ParticipantFlow({ convexWrites, participantIndex }: ParticipantF
   }, [convexWrites]);
 
   useEffect(() => {
-    if (sessionId === null) {
-      void startSession(participantIndex, writesRef.current);
+    if (sessionId !== null) {
+      setConvexWrites(writesRef.current);
       return;
     }
-    setConvexWrites(writesRef.current);
-  }, [sessionId, participantIndex, startSession, setConvexWrites]);
+    // Guard: only start a Convex session AFTER consent, never on mount.
+    // Creating a session for a participant who hasn't consented would leak
+    // their existence into the data layer.
+    if (!consentAccepted) return;
+    void startSession(participantIndex, writesRef.current);
+  }, [sessionId, participantIndex, consentAccepted, startSession, setConvexWrites]);
 
   useNavigationGuard({ active: phase !== "debrief" && phase !== "consent" });
 

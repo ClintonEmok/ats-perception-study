@@ -55,6 +55,16 @@ describe("useExperimentStore", () => {
     expect(useExperimentStore.getState().consentAccepted).toBe(true);
   });
 
+  it("acceptConsent advances phase to 'instructions' so the user doesn't fall through to debrief", () => {
+    const s = useExperimentStore.getState();
+    expect(s.phase).toBe("consent");
+    expect(s.consentAccepted).toBe(false);
+    s.acceptConsent();
+    const after = useExperimentStore.getState();
+    expect(after.consentAccepted).toBe(true);
+    expect(after.phase).toBe("instructions");
+  });
+
   it("transitions through instructions to practice", () => {
     const s = useExperimentStore.getState();
     s.acceptConsent();
