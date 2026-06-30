@@ -1,49 +1,81 @@
 # Roadmap: Adaptive Space-Time Cube Prototype
 
+## Overview
+
+v4.0 turns the prototype into a self-contained ATS perception study built on the existing React + Zustand + Visx stack and a Convex-only backend. The phase order is fixed by the research dependency chain: data foundation first, then SVG stimuli and timing, then the guarded trial engine and participant flow, and finally route stripping plus pilot deployment.
+
 ## Milestones
 
-- ✅ **v3.1 Workflow Finalization** — Phases 72-75, shipped
-- ✅ **v3.2 Visualization Level Up** — Phases 76-78, shipped
+- ✅ **v3.1 Workflow Finalization** — Phases 72-75, complete
+- ✅ **v3.2 Visualization Level Up** — Phases 76-78, complete
 - ✅ **v3.4 Burstiness-First Adaptive Timeline** — Phases 79, 83-86, shipped 2026-06-30
-- 📋 **Future milestones** — Study & Evaluation follow-ups, POI map work, memory-pressure cleanup
+- 🚧 **v4.0 ATS Perception Study** — Phases 87-90, current milestone
 
-## Phases
+## Phase Details
 
-<details>
-<summary>✅ v3.4 Burstiness-First Adaptive Timeline — SHIPPED 2026-06-30</summary>
+### Phase 87: Infrastructure & Core Logic
 
-- [x] Phase 79: Adaptive 3D Visualization + Interactive Slices (3/3 plans) — completed 2026-06-19
-- [x] Phase 83: Contextual Burstiness vs Goh-Barabasi Comparison (5/5 plans) — completed 2026-06-27, verdict GO
-- [x] Phase 84: Burstiness Signal Contract + Density Fallback + Contextual z (3/3 plans) — completed 2026-06-27
-- [x] Phase 85: Demo Presets Topbar (1/1 plan) — completed 2026-06-29
-- [x] Phase 86: Wire up DemoPresetSelect (1/1 plan) — completed 2026-06-29
+**Goal**: The study has a Convex-only data backbone, committed counterbalancing, client-side ATS mapping, and reusable base datasets before any participant-facing UI is built.
+**Depends on**: Phase 86
+**Requirements**: DATA-01, DATA-03, EXPMT-04, EXPMT-07
+**Plans**: TBD
+**Success Criteria**:
 
-See: `.planning/milestones/v3.4-ROADMAP.md` for full phase details.
+  1. A participant/session can be assigned a precomputed counterbalanced condition order from a Latin square committed in the repo, without runtime randomization.
+  2. Trial/session records support started, responded, completed, abandoned, and timeout states in Convex without losing partial data.
+  3. At least 6 unique base event datasets are available, and each can produce both Uniform and ATS variants.
+  4. ATS interval widths are computed client-side from burstiness-derived allocation weights and stay deterministic across reloads.
 
-</details>
+### Phase 88: Stimulus Rendering & RT Measurement
 
-<details>
-<summary>✅ v3.2 Visualization Level Up — Phases 76-78</summary>
+**Goal**: The study can render the SVG timeline stimuli and capture per-trial timing/response metadata from the rendered stimulus.
+**Depends on**: Phase 87
+**Requirements**: DATA-02, EXPMT-01, EXPMT-05
+**Plans**: TBD
+**Success Criteria**:
 
-See: `.planning/milestones/v3.2-ROADMAP.md`
+  1. A participant can see event rug marks rendered atop allocation bands as the study stimulus.
+  2. The same dataset renders in both Uniform and ATS variants without falling back to prototype map/cube UI.
+  3. Trial onset is timed with `performance.now()`, and the response payload includes accuracy, RT, confidence, condition, dataset ID, and task type.
+  4. Trial starts and responses are written as separate events so abandoned trials still leave an audit trail.
+  5. The rendered stimulus remains legible in the supported desktop browsers used for the study.
 
-</details>
+### Phase 89: Experiment Flow & Trial Engine
 
-### 📋 Remaining Phases
+**Goal**: The custom React + Zustand trial engine runs the full within-subjects participant flow, task blocks, practice, and guarded navigation in the right order.
+**Depends on**: Phase 88
+**Requirements**: EXPMT-02, EXPMT-03, EXPMT-06, FLOW-01, FLOW-02, FLOW-03
+**Plans**: TBD
+**Success Criteria**:
 
-- [ ] Phase 80: Evaluation readiness — prepare dashboard-demo prototype for user study (2/3 plans, 80-03 deferred)
-- [ ] Phase 81: Reduce dashboard memory pressure (0/3 plans)
-- [ ] Phase 82: Add POI to 2D map on dashboard demo (1/1 plan executed, verification missing)
+  1. A participant starts with a unique anonymous ID and can move through consent → instructions → practice → block A → block B → questionnaire (preference + free-text) → debrief.
+  2. All three task types appear with the specified answer formats: 3-choice peak identification, binary period comparison, and 4-choice pattern recognition.
+  3. Each participant completes exactly 2 practice trials and 24 experimental trials, with 12 Uniform and 12 ATS trials under the committed counterbalance.
+  4. Practice trials show correctness feedback before the main blocks start.
+  5. Back button, refresh, and tab-switch behavior do not silently drop the participant out of the study because navigation guards and session checkpoints recover the current position.
+
+### Phase 90: Deployment / Route Stripping / Pilot
+
+**Goal**: The study ships as a stripped, production-deployable route with researcher export and a small pilot verified before recruitment opens.
+**Depends on**: Phase 89
+**Requirements**: DATA-04, DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
+**Plans**: TBD
+**Success Criteria**:
+
+  1. Only the study surface ships on the ats-study branch; unrelated prototype routes and heavy dependencies are removed.
+  2. Study code cannot import prototype modules because the import guard fails the build if forbidden paths appear.
+  3. The experiment bundle passes analysis without DuckDB, Three.js, or MapLibre in the shipped study chunk.
+  4. The study is deployed to Vercel with the Convex production project and environment variables configured.
+  5. Researchers can export aggregated trial results and complete a 2-3 participant pilot before opening recruitment.
 
 ## Progress
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|--- |--- |--- |--- |--- |
-| 79. Adaptive 3D Visualization | v3.4 | 3/3 | Complete | 2026-06-19 |
-| 80. Evaluation Readiness | v3.3 | 2/3 | In progress | — |
-| 81. Memory Pressure Reduction | v3.3 | 0/3 | Planned | — |
-| 82. POI on 2D Map | v3.3 | 1/1 | Executed | — |
-| 83. Contextual vs Goh-Barabasi | v3.4 | 5/5 | Complete | 2026-06-27 |
-| 84. Burstiness Signal Contract | v3.4 | 3/3 | Complete | 2026-06-27 |
-| 85. Demo Presets Topbar | v3.4 | 1/1 | Complete | 2026-06-29 |
-| 86. Wire DemoPresetSelect | v3.4 | 1/1 | Complete | 2026-06-29 |
+**Execution Order:**
+Phases execute in numeric order: 87 → 88 → 89 → 90
+
+| Phase | Milestone | Status | Requirements | Success Criteria |
+|-------|-----------|--------|--------------|------------------|
+| 87. Infrastructure & Core Logic | v4.0 | Not started | 4 | 4 |
+| 88. Stimulus Rendering & RT Measurement | v4.0 | Not started | 3 | 5 |
+| 89. Experiment Flow & Trial Engine | v4.0 | Not started | 6 | 5 |
+| 90. Deployment / Route Stripping / Pilot | v4.0 | Not started | 6 | 5 |
