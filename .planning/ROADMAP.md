@@ -77,13 +77,13 @@ v4.0 turns the prototype into a self-contained ATS perception study built on the
 **Depends on**: Phase 89
 **Requirements**: EXPMT-06 (post-study questionnaire iteration)
 **Plans**: 1
-**Status**: Ready to plan
+**Status**: Complete
 **Success Criteria**:
 
-  1. Per-trial confidence scale wording and anchors match Likert-5 conventions used in published perception studies.
-  2. Post-study preference question supports a 5-point ATS-vs-Uniform scale in addition to the existing "uniform / ats / no-preference" radio.
-  3. Free-text field has a minimum character count and a soft warning to encourage substantive feedback.
-  4. Debrief screen offers "Download my responses" so the participant leaves with a copy of their data.
+  1. Per-trial confidence scale wording and anchors match Likert-5 conventions used in published perception studies. ✓
+  2. Post-study preference question supports a 5-point ATS-vs-Uniform scale in addition to the existing "uniform / ats / no-preference" radio. ✓
+  3. Free-text field has a minimum character count and a soft warning to encourage substantive feedback. ✓
+  4. Debrief screen offers "Download my responses" so the participant leaves with a copy of their data. ✓
 
 ## Progress
 
@@ -96,4 +96,4 @@ Phases execute in numeric order: 87 → 88 → 89 → 90 → 91
 | 88. Stimulus Rendering & RT Measurement | v4.0 | Complete | 3 | 5 |
 | 89. Experiment Flow & Trial Engine | v4.0 | Complete | 6 | 5 |
 | 90. Deployment / Route Stripping / Pilot | v4.0 | Complete (build + gates; deploy + pilot deferred) | 6 | 3 |
-| 91. Questionnaire Iteration | v4.0 | Ready to plan | 1 | 0 |
+| 91. Questionnaire Iteration | v4.0 | Complete | 1 | 4 |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: ATS Perception Study
-status: planning
-last_updated: "2026-06-30T19:15:00Z"
+status: executing
+last_updated: "2026-06-30T19:30:00Z"
 last_activity: 2026-06-30
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
-  percent: 80
+  completed_phases: 5
+  total_plans: 5
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -19,16 +19,16 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Phase 91 — Questionnaire Iteration
+**Current focus:** v4.0 milestone archive
 
 ## Current Position
 
 Phase: 91 (v4.0 Phase 5 of 5 — Questionnaire Iteration)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-06-30 — Phase 91 inserted after audit found DEPLOY-04/05 credential-blocked
+Plan: 1
+Status: Complete
+Last activity: 2026-06-30 — Phase 91 committed (`4f6af44`); ready to archive v4.0
 
-Progress: [████████████████░░] 80%
+Progress: [████████████████████] 100%
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Progress: [████████████████░░] 80%
 | 88 Stimulus Rendering & RT Measurement | 1 | done | — |
 | 89 Experiment Flow & Trial Engine | 1 | done | — |
 | 90 Deployment / Route Stripping / Pilot | 1 | done | — |
-| 91 Questionnaire Iteration | TBD | — | — |
+| 91 Questionnaire Iteration | 1 | done | — |
 
 **Recent Trend:**
 - Last 4 plans: 87 (Convex schema, counterbalancing, ATS mapping, base datasets), 88 (SVG stimulus, performance.now timing), 89 (Zustand state machine, task components, trial runner, /experiment route), 90 (route stripping, deployment gates, pilot prep).
@@ -85,5 +85,5 @@ Progress: [████████████████░░] 80%
 ## Session Continuity
 
 Last session: 2026-06-30
-Stopped at: Phase 91 inserted; ready to plan.
+Stopped at: All 5 v4.0 phases complete; ready to archive.
 Resume file: None
