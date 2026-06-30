@@ -59,7 +59,7 @@ export function TrialRunner({ variant, taskType, correctAnswer, showFixation = t
         </div>
       )}
       {phase !== "fixation" && (
-        <>
+        <div className="flex w-full flex-col gap-4">
           <Timeline variant={variant} />
           {taskType === "peak" && <PeakIdentificationChoice onChoose={choose} disabled={phase === "responded"} />}
           {taskType === "comparison" && <PeriodComparisonChoice onChoose={choose} disabled={phase === "responded"} />}
@@ -88,7 +88,7 @@ export function TrialRunner({ variant, taskType, correctAnswer, showFixation = t
               );
             })}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

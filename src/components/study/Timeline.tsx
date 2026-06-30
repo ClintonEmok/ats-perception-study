@@ -60,9 +60,9 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
       data-timeline-h={h}
       style={{
         display: "block",
-        width: "100%",
-        maxWidth: `${w}px`,
-        aspectRatio: `${w} / ${h}`,
+        width: `${w}px`,
+        height: `${h}px`,
+        maxWidth: "100%",
         background: "#000000",
         color: "#ffffff",
         fontFamily: "monospace",
@@ -72,6 +72,8 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
         boxSizing: "border-box",
         borderRadius: "4px",
         overflow: "hidden",
+        flexShrink: 0,
+        alignSelf: "stretch",
       }}
     >
       <strong>BLACKBOX</strong>
