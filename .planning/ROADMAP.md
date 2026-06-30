@@ -46,14 +46,15 @@ v4.0 turns the prototype into a self-contained ATS perception study built on the
 **Goal**: The custom React + Zustand trial engine runs the full within-subjects participant flow, task blocks, practice, and guarded navigation in the right order.
 **Depends on**: Phase 88
 **Requirements**: EXPMT-02, EXPMT-03, EXPMT-06, FLOW-01, FLOW-02, FLOW-03
-**Plans**: TBD
+**Plans**: 1
+**Status**: Complete (`c9b20a3`)
 **Success Criteria**:
 
-  1. A participant starts with a unique anonymous ID and can move through consent → instructions → practice → block A → block B → questionnaire (preference + free-text) → debrief.
-  2. All three task types appear with the specified answer formats: 3-choice peak identification, binary period comparison, and 4-choice pattern recognition.
-  3. Each participant completes exactly 2 practice trials and 24 experimental trials, with 12 Uniform and 12 ATS trials under the committed counterbalance.
-  4. Practice trials show correctness feedback before the main blocks start.
-  5. Back button, refresh, and tab-switch behavior do not silently drop the participant out of the study because navigation guards and session checkpoints recover the current position.
+  1. A participant starts with a unique anonymous ID and can move through consent → instructions → practice → block A → block B → questionnaire (preference + free-text) → debrief. ✓
+  2. All three task types appear with the specified answer formats: 3-choice peak identification, binary period comparison, and 4-choice pattern recognition. ✓
+  3. Each participant completes exactly 2 practice trials and 24 experimental trials, with 12 Uniform and 12 ATS trials under the committed counterbalance. ✓
+  4. Practice trials show correctness feedback before the main blocks start. ✓
+  5. Back button, refresh, and tab-switch behavior do not silently drop the participant out of the study because navigation guards and session checkpoints recover the current position. ✓
 
 ### Phase 90: Deployment / Route Stripping / Pilot
 
@@ -61,6 +62,7 @@ v4.0 turns the prototype into a self-contained ATS perception study built on the
 **Depends on**: Phase 89
 **Requirements**: DATA-04, DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 **Plans**: TBD
+**Status**: Ready to plan
 **Success Criteria**:
 
   1. Only the study surface ships on the ats-study branch; unrelated prototype routes and heavy dependencies are removed.
