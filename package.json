@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "check:imports": "node scripts/check-import-guard.mjs",
-    "check:bundle": "node scripts/check-bundle.mjs"
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "stimuli:exp2": "node scripts/experiment2_expert_stimuli.js"
   },
   "dependencies": {
     "@radix-ui/react-tooltip": "^1.2.10",
@@ -33,6 +34,9 @@
     "@types/node": "^20.19.43",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "canvas": "^3.2.0",
+    "csv-parse": "^5.6.0",
+    "d3-scale": "^4.0.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.9",
     "jsdom": "^28.1.0",

@@ -46,6 +46,35 @@ export function buildStimulusLayout(
       : computeAtsIntervals(variant.events);
   const bands = bandsFromIntervals(intervals, domain, { width: opts.width, height: opts.height }, opts.bandHeight);
   const rug = eventRugPoints(variant.events, domain, { width: opts.width, height: opts.height }, opts.bandHeight);
+
+  const hasNaN = (n: number) => !Number.isFinite(n);
+  const hasAnyNaN =
+    hasNaN(opts.width) ||
+    hasNaN(opts.height) ||
+    hasNaN(opts.bandHeight) ||
+    bands.some((b) => hasNaN(b.x) || hasNaN(b.y) || hasNaN(b.width) || hasNaN(b.height)) ||
+    rug.some((p) => hasNaN(p.x) || hasNaN(p.y));
+  if (hasAnyNaN && typeof console !== "undefined") {
+    console.warn(
+      "[buildStimulusLayout] produced non-finite coordinates",
+      {
+        datasetId: variant.datasetId,
+        condition: variant.condition,
+        pattern: variant.pattern,
+        opts: { width: opts.width, height: opts.height, bandHeight: opts.bandHeight },
+        domain,
+        eventCount: variant.events.length,
+        firstEvent: variant.events[0],
+        lastEvent: variant.events[variant.events.length - 1],
+        intervalCount: intervals.length,
+        firstInterval: intervals[0],
+        lastInterval: intervals[intervals.length - 1],
+        bands: bands.slice(0, 3),
+        rug: rug.slice(0, 3),
+      },
+    );
+  }
+
   return {
     datasetId: variant.datasetId,
     condition: variant.condition,
