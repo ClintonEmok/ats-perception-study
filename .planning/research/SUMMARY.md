@@ -1,391 +1,227 @@
-# Research Summary: Visualization Level-Up
+# Project Research Summary
 
-**Domain:** Spatiotemporal crime visualization — adaptive space-time cube, burst rendering, temporal evolution, multi-scale inspection
-**Researched:** 2026-05-26
-**Overall confidence:** HIGH
+**Project:** Adaptive Space-Time Cube Prototype — ATS Perception Study (v4.0)
+**Domain:** Web-based controlled within-subjects perception experiment comparing Adaptive Temporal Scaling vs Uniform timelines
+**Researched:** 2026-06-30
+**Confidence:** HIGH
 
 ## Executive Summary
 
-This research synthesizes four parallel investigations into a visualization level-up milestone for an existing Adaptive Space-Time Cube Prototype (v3.1 complete). The app already has working burst detection, slice generation, cross-view coordination, and a five-tab workflow (Scan → Detect → Slices → Inspect → Configure). The level-up targets **analytical effectiveness** — making bursts immediately visible, temporal evolution interpretable, 3D orientation clear, dense data readable, and the entire experience evaluation-ready for thesis usability testing.
+The ATS Perception Study is a **self-contained web experiment** that validates the core hypothesis of the Adaptive Space-Time Cube: does adaptive temporal scaling (ATS) make bursty crime patterns more perceptible than uniform timeline rendering? The study delivers 24 counterbalanced trials across 3 task types (Peak Identification, Period Comparison, Pattern Recognition) rendered as SVG timeline stimuli — event rug marks atop allocation bands — with per-trial response recording (accuracy, RT, confidence) stored to Convex.
 
-**The core tension across all objectives is information density vs. cognitive clarity.** Crime datasets are large (8.5M+ records), the 3D cube is inherently complex, and the analyst's job requires rapid pattern recognition without visual overwhelm. Every decision in this milestone should be evaluated against this tension.
+Experts build web perception experiments with a **custom lightweight engine**, not a framework like jsPsych, when stimuli require custom SVG rendering that off-the-shelf plugins don't support. The recommended approach mirrors jsPsych's proven patterns (visibility-gated timing with `performance.now()`, counterbalancing via Latin square, sessionStorage checkpointing, write-ahead logging) while leveraging the existing React 19 + Zustand 5 + Visx 3.12 stack. The Convex backend provides serverless, real-time response storage with zero infrastructure overhead — exactly what a thesis experiment needs.
 
-**Three strategic stack additions are justified:** `@react-three/postprocessing` (bloom/selective glow), `deck.gl` with `@deck.gl/aggregation-layers` (GPU-based heatmap density), and `GSAP` (sequenced temporal animations that avoid React reconciliation). No other new libraries are needed — the existing Three.js/R3F/drei/MapLibre stack covers the remaining needs with configuration and shader work. Six new packages total, adding ~147 KB gzip to the bundle.
-
-**The recommended build order is a 6-phase sequence:** (1) Shader infrastructure + architecture cleanup, (2) Spatial orientation + cognitive foundation, (3) Burst visibility + visual consistency, (4) Temporal evolution + post-processing, (5) Multi-scale temporal + workflow support, (6) Evaluation readiness. Each phase builds on the previous, with spatial orientation early as a "quick win" and evaluation readiness last as the measurement layer.
-
-**The top risks are:** GPU memory saturation from 8.5M instanced points (must implement LOD before adding visual channels), shader compilation stalls from dynamic `onBeforeCompile` patching (must refactor to stable uniforms), cross-store synchronization deadlock from 20+ Zustand stores (must consolidate coordination store), and camera disorientation in axis-less 3D space (must add persistent spatial anchors). All have documented prevention strategies.
-
----
+**The dominant risk is browser navigation corrupting participant state** — the experiment must guard against back-button, refresh, and tab-switch with a formal state machine, `beforeunload` handlers, and `visibilitychange`-gated timing. The second-tier risks are Convex schema rigidity (must support partial/abandoned trials via `status` enum) and cross-browser SVG consistency (Chrome/Firefox/Safari render event rug marks differently unless rendering properties are explicitly set). All three are preventable with specific, measurable guardrails mapped to early phases.
 
 ## Key Findings
 
-### From STACK.md
+### Recommended Stack
 
-**Three strategic additions — and nothing else:**
+**Only 4 new packages needed.** The existing Next.js 16 / React 19 / Zustand 5 / Visx 3.12 / Tailwind CSS 4 / Vitest 4 stack covers ~80% of experiment infrastructure. Additions:
 
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| `@react-three/postprocessing` | ^3.0.4 | Bloom, SelectiveBloom, DepthOfField | Handles all GL state management for post-processing; tree-shakable ~12 KB gzip |
-| `deck.gl` + `@deck.gl/aggregation-layers` + `@deck.gl/mapbox` | ^9.3.2 | GPU-accelerated heatmap density inside MapLibre | HeatmapLayer uses GPU-based Gaussian KDE — real-time density without CPU bottlenecks; replaces MapLibre's fixed heatmap |
-| `GSAP` | ^3.15.0 | Animation sequencing (camera fly-throughs, transitions, fading trails) | Runs outside React render cycle — no reconciliation issues; ~12 KB tree-shaken core |
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `convex` | ^1.42.1 | Serverless backend for response storage (replaces DuckDB for study) |
+| `@visx/tooltip` | ^3.12.0 | Hover tooltips on timeline stimuli |
+| `@visx/text` | ^3.12.0 | SVG text labels with vertical alignment |
+| `@visx/annotation` | ^3.12.0 | Callout annotations for burst regions |
 
-**Things explicitly NOT to add:**
-- **GPU.js** — deprecated-feeling transpilation layer; deck.gl GPU aggregation is the correct replacement
-- **@react-spring/three** — React 18-only (project uses React 19.2.3), adds 30KB+ for spring physics this use case doesn't need
-- **WebGPU compute** — Chrome-only effectively; no Three.js integration layer yet
-- **Custom camera library** — existing `drei CameraControls` can be constrained via `minPolarAngle`/`maxPolarAngle`/`minDistance`/`maxDistance`
+**One-command install:** `pnpm add convex@^1.42.1 @visx/tooltip@^3.12.0 @visx/text@^3.12.0 @visx/annotation@^3.12.0`
 
-**Total new deps:** 6 packages. Estimated bundle addition: ~147 KB gzipped (acceptable for desktop-first prototype).
+**Explicit anti-recommendations:** No nanoid (use built-in `crypto.randomUUID()`), no jsPsych (custom engine better for SVG stimuli), no DuckDB on the study branch, no Three.js/MapLibre/Web Workers in the experiment bundle, no new databases or CSS frameworks. The `ats-study` branch must physically strip 21 prototype routes, ~35 heavy dependencies, and all DuckDB imports to achieve a <500KB gzipped deployment.
 
-**Version compatibility:** All verified against existing stack via npm registry + Context7. `@react-three/postprocessing@3.x` requires `@react-three/fiber >=9` (satisfied, we have 9.5.0). `deck.gl@9.x` integrates with `react-map-gl/maplibre >=8` (satisfied, we have 8.1.0).
+### Expected Features
 
----
+**Must have for pilot (P1 — experiment cannot run without these):**
+- **Synthetic stimulus generator** — 24 fixed-seed datasets with known ground truth (burst locations, peak counts, pattern types), reusing existing `src/lib/synthetic/goh-barabasi.ts`
+- **SVG timeline stimulus renderer** — Event rug + allocation bands for Uniform and ATS conditions, rendered with @visx primitives
+- **Trial runner with 3 task types** — Peak Identification (3-choice MCQ), Period Comparison (binary), Pattern Recognition (4-choice MCQ), each capturing accuracy, RT, and confidence
+- **Convex schema + write mutations** — `sessions`, `trialResponses`, `questionnaireResponses` tables with `status` enum supporting partial trials
+- **Anonymous participant flow** — ID generation via `crypto.randomUUID()`, condition-blind A/B labeling, progression through 2 practice + 24 experimental trials + questionnaire
+- **Counterbalanced condition assignment** — Latin square design ensuring exactly 12 Uniform + 12 ATS per participant, task types balanced across blocks
+- **Practice trials with feedback** — 2 trials before block 1 with correct/incorrect feedback overlay
+- **Post-study questionnaire** — 4-6 Likert items comparing condition experience (NASA-RTLX + interpretability)
 
-### From FEATURES.md
+**Should have for analysis rigor (P2):** Data export (CSV/JSON), progress indicator, desktop browser check (≥1024px), stimulus onset guard (500ms fixation cross), allocation band polish.
 
-**All 10 objectives analyzed with table stakes, differentiators, and anti-features:**
+**Defer to v5.0+:** Prolific/MTurk integration, between-subjects variant, eye-tracking, additional stimulus types, multi-session retest reliability.
 
-| # | Objective | Complexity | Key Table Stakes | Key Differentiators | Anti-Feature to Avoid |
-|---|-----------|------------|------------------|---------------------|-----------------------|
-| 1 | Burst Visibility | **LOW** | Opacity/color intensity mapping per burst | Multi-channel encoding (opacity+size+color) | Continuous pulsing/glowing (visual fatigue) |
-| 2 | Temporal Evolution | **MEDIUM** | Jump-cut slice transitions, playback controls | Smooth KDE interpolation (opt-in), aging trails | Always-on smooth animation (obscures discrete boundaries) |
-| 3 | Spatial Orientation | **LOW-MEDIUM** | Map substrate, axis labels, constrained camera | Eagle-eye preset, animated camera transitions | Free-flying camera as default (disorientation) |
-| 4 | Cognitive Overload | **LOW-MEDIUM** | Height=time exclusively, 45° default, constrained orbit | Depth-based dimming, focus mode, 2D/3D toggle | VR headset, automatic rotation, multiple viewports |
-| 5 | Multi-Scale Temporal | **MEDIUM** | Overview+detail timeline, adjustable bin count | Zoom-linked 3D cube, dynamic aggregation windows, "zoom to burst" | Unlimited zoom to individual days (sparse/unusable) |
-| 6 | Workflow Support | **MEDIUM** | Default overview density, burst highlights, active slice context | Scan-mode density auto-legend, burst window map polygons, comparison presets | Fully automated pipeline (removes analyst judgment) |
-| 7 | Visual Consistency | **MEDIUM** | Same color palette across views, synchronized active highlight | Single color scale with shared domain, cross-view hover sync | Identical rendering in all views (different purposes) |
-| 8 | Dense Data Readability | **MEDIUM-HIGH** | Density-based point opacity, burst-emphasized color | Adaptive transparency per point, saliency map, LOD switching | Always show all 8.5M points (overplotting obscures patterns) |
-| 9 | Analytical Clarity | **LOW** | Jump-cut as default, minimal chrome, optional animations | Explainable encoding panel, "why this is a burst" tooltip, visual diff mode | Cinematic transitions (prevents rapid comparison) |
-| 10 | Usability Evaluation | **LOW-MEDIUM** | Consistent interactions, clear task paths, undo/redo | Task completion timing, interaction log, URL state sharing | Full analytics dashboard (privacy, maintenance overhead) |
+**Decision: Build custom experiment engine, do NOT adopt jsPsych.** Rationale: jsPsych has no SVG timeline plugin (we'd build one anyway), adds 200KB+ to the bundle, introduces a parallel framework with its own state management, and its server-side data saving pattern doesn't match Convex mutations. The existing React+Zustand+Visx stack provides equivalent trial lifecycle capabilities with full control over stimuli.
 
-**Critical dependency paths:**
-- **Obj 1 (Burst) + Obj 7 (Consistency) must be implemented together** — burst encoding inconsistent across views creates confusion, not clarity
-- **Obj 4 (Cognitive Overload) blocks all other 3D features** — if the 3D view is overwhelming, everything else is wasted
-- **Obj 9 (Analytical Clarity) is the governing design principle** — every feature decision must be evaluated against whether it enhances or degrades clarity
+### Architecture Approach
 
-**Key conflicts to manage:**
-- Burst emphasis vs. full data fidelity → toggle between modes
-- Smooth interpolation vs. analytical clarity → opt-in with "estimated" label
-- Cognitive overload reduction vs. rich 3D interaction → default constrained + explicit unlock
+**Self-contained standalone experiment** on the `ats-study` branch. Three layers:
 
----
+1. **Browser (Client):** SVG stimulus components (`src/components/stimulus/`) render event rug + allocation bands from ATS mapping lib (`src/lib/ats/`). Trial Runner store (`src/store/useExperimentStore.ts`) drives a formal finite state machine through consent → practice → block A → block B → questionnaire → debrief. ConvexClientProvider wraps the experiment layout.
 
-### From ARCHITECTURE.md
+2. **Convex Cloud (Backend):** `convex/schema.ts` defines `sessions`, `trialResponses`, `questionnaireResponses` tables with type-safe validators. `convex/responses.ts` provides `submitTrialResponse` mutation (idempotent via trial UUID) and `getSessionData` query. Zero server-side computation — all ATS mapping happens client-side on small datasets (~200-500 events per trial).
 
-**Current pipeline (dashboard-demo 3D):**
-- Canvas2D → texture → plane mesh — zero custom shaders or post-processing
-- KDE computed in main thread (`computeSliceKde()` in `Demo3dSpatialView`)
-- Sequential per-slice fetch
-- No camera sync between map and 3D
-- Multiple coordination stores (`useCoordinationStore` + `useDashboardDemoCoordinationStore` — can drift)
+3. **Vercel (Deployment):** Stripped Next.js build serving only `/experiment` route. No DuckDB, Three.js, MapLibre, deck.gl, Web Workers, or Apache Arrow. Bundle target: <500KB gzipped total JS.
 
-**Target pipeline:**
-- ShaderMaterial rendering (replaces Canvas2D CPU textures with GPU data textures)
-- KDE computation offloaded to worker (`kde.worker.ts` or extended existing worker)
-- Parallel per-slice fetch (Promise.all)
-- EffectComposer wrapping R3F Canvas with selective DepthOfField + Bloom
-- Unidirectional camera sync (Map → 3D) by default, bidirectional opt-in
-- Single coordination store for all interactive views
+**Key patterns:** Pure-function computation libs (testable without DOM), Zustand store with Convex integration (local state drives UI, Convex is fire-and-forget persistence), Server Component shell + Client Component internals (matches existing `/evaluation` pattern), fixed-seed reproducibility (24 datasets from 24 committed seeds with seeded PRNG).
 
-**New stores needed (4 total):**
+**Anti-patterns blocked:** Mixing prototype stores with experiment state, direct DuckDB imports, Web Workers for small-scale computation, server-side stimulus generation.
 
-| Store | Purpose | Phase |
-|-------|---------|-------|
-| `useCameraStore` | 3D camera presets, constraints, map sync state | Spatial Orientation |
-| `usePostProcessingStore` | DoF/Bloom toggle, intensity, effect presets | Post-Processing |
-| `useMultiScaleStore` | Aggregation resolution, bins, computing state | Multi-Scale |
-| `useVizAnimationStore` | Interpolation mode, trail decay, accumulated frames | Temporal Evolution |
+### Critical Pitfalls
 
-**Extended stores:**
-- `useDashboardDemoCoordinationStore` — add `burstAmplifyEnabled`, `burstAmplifyIntensity`, `temporalEvolutionMode`
-- `useDashboardDemoMapLayerStore` — add `cameraSync` mode
-- `useDashboardDemoAnalysisStore` — add `saliencyThreshold`, `saliencyEnabled`
+1. **Browser Navigation Corrupts Participant State** — Back button, refresh, or tab switch causes data loss. **Prevent:** Formal FSM with transition guards, `beforeunload` handler, `popstate` interception, `visibilitychange`-gated RT timing, sessionStorage checkpointing after every trial.
 
-**New components (~10):**
-- `src/shaders/burst-amplify.ts` — shared burst shader logic
-- `StkdeSliceStackExtended.tsx` — shader-based replacement for Canvas2D
-- `VizPostProcessing.tsx` — EffectComposer wrapper
-- `TemporalTrailLayer.tsx` — frame accumulation + interpolation
-- `CameraPresetsManager.tsx` — camera preset switcher
-- `ConstrainedCamera.tsx` — CameraControls with configurable bounds
-- `AxisHelper3D.tsx` — annotated 3D axes, grid, scale bar
-- `MultiScaleTimelineBand.tsx` — aggregation resolution band
-- `VizControlsPanel.tsx` — unified viz toggles
-- `src/lib/aggregation/multi-scale.ts` — worker-based multi-resolution aggregation
+2. **Convex Schema Doesn't Support Partial/Failed Trials** — Missing `status` field means abandoned trials are silently dropped or cause write failures. **Prevent:** `status` enum (`started`/`responded`/`completed`/`abandoned`/`timeout`), two-phase writes (stimulus onset first, response second), optional response fields, idempotent writes via trial UUID.
 
-**Components NOT modified:** `DemoSlicePanel`, `DemoDetectPanel`, `DemoStkdePanel`, `DemoStatsPanel`, `DemoTimelineSettingsCard`, `DashboardDemoRailTabs`, `MapStkdeHeatmapLayer` — these are already stable.
+3. **SVG Rendering Differs Across Browsers** — Event rug line weights and text metrics vary between Chrome/Firefox/Safari, creating a stimulus consistency confound. **Prevent:** Explicit `shape-rendering="crispEdges"`, `vector-effect="non-scaling-stroke"`, web font for all labels, Playwright screenshot verification across browsers (<1% pixel difference threshold).
 
-**Performance strategy:**
-- GPU work (free, no main thread impact): Shader-based burst amplification, post-processing (1-2 render targets), temporal trail accumulation
-- CPU work offloaded to workers: KDE per slice (new `kde.worker.ts`), multi-scale aggregation (new `aggregation.worker.ts`), burst scoring (already in `adaptiveTime.worker.ts`)
-- Optimization: only render effects when enabled, half-res bloom, debounce camera sync, dispose textures explicitly
+4. **Vercel Build Includes All 21 Prototype Routes + DuckDB** — 50+ MB deployment with 8-second cold starts. **Prevent:** Physically delete prototype routes from `ats-study` branch, strip ~35 heavy dependencies from `package.json`, ESLint import guard blocking `@/lib/db`/`@/lib/queries` in experiment code, bundle analysis gate before deploy.
 
----
-
-### From PITFALLS.md
-
-**Top 7 critical pitfalls with prevention strategies:**
-
-| # | Pitfall | Phase to Address | Prevention Strategy |
-|---|---------|------------------|---------------------|
-| 1 | **GPU memory saturation** — 8.5M InstancedMesh spheres at ~3.3 GB VRAM, no LOD, `frustumCulled={false}` | Phase 1 | Implement true geometry LOD (`drei <Detailed>`), downsample distant data, texture lifecycle discipline, VRAM budget tracking |
-| 2 | **Draw-call explosion** — N slices × (SlicePlane + SliceCrimePoints + BurstEvolution lines) = 50+ draw calls | Phase 1 | Merge static geometry (`BufferGeometryUtils`), reuse materials across slices, eliminate redundant `SliceCrimePoints`, batch lines into `<lineSegments>` |
-| 3 | **Shader compilation stalls** — `onBeforeCompile` with template literals (`${typeMapSize}`) invalidates WebGL program cache on every filter change, causing 100-500ms hitches | Phase 1 | Eliminate dynamic shader patching (hard-code fixed sizes), batch uniform updates into single `useFrame`, add `customProgramCacheKey`, pre-warm shaders on load |
-| 4 | **MapLibre + R3F double rendering** — both renderers use WebGL simultaneously in map mode, halving effective GPU budget | Phase 2 (Temporal) | Fully unmount inactive renderer (not just CSS hide), investigate single GL context via MapLibre custom layer API, reduce R3F resolution when overlaying |
-| 5 | **Camera disorientation** — no axis labels, grid, or basemap in 3D; free rotation disorients users; coordinate system shifts between map (lng/lat) and 3D (normalized) | Phase 3 (Orientation) | Constrain polar angle (~π/4 from horizontal), persistent basemap plane at Y=0, axis helpers with `drei <Text>`, north-up lock toggle, eagle-eye minimap |
-| 6 | **Occlusion-driven information loss** — points in dense areas hide 60-80% behind visible layers; user sees empty space where data exists | Phase 4 (Readability) | Adaptive transparency based on local density, depth-peel for inspect mode, screen-space density overlay when zoomed out, auto-hide non-slice points in inspection |
-| 7 | **Animation interpolation jitter** — `useFrame` runs at 60fps but React state updates (filter/slice changes) re-render mid-animation, causing discontinuous GPU uniform values | Phase 2 (Temporal) | Store animation state in React refs (not Zustand/React state), use stable IDs for Three.js objects, batch store reads at frame start via `getState()`, constant-time lerp instead of asymptotic `damp` |
-
-**Cross-cutting pattern:** Pitfalls 1, 2, 3, 8 (cross-store sync), and 9 (worker overcontribution) all need to be addressed in Phase 1 before any new visualization features are added. The existing architecture has accumulated technical debt (dual coordination stores, `frustumCulled={false}`, dynamic shader patching, main-thread `computeMaps`) that will cause compound failures if new features are layered on top.
-
-**"Looks Done But Isn't" checklist items that must be verified:**
-- [ ] LOD system: dither ≠ true LOD — points still cost vertex transform
-- [ ] VRAM cleanup: heatmap FBO, aggregation geometry, per-slice textures are not disposed
-- [ ] R3F Canvas unmount: switching view modes hides Canvas but doesn't release WebGL context
-- [ ] Shader recompilation guard: no `customProgramCacheKey` exists
-- [ ] Cross-store consistency: dual coordination stores can drift independently
-- [ ] Worker result transfer: `Float32Array` is copied, not transferred (68MB per call at 8.5M records)
-- [ ] Animation completion callback: `MathUtils.damp` never signals "done"
-- [ ] State serialization: no way to capture/replay visualization state
-- [ ] Reset-to-baseline: only resets camera, not filters or params
-- [ ] Map ↔ 3D sync: no coordinate transformation when switching views
-
----
+5. **RT Measurement Uses Inaccurate Clock Source** — `Date.now()` has ±5ms precision and includes tab-switch time, poisoning RT data. **Prevent:** `performance.now()` exclusively for RT, visibility-gated pause accumulator, hardware timer calibration at experiment boot, RT sanity bounds (flag <100ms anticipatory, >10,000ms inattention).
 
 ## Implications for Roadmap
 
-### Recommended Build Order: 6 Phases
+Based on combined architecture dependency chains and pitfall prevention requirements, the suggested phase structure is:
 
-The following phase order reconciles dependency analysis from FEATURES.md (feature dependencies), ARCHITECTURE.md (component/module dependencies), and PITFALLS.md (technical debt prevention). Each phase has a clear rationale, deliverable, and pitfall avoidance strategy.
+### Phase 1: Infrastructure & Core Logic
 
-#### Phase 0: Shader Infrastructure & Architecture Cleanup
-*Foundation — prerequisites for all GPU work*
+**Rationale:** Convex backend and stimulus data pipeline are prerequisite for all downstream work. Counterbalancing design and schema must be locked before any trial UI is built. This phase unblocks both stimulus rendering (needs data) and trial runner (needs Convex).
 
-**Rationale:** Every subsequent phase depends on having the shader pipeline, worker infrastructure, and clean store architecture in place. Attempting burst visibility or post-processing without fixing the existing pitfalls will compound technical debt.
+**Delivers:**
+- `ats-study` branch created, prototype routes & dependencies stripped
+- Convex installed, `convex/schema.ts` defined with partial-trial support
+- Convex mutations: `startSession`, `submitTrialResponse`, `completeSession`
+- `ConvexClientProvider` wired into root layout
+- `NEXT_PUBLIC_CONVEX_URL` env var configured
+- ATS mapping types (`src/lib/ats/types.ts`) and pure functions (`src/lib/ats/mapper.ts`)
+- 24 seeded synthetic datasets generated from `src/lib/synthetic/goh-barabasi.ts`
+- Counterbalancing assignment matrix (Latin square), committed as JSON, validated in CI
+- Unit tests for mapper, dataset generator, and assignment balance
 
-**What it delivers:**
-- Install all 6 new dependencies (`@react-three/postprocessing`, `deck.gl` + aggregation-layers + mapbox, `GSAP`)
-- Create `src/shaders/` directory with shared `burst-amplify.ts` GLSL fragments/uniforms
-- Consolidate dual coordination stores into single `useDashboardDemoCoordinationStore`
-- Eliminate dynamic `onBeforeCompile` shader patching — replace with stable uniforms
-- Enable `frustumCulled` on DataPoints and verify culling works
-- Offload `computeMaps` to Web Worker with transferable result buffers
-- Consolidate 10+ individual `useEffect` uniform updates into single `useFrame` batch
-- Add VRAM tracking overlay (dev-only)
-- Set up `kde.worker.ts` for parallel KDE computation
+**Addresses pitfalls:** #2 (Convex schema → partial trials), #5 (Counterbalancing → Latin square), #10 (Convex sync → idempotent writes)
 
-**Pitfalls avoided:** #1 (GPU memory), #2 (draw-call explosion), #3 (shader stalls), #8 (cross-store deadlock), #9 (worker overcontribution)
+**Research flag:** Standard patterns — Convex schema and mutation patterns are well-documented. Skip `/gsd research-phase`.
 
-**Research flag:** Phase 0 is routine (standard R3F/deck.gl/GSAP installation patterns). No need for `/gsd/research-phase`. Confidence: HIGH.
+### Phase 2: Stimulus Rendering & RT Measurement
 
----
+**Rationale:** The stimulus is the independent variable. Cross-browser consistency and RT accuracy must be verified before any trial flow is built — otherwise you're building the trial runner on an unvalidated stimulus foundation.
 
-#### Phase 1: Spatial Orientation & Cognitive Foundation
-*Quick wins with high visual impact*
+**Delivers:**
+- SVG `EventRug` component (tick marks on time axis)
+- SVG `AllocationBands` component (per-interval weight visualization)
+- Composite `StimulusView` (rug + bands + labels for Uniform and ATS conditions)
+- `@visx/tooltip`, `@visx/text`, `@visx/annotation` installed and integrated
+- RT measurement infrastructure: `performance.now()` onset capture, visibility-gated pause accumulator
+- 500ms fixation cross stimulus onset guard
+- Cross-browser screenshot verification (Playwright, <1% pixel difference)
+- Stimulus container responsive to viewport with explicit rendering properties
 
-**Rationale:** Spatial orientation (Obj 3) and cognitive overload reduction (Obj 4) are the minimum viable conditions for 3D analysis. If users are disoriented or overwhelmed, no amount of burst highlighting or temporal animation will help. These also have LOW-MEDIUM complexity with no shader dependencies beyond Phase 0.
+**Addresses pitfalls:** #3 (SVG cross-browser → explicit rendering props + Playwright verification), #7 (RT timing → `performance.now()` + visibility gating)
 
-**What it delivers:**
-- `useCameraStore` with presets, constraints, map sync state
-- `ConstrainedCamera` wrapper with configurable polar/dist bounds (default: π/4 from horizontal)
-- `CameraPresetsManager` with eagle-eye, 45° iso, side-view presets
-- `AxisHelper3D` with N/S/E/W labels and geo-referenced ground grid
-- Port `MapTileSource` pattern from STC-3D scene to main Scene for basemap substrate
-- `usePostProcessingStore` (created but not wired to effects yet)
-- Focus mode (active slice pops, others dim to 15-20%)
-- Depth-based slice dimming (distance-based opacity modulation)
-- 2D/3D toggle preserving active slice state
-- Driver.js onboarding tour covering STC mental model
+**Research flag:** Needs research — SVG cross-browser consistency for data visualization stimuli is under-documented. Consider `/gsd research-phase` for Playwright visual regression setup.
 
-**Features delivered:** Obj 3 (all table stakes + eagle-eye preset + animated transitions + axis helpers + ground grid), Obj 4 (focus mode, depth-based dimming, 2D/3D toggle, onboarding), Obj 9 (minimal chrome enforcement)
+### Phase 3: Experiment Flow & Trial Engine
 
-**Pitfalls avoided:** #5 (camera disorientation)
+**Rationale:** This is the core participant experience. It depends on stimulus rendering (Phase 2) and Convex persistence (Phase 1). The formal state machine must be built before any trial UI to prevent the invalid-transition pitfall.
 
-**Research flag:** Standard patterns (CameraControls configuration, drei helpers, MapLibre texture capture). Confidence: HIGH.
+**Delivers:**
+- `useExperimentStore` — Zustand store with formal FSM (XState-like transition table)
+- ExperimentShell component (Server Component shell pattern)
+- Welcome screen with consent flow (consent recorded before any data collection)
+- Instructions screen with "I understand" acknowledge
+- Practice trial flow with correct/incorrect feedback overlay
+- Experiment trial flow: stimulus → MCQ response → confidence slider → advance
+- Block transition screen ("Block A complete — short break before Block B")
+- Post-study questionnaire (NASA-RTLX + interpretability Likert items)
+- Progress bar (Trial X of 12 per block, block label)
+- Debriefing screen with condition revelation, study purpose, "Withdraw My Data" option
+- Browser navigation guards: `beforeunload`, `popstate`, `visibilitychange` pause
+- sessionStorage checkpointing after every trial completion
+- Convex WAL (write-ahead log) in sessionStorage for crash recovery
+- Convex transition event logging for audit trail
 
----
+**Addresses pitfalls:** #1 (Browser nav → FSM + guards + checkpointing), #6 (Anonymity → consent flow + data minimization), #8 (State machine → formal FSM with transition table)
 
-#### Phase 2: Burst Visibility & Visual Consistency
-*Core analytical encoding*
+**Research flag:** Needs research — formal state machine patterns for web experiments (XState vs hand-rolled FSM). Consider `/gsd research-phase` for state machine library evaluation.
 
-**Rationale:** Burst visibility (Obj 1) is the primary analytical encoding — everything else enhances it. Visual consistency (Obj 7) must be implemented alongside it because inconsistent burst encoding across views creates confusion. Phase 0's shader infrastructure and Phase 1's spatial stability make this feasible and interpretable.
+### Phase 4: Deployment, Route Stripping & Pilot
 
-**What it delivers:**
-- `StkdeSliceStackExtended` — shader-based KDE rendering replacing Canvas2D (GPU data textures instead of CPU textures)
-- Custom `ShaderMaterial` with `uBurstScore`, `uBurstClass`, `uActiveIntensity` uniforms
-- Burst-score-to-opacity mapping in 3D cube
-- Burst-score-to-color-intensity mapping on map heatmap
-- Unified color scale with shared domain across map, cube, timeline
-- Shared legend component
-- SelectiveBloom from postprocessing for burst-highlighted meshes (`luminanceThreshold` + `selection` prop)
-- Animated burst pulse on slice change (one-shot, not continuous)
-- Toggle between "raw density" and "burst-emphasized" view
-- Visual legend showing burst intensity scale
+**Rationale:** Everything built in Phases 1-3 must be deployed as a clean, stripped bundle to Vercel. The import guard and bundle analysis gate must catch any prototype leakage before participants access the deployed URL.
 
-**Features delivered:** Obj 1 (all table stakes + multi-channel encoding + animated burst pulse), Obj 7 (unified color scale, shared legend, synchronized animation states, consistent opacity encoding)
+**Delivers:**
+- Physical route stripping: delete all prototype page directories from `src/app/`
+- Dependency removal: `pnpm remove duckdb apache-arrow three deck.gl maplibre-gl leaflet density-clustering patch-package` and ~25 others
+- `next.config.ts` cleaned (remove `serverExternalPackages`)
+- `package.json` cleaned (remove `postinstall` DuckDB symlink)
+- ESLint import guard: block `@/lib/db`, `@/lib/study/storage`, `@/lib/queries` in experiment code
+- Bundle analysis gate: total JS <500KB gzipped, no Three.js/MapLibre/DuckDB chunks
+- Vercel deployment configured with `NEXT_PUBLIC_CONVEX_URL` env var
+- Convex production deployment (`npx convex deploy`)
+- Landing page (`/`) modified to redirect to `/experiment`
+- Data export (CSV/JSON download) button on Done screen
+- Desktop browser check (≥1024px, modern browser)
+- Pilot verification: N=2-3 internal testers complete full 24-trial run
+- "Looks Done But Isn't" checklist: all 14 items verified
 
-**Dependencies:** This is the phase where KDE computation must be fully worker-offloaded (from Phase 0). Each slice's KDE grid feeds the shader — if KDE is still on main thread, 15+ slices × 2-5ms = 30-75ms blocked UI.
+**Addresses pitfalls:** #4 (Vercel build size → route stripping + bundle gate), #9 (Import leaks → ESLint guard + bundle analysis verification)
 
-**Pitfalls avoided:** #6 (occlusion — partial, via burst-emphasized visibility)
+**Research flag:** Standard patterns — Vercel + Next.js deployment is well-documented. Skip `/gsd research-phase`.
 
-**Research flag:** ShaderMaterial with data textures is well-documented (Three.js + R3F docs). SelectiveBloom integration needs care around render layers (exclude map tile plane). Confidence: HIGH. However, the kernel-size-scaling differentiator (tie bandwidth to burstScore) touches `src/lib/kde.ts` — this may need a focused research pass on KDE parameter modulation.
+### Phase Ordering Rationale
 
----
+- **Infrastructure before UI:** Convex and stimulus data are prerequisites. Phase 1 must complete before any stimulus rendering or trial UI.
+- **Stimulus before flow:** Cross-browser consistency must be verified (Phase 2) before building the trial runner that displays stimuli (Phase 3). You can't validate the experiment if the stimulus itself varies by browser.
+- **Flow before deployment:** All participant-facing code (Phase 3) must be complete before optimizing for deployment (Phase 4). Bundle stripping decisions depend on knowing exactly what imports exist.
+- **Counterbalancing in Phase 1, not Phase 3:** The assignment matrix must be designed alongside the schema and validated before any trial logic references it. Pitfall #5 shows that late counterbalancing fixes require re-recruiting participants.
+- **Pitfalls drive phase content more than feature groupings:** Each phase explicitly addresses 2-3 critical pitfalls. This ensures prevention is built in, not retrofitted.
 
-#### Phase 3: Temporal Evolution & Post-Processing
-*Animation and depth effects*
+### Alternative: Combined Phase Approach
 
-**Rationale:** Temporal evolution (Obj 2) and post-processing effects (Obj 7) depend on the stable shader pipeline from Phase 0 and the burst rendering from Phase 2. EffectComposer wraps the existing scene — it must come after burst shaders are verified. Temporal evolution needs the animation architecture (ref-based, not React state) documented in Pitfall #7.
+If the team is small (1 developer), Phases 2+3 could merge into a single "Experiment Shell" phase since stimulus rendering and trial flow are tightly coupled. **Risk:** Merging increases the chance of building the trial runner on unvalidated stimuli (Pitfall #3) and delaying cross-browser verification until after flow is built. **Recommendation:** Keep separate unless timeline pressure forces consolidation. The validation gates (Playwright screenshots, RT calibration) are too important to defer.
 
-**What it delivers:**
-- `VizPostProcessing` — EffectComposer wrapping Canvas with DepthOfField + Bloom
-- DepthOfField focused on active slice Y position (bokehScale configurable, 0 = disabled)
-- Bloom on burst-highlighted meshes (selective, via `selectionLayer`)
-- GSAP integration for camera fly-throughs and slice transitions
-- `TemporalTrailLayer` — aging trails on map (fixed-radius echo with opacity ∝ recency)
-- Temporal accumulation overlay (semi-transparent prior-slice compositing)
-- Smooth interpolation between KDE surfaces (CPU first, GPU optimization optional)
-- Animation policy: ≤200ms for analytical state changes, ease-out for analysis, ease-in-out for orientation
-- Animation architecture: store targets in refs, interpolate in useFrame, no React round-trips
+### Research Flags
 
-**Features delivered:** Obj 2 (aging trails, temporal accumulation, smooth interpolation, blob size animation), plus post-processing polish across all views
+**Phases likely needing `/gsd research-phase` during planning:**
+- **Phase 2 (Stimulus Rendering):** SVG cross-browser consistency for data visualization stimuli is under-documented. Playwright visual regression setup, `shape-rendering` property behavior across engines, and canvas fallback evaluation need deeper research.
+- **Phase 3 (Experiment Flow):** Formal state machine library choice (XState vs hand-rolled FSM) for web experiments. XState is feature-complete but adds ~12KB; hand-rolled FSM is lighter but harder to audit. This tradeoff needs evaluation.
 
-**Dependencies:** Requires Phase 2 shader pipeline. The MapTileSource plane must render before EffectComposer (use `renderOrder` or `selectionLayer` to exclude from post-processing).
-
-**Pitfalls avoided:** #4 (double rendering — ensure Canvas unmounts when hidden), #7 (animation jitter), #12 (over-animated transitions)
-
-**Research flag:** EffectComposer with R3F is standard. GSAP + Three.js ref animation is straightforward. The KDE surface interpolation (vertex morphing between consecutive KDE grids) is less documented — this may need a focused `/gsd/research-phase` for the interpolation shader approach. Confidence: MEDIUM for interpolation component.
-
----
-
-#### Phase 4: Multi-Scale Temporal & Workflow Support
-*Navigation and process scaffolding*
-
-**Rationale:** Multi-scale temporal inspection (Obj 5) and workflow support (Obj 6) are the highest-level features — they depend on stable visual encoding from Phases 1-3 working correctly. The zoom-linked 3D cube update needs the camera store (Phase 1) and slice rendering (Phase 2) to be stable. Workflow presets need all visual modes to exist.
-
-**What it delivers:**
-- `useMultiScaleStore` with resolution/aggregation state
-- `aggregation.worker.ts` for multi-resolution temporal binning
-- `MultiScaleTimelineBand` — additional timeline track showing aggregated bins
-- Zoom-linked 3D cube update (timeline zoom controls which slices appear)
-- Dynamic aggregation window (auto-suggest daily/weekly/monthly based on zoom level)
-- Temporal resolution indicator
-- "Zoom to burst" action (double-click burst window → zoom detail)
-- Scan-mode density layer with auto-legend (dedicated rendering mode)
-- Detect-mode burst window polygons on map
-- Inspect-mode comparison presets (side-by-side, overlay, swipe)
-- Workflow state machine with guided transitions ("You detected 3 bursts — review them?")
-- "Hotspot → slice → inspect" jump (click hotspot → generate slice → auto-navigate)
-
-**Features delivered:** Obj 5 (all table stakes + zoom-linked cube + dynamic aggregation + zoom-to-burst), Obj 6 (all table stakes + all differentiators)
-
-**Dependencies:** Requires stable timeline (from Phase 1-2), burst rendering (Phase 2), camera presets (Phase 1). The multi-scale worker is new but follows established pattern.
-
-**Pitfalls avoided:** N/A directly — this phase primarily adds features on top of stable infrastructure from previous phases.
-
-**Research flag:** Comparison presets (side-by-side/overlay/swipe) have established patterns in geovisualization literature but less in R3F — may need `/gsd/research-phase`. Burst window map polygons (time-bounded spatial overlays) are novel and may need design iteration. Confidence: MEDIUM for comparison presets, HIGH for remaining items.
-
----
-
-#### Phase 5: Dense Data Readability
-*Polish and edge-case handling*
-
-**Rationale:** Dense data readability (Obj 8) depends on the shader infrastructure from Phase 0 and the burst visibility pipeline from Phase 2 — it extends the same shader with adaptive transparency and saliency uniforms. This is pure polish that makes the system work at scale but has no new dependencies on Phases 3 or 4.
-
-**What it delivers:**
-- Adaptive transparency per point (inverse local density → opacity) — extends `burst-amplify.ts` with saliency uniforms
-- Burst-emphasized rendering mode (non-burst regions desaturated/transparent)
-- Saliency map overlay (burst score × density anomaly)
-- Dynamic filtering sliders (density threshold, burst threshold, transparency)
-- Level-of-detail switching (points → KDE surface → abstract markers based on zoom)
-- `SliceCrimePoints` removal — replaced by shader-based slice highlighting via `uSliceRanges`
-
-**Features delivered:** Obj 8 (all table stakes + all differentiators)
-
-**Dependencies:** Extends Phase 0 shader infrastructure and Phase 2 burst pipeline. No dependency on Phases 3-4.
-
-**Pitfalls avoided:** #6 (occlusion-driven information loss — fully addressed via adaptive transparency + depth-peel)
-
-**Research flag:** Per-point adaptive transparency (KDE value at point location) requires per-point density estimation. This can be GPU-based (deck.gl approach) or CPU-based (worker). The GPU approach is already in stack via deck.gl HeatmapLayer. This is well-documented. Confidence: HIGH.
-
----
-
-#### Phase 6: Evaluation Readiness
-*Measurement and hardening*
-
-**Rationale:** Usability evaluation (Obj 10) is the meta-objective that measures whether Phases 0-5 are working. It only makes sense once the visualization is stable. All features from Obj 10 are additive on top of existing infrastructure.
-
-**What it delivers:**
-- Interaction logging via existing LoggerService (capture all user actions)
-- Task completion time tracking
-- Visualization state serialization (all 20+ parameters → URL hash/query string)
-- State replay in dev mode (Ctrl+Shift+E copies current state URL)
-- Undo/redo for slice operations (history stack in slice domain store)
-- Session state persistence (Zustand + localStorage)
-- Evaluation parameter lock (known defaults, log all adjustments)
-- Reset-to-baseline (one-click: camera + filters + params + slices)
-- Interaction trace logger (dev-mode)
-- Insight annotation export (PDF/CSV summary)
-
-**Features delivered:** Obj 10 (all table stakes + all differentiators)
-
-**Dependencies:** Requires all visualization features from Phases 0-5 to be stable. Undo/redo needs slice store immutability patterns.
-
-**Pitfalls avoided:** #10 (inconsistent interactions — verify single coordination store), #11 (hidden visualization states — state serialization)
-
-**Research flag:** Standard patterns (Zustand persistence, URL state, interaction logging). Confidence: HIGH.
-
----
+**Phases with well-documented standard patterns (skip research-phase):**
+- **Phase 1 (Infrastructure):** Convex schema, mutations, and Next.js integration are well-documented via Context7. Zustand store patterns are proven in the existing codebase.
+- **Phase 4 (Deployment):** Vercel + Next.js deployment, bundle analysis, and route stripping are standard patterns. The existing project already deploys to Vercel.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack additions** | **HIGH** | All 3 additions verified via Context7 + npm registry + version compatibility matrix against existing stack. |
-| **Feature landscape** | **HIGH** | Based on codebase analysis of 90+ components + established visualization HCI principles (Tufte, Ware, Andrienko). Implementation complexity estimates verified against existing patterns. |
-| **Architecture changes** | **HIGH** | Derived from existing codebase analysis + Context7-verified R3F post-processing and deck.gl APIs. Component boundaries, store designs, and data flows are concrete. |
-| **Pitfalls** | **HIGH** | All 12 pitfalls reverse-engineered from existing codebase (DataPoints, ghosting shader, MainScene, stores, workers). Prevention strategies reference specific files and patterns. **This is the strongest section of the research.** |
-| **Overall** | **HIGH** | No critical gaps. The existing codebase is well-structured, and the additions use established, well-documented libraries. |
+| Stack | **HIGH** | All version numbers verified via npm registry and Context7. Existing @visx packages confirmed at 3.12.0. Convex client at 1.42.1 confirmed installable and compatible with Next.js 16.2.9 + React 19.2.7. Anti-recommendations cross-referenced against codebase. |
+| Features | **HIGH** | Requirements locked from PROJECT.md (EXP-01 through EXP-08). Feature landscape validated against jsPsych v8 documentation (official API) and existing Phase 80 evaluation infrastructure. Custom engine decision backed by 5-point rationale against jsPsych adoption. |
+| Architecture | **HIGH** | Codebase analyzed for integration points (root layout, existing stores, synthetic generator). Convex integration pattern verified via Context7 (ConvexProvider, useMutation/useQuery). Route stripping strategy informed by directory listing of all 21 prototype routes. Build order validated against actual dependency chains. |
+| Pitfalls | **HIGH** | Top 10 pitfalls sourced from MDN (Page Visibility API, History API, High Resolution Time — all W3C specs), Convex official docs (schema validation, mutation semantics), Next.js docs (output tracing, external packages), and existing codebase analysis. Recovery strategies defined for each pitfall. "Looks Done But Isn't" checklist provides 14 measurable verification gates. |
+
+**Overall confidence:** **HIGH** — All findings verified against official documentation (MDN, Convex, Next.js), npm registry, and direct codebase inspection. No inferences from community blog posts or Stack Overflow.
 
 ### Gaps to Address
 
-1. **KDE kernel-size scaling (Obj 1 differentiator):** Tying bandwidth parameter to `burstScore` requires modifying `src/lib/kde.ts`. The current KDE uses a fixed bandwidth. Research into adaptive KDE bandwidth modulation is needed during implementation.
+- **Convex project provisioning:** The research assumes a Convex project will be created via `npx convex init`. If the prototype already has a Convex project (no `convex/` directory found in codebase), a new project must be provisioned. This is a 5-minute setup task, not a research gap.
+- **@visx/annotation optionality:** The annotation package may not be needed if the timeline stimuli are self-explanatory without callout markers. Defer final decision to Phase 2 design review.
+- **Canvas fallback for SVG inconsistency:** If cross-browser SVG verification fails in Phase 2, a canvas-2D fallback may be needed. This is a risk mitigation path, not a gap — the architecture already notes this as Pitfall #3's final prevention strategy.
+- **University ethics committee requirements:** The research references GDPR and general research ethics principles. The specific university ethics committee may have additional requirements (data retention period, consent form wording, debriefing content). Verify with the institution before Phase 1 implementation.
+- **Convex free tier limits:** At N>200 participants, Convex free tier may be exceeded (~48K writes for 200 participants). The scalability analysis in ARCHITECTURE.md already notes this; no research gap, just a monitoring trigger.
 
-2. **Smooth KDE surface interpolation (Obj 2 differentiator):** Morphing between consecutive KDE grids via vertex interpolation has established GPU patterns but little React/Three.js documentation. May need a focused research pass.
+## Sources
 
-3. **Comparison presets rendering (Obj 6 differentiator):** Side-by-side/overlay/swipe comparison modes for slices have established Geovisualization patterns but no direct R3F precedent. Design iteration expected.
+### Primary (HIGH confidence — official documentation)
+- **Context7 `/websites/convex_dev`** — Convex client v1.42.1, ConvexProvider setup, useMutation/useQuery hooks, schema definition with defineTable/v.union/v.optional, idempotent writes via ctx.db.replace, Next.js App Router integration pattern
+- **Context7 `/airbnb/visx` v3.12.0** — @visx/tooltip (useTooltip hook, TooltipWithBounds), @visx/text (verticalAnchor, textAnchor), @visx/annotation (connector + label components), @visx/xychart (evaluated, rejected)
+- **MDN Web Docs** — Page Visibility API (visibilityState, visibilitychange), History API (pushState, popstate, beforeunload), High Resolution Time (performance.now() spec), requestAnimationFrame throttling
+- **jsPsych v8 Official Documentation** (jspsych.org/v8) — Experiment lifecycle patterns, trial timeline structure, RT measurement approach, counterbalancing methods, Likert survey plugin API
+- **npm registry** (via `npm view`) — All version numbers verified: convex@1.42.1, @visx/tooltip@3.12.0, @visx/text@3.12.0, @visx/annotation@3.12.0, nanoid@5.1.16 (evaluated, rejected)
 
-4. **Burst window map polygons (Obj 6 differentiator):** Converting temporal burst windows to spatial overlay elements is a novel visualization — no existing pattern in the codebase.
+### Secondary (HIGH confidence — codebase analysis)
+- **PROJECT.md v4.0 ATS Perception Study** — Milestone scope, 8 experiment requirements (EXP-01 through EXP-08), Convex-only backend decision, dedicated ats-study branch decision
+- **Codebase inspection** — `package.json` (dependency versions), `src/store/useStudyStore.ts` (existing crypto.randomUUID() usage), `src/store/useEvaluationStudyStore.ts` (Phase 80 study infrastructure patterns), `src/app/evaluation/` (existing study route pattern), `src/lib/study/protocol.ts` + `condition-order.ts` (protocol type patterns), `src/lib/synthetic/goh-barabasi.ts` (event generator for stimuli), `next.config.ts` (current config for strip targets), `src/app/` directory listing (21 prototype routes to strip)
+- **Existing research files** — `.planning/research/STACK.md` (stack additions verified), `.planning/research/FEATURES.md` (feature landscape validated against jsPsych), `.planning/research/ARCHITECTURE.md` (build order validated), `.planning/research/PITFALLS.md` (10 pitfalls with prevention strategies)
 
-5. **VRAM budget without real data testing:** Pitfall #1 estimates ~3.3 GB for the full 8.5M dataset, but actual GPU behavior depends on specific hardware, driver, and rendering configuration. VRAM tracking overlay is essential during development for real-world validation.
-
-### Sources
-
-**Primary (HIGH confidence — Context7 verified or codebase analysis):**
-- `/pmndrs/react-postprocessing` — Bloom, SelectiveBloom, EffectComposer API
-- `/pmndrs/react-three-fiber` (v9+) — useFrame, Canvas props, performance options
-- `/pmndrs/drei` — Instances, CameraControls, Stats, PerformanceMonitor, AdaptiveDpr
-- `/mrdoob/three.js` (r182+) — ShaderMaterial, InstancedMesh, BufferGeometry
-- `/visgl/deck.gl` — HeatmapLayer GPU KDE, MapboxOverlay integration
-- `/maplibre/maplibre-gl-js` — heatmap layer, custom layers, setData/setFilter
-- Existing codebase analysis: 90+ component files, store definitions, API routes, workers
-- `.planning/research/STACK.md` — version-verified stack additions
-- `.planning/research/FEATURES.md` — feature landscape across 10 objectives
-- `.planning/research/ARCHITECTURE.md` — component boundaries, data flows, store designs
-- `.planning/research/PITFALLS.md` — 12 reverse-engineered pitfalls with prevention strategies
-
-**Secondary (MEDIUM confidence — official docs fetched):**
-- GSAP documentation (gsap.com/docs) — timeline/tween API
-- @react-spring/three docs — React 18-only compatibility verified
-- deck.gl v9 documentation — HeatmapLayer GPU aggregation
-- Zustand performance patterns (pmndrs) — selector subscriptions, getState()
-
-**All critical findings verified against primary sources. No tertiary (unverified) sources were needed.**
+### Tertiary (MEDIUM confidence — community practice)
+- **Web Experiment Methodology (synthesized)** — Patterns for beforeunload guards, visibility-gated timing, Latin square counterbalancing, sessionStorage checkpointing, write-ahead logging for unreliable networks. Synthesized from common practice in jsPsych, PsychoJS, and lab.js ecosystems. Not verified against a single authoritative source; represents community consensus rather than spec-mandated behavior.
 
 ---
 
-*Visualization level-up research synthesized for: Adaptive Space-Time Cube Prototype*
-*Researched: 2026-05-26*
-*Sources: STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md — all HIGH confidence*
-*Ready for: Roadmap creation*
+*Research completed: 2026-06-30*
+*Ready for roadmap: yes*
+*Next: Roadmap creation via `/gsd roadmap` or equivalent milestone planning*

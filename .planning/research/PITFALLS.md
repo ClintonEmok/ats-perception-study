@@ -1,358 +1,351 @@
-# Pitfalls Research — Visualization Level-Up
+# Pitfalls Research — ATS Perception Study (v4.0)
 
-**Domain:** Three.js/R3F spatiotemporal crime visualization overlaying MapLibre
-**Researched:** 2026-05-26
+**Domain:** Web-based within-subjects perception experiment on brownfield Next.js 16 application
+**Researched:** 2026-06-30
 **Confidence:** HIGH
-**Context:** Adding burst visibility, temporal evolution, spatial orientation, multi-scale inspection, and dense-data readability to an existing 8.5M-record crime analysis app (Next.js 16, DuckDB, Zustand, Web Workers, custom shaders).
+**Context:** Adding a controlled ATS vs Uniform timeline perception study (24 trials, 3 task types, SVG stimuli, Convex backend) to an existing 21-route Next.js prototype with DuckDB, Three.js, and MapLibre. The study runs on a dedicated `ats-study` branch with Convex-only backend and deploys to Vercel for remote participants.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: GPU Memory Saturation from Instanced Point Geometry
+### Pitfall 1: Browser Navigation Corrupts Participant State
 
 **What goes wrong:**
-The app renders 8.5M+ crime records as individual `InstancedMesh` spheres (0.5-unit radius, 8×8 segments). Each sphere is ~384 bytes of vertex data (24 vertices × 16 bytes). At 8.5M records, this is ~3.3 GB of GPU geometry data before instancing overhead, textures, uniforms, and the heatmap FBO. On a typical GPU with 4–6 GB VRAM, this leaves almost no headroom for the MapLibre texture, post-processing, or the heatmap render target.
+A participant presses the browser back button during a trial, refreshes the page, or switches tabs. When they return, the experiment either restarts from the beginning (losing all prior trial data), shows a broken state (half-rendered stimulus with no response UI), or — worst case — silently continues collecting RT data while the participant is in another tab, producing spurious 30-second reaction times that poison the dataset.
 
 **Why it happens:**
-- Each crime record becomes a persistent 3D sphere in the instanced mesh; developers naturally assume instancing is "free" but instance count still drives vertex shader invocation cost
-- The `frustumCulled={false}` setting on `DataPoints` forces the GPU to process all 8.5M instances every frame regardless of visibility
-- Columnar data mode keeps ALL points loaded; there is no LOD mechanism that reduces geometry for distant/zoomed-out views
-- The shader's LOD dithering (`uLodFactor`) only affects fragment discard, not vertex processing — the GPU still transforms every instance's 24 vertices per frame
+- Next.js App Router uses client-side navigation by default — `popstate` events fire on browser back/forward but the experiment state machine (typically a React state machine or Zustand store) lives in-memory and is lost on hard navigation
+- `requestAnimationFrame` stops firing in background tabs (browser throttling of hidden documents per the Page Visibility API), but `performance.now()` continues to advance — if the experiment timer uses wall-clock time rather than visibility-gated time, RT measurements become invalid
+- The History API (`pushState`/`replaceState`) is designed for SPAs to synthesize history entries, but most experiment implementations don't intercept `popstate` or `beforeunload`
+- Browser tab throttling: `setTimeout`/`setInterval` are throttled to ≤1Hz in background tabs after 30 seconds; RAF stops entirely per MDN spec
+
+**How to avoid:**
+1. **Visibility-gated timing**: Use `document.addEventListener('visibilitychange', ...)` to pause the trial timer when `document.visibilityState === 'hidden'`. Record `visibilityHiddenDuration` per trial as a data quality flag. Never use `Date.now()` for RT — use `performance.now()` only during `visibilityState === 'visible'` periods.
+2. **beforeunload guard**: Add a `beforeunload` event listener that warns participants they'll lose progress. Set `event.returnValue = 'Your progress will be lost.'` (browsers show a generic dialog; the custom message is ignored by modern browsers, but the dialog itself prevents accidental navigation).
+3. **popstate interception**: Use `history.pushState(null, '', window.location.href)` on experiment entry, then listen for `popstate` to show a confirmation dialog rather than allowing back-navigation to leave the experiment silently.
+4. **SessionStorage checkpointing**: Persist the experiment state machine position (current trial index, condition assignment, completed trial IDs, accumulated RT data) to `sessionStorage` after every trial completion. On page load, check for a resumed session and restore state. `sessionStorage` survives refreshes but is scoped to the tab (doesn't leak between browser sessions).
+5. **Trial timeout + abandonment logging**: Set a maximum trial duration (e.g., 30 seconds for a perception task). If exceeded, mark the trial as `abandoned` in Convex with `completion_status: 'timeout'` and advance to the next trial. Never silently discard timeout trials — they are themselves data about task difficulty.
+6. **Immutable trial IDs**: Each trial gets a UUID at generation time. On Convex write, use the trial UUID as an idempotency key — if the same trial UUID is written twice (e.g., due to retry after refresh), the second write is a no-op or update, not a duplicate row.
 
 **Warning signs:**
-- Frame rate drops below 30fps when zoomed out (full dataset visible)
-- Chrome DevTools `about:gpu` shows VRAM usage > 80% of available
-- Map interactions become sluggish (both MapLibre and R3F share GPU)
-- Browser tab crashes on dataset reload after navigation (VRAM leak from texture disposal gaps)
-
-**Prevention strategy:**
-1. **Implement true geometry LOD:** Use `@react-three/drei`'s `<Detailed>` or manual multi-mesh replacement. At zoomed-out levels, render aggregated bins (2D density) instead of individual spheres. Kill the "frustumCulled={false}" antipattern — enable culling and verify it works (the `-50 to 50` coordinate system should allow frustum culling with a moderately sized scene).
-2. **Downsample distant data:** Beyond a camera distance threshold, switch from instanced sphere geometry to a sprite-based approach or render to a density texture and discard individual points.
-3. **Texture lifecycle discipline:** Every `useMemo` that creates a DataTexture needs a paired `useEffect` dispose. The existing code has `useEffect(() => () => warpTexture.dispose(), [warpTexture])` — good pattern, but verify every texture path.
-4. **VRAM budget tracking:** Add a dev-only overlay that shows current VRAM usage, texture count, and geometry buffer sizes. Establish a hard budget (e.g., 2 GB for geometry, 500 MB for textures).
+- RT distributions show a bimodal pattern with a spike at >10 seconds (tab-switch artifacts)
+- Convex logs show duplicate trial writes for the same trial index
+- Participants report "the experiment restarted when I switched tabs"
+- Network waterfall shows Convex writes arriving out of order (indicates state machine drift)
 
 **Phase to address:**
-Phase 1 (Burst Visibility Foundation) — burst visibility introduces additional visual channels (opacity, density amplification) that increase the cost of full-resolution rendering. LOD structures must be in place before adding these channels.
+Phase 1 (Experiment Shell & Participant Flow) — the state machine and browser guard infrastructure must be in place before any trial logic is built.
 
 ---
 
-### Pitfall 2: Draw-Call Explosion from Per-Slice Rendering
+### Pitfall 2: Convex Schema Doesn't Accommodate Partial or Failed Trials
 
 **What goes wrong:**
-Each time slice (`SlicePlane`, `SliceCrimePoints`, `SliceClusterOverlay`, `BurstEvolutionOverlay`, `EvolutionFlowOverlay`) adds its own mesh or line geometry. With N slices (potentially 10–20), the scene accumulates: N × SlicePlane meshes + N × SliceClusterOverlay meshes + N × SliceCrimePoints meshes + N × BurstEvolution lines. This creates dozens of draw calls per frame, each with its own material, geometry, and state change.
+The schema assumes every trial completes successfully (all fields `NOT NULL`, no status column). When a participant abandons mid-trial, refreshes, or hits a network error, the Convex mutation either fails entirely (losing ALL data from that trial, including stimulus onset timestamp), or succeeds with `null` values that break downstream SQL analysis (e.g., `AVG(rt_ms)` returns `NaN` or silently excludes partial trials, biasing results toward easier trials where participants didn't quit).
 
 **Why it happens:**
-- The component model encourages per-slice React components (each slice is a `<group>` with child components) — natural in R3F but expensive with many slices
-- Lines (`BurstEvolutionOverlay`) create new `BufferGeometry` per segment (see `buildLinePoints` called per-segment with `new Float32Array`)
-- `SliceCrimePoints` renders points per-slice even though the main `DataPoints` already renders ALL points — duplicating geometry in the scene
-- `BurstEvolutionOverlay` creates separate `<line>` elements for each connector segment, each with its own material
+- Convex validators encourage strict field requirements — `v.number()` is the default, `v.optional(v.number())` must be explicit
+- Schema design typically starts from "what does a complete trial look like?" rather than "what failure modes exist?"
+- The existing Phase 80 study storage (`src/lib/study/storage.ts`) uses DuckDB tables with `accuracy INTEGER` and `completion_time_ms BIGINT` that are always written — no concept of a "partial write" or "abandoned trial" in the schema
+- Convex's optimism means writes usually succeed, but network partitions between participant browser and Convex backend still happen
+
+**How to avoid:**
+1. **Trial status enum**: Every trial row has a `status` field: `v.union(v.literal('started'), v.literal('responded'), v.literal('completed'), v.literal('abandoned'), v.literal('timeout'))`. The trial is created as `started` at stimulus onset, updated to `responded` when the participant clicks, and finalized as `completed` after confidence rating. If the participant navigates away, the trial remains `started` or `responded` — analysis can exclude these or analyze them separately.
+2. **Two-phase writes**: Phase 1 writes `{ trialId, participantId, status: 'started', stimulus_onset_ms, condition, taskType, datasetId }` immediately when the stimulus renders. Phase 2 updates `{ status, response, accuracy, rt_ms, confidence }` after the participant responds. This means even abandoned trials leave a record of what stimulus was shown and when.
+3. **Null-safe analysis views**: Define Convex queries that filter by `status === 'completed'` for primary RT/accuracy analysis, but also expose queries that count `status === 'abandoned'` per condition for dropout-rate analysis (a secondary dependent variable that can itself show condition effects).
+4. **Optional response fields**: Make `response`, `accuracy`, `rt_ms`, and `confidence` optional (`v.optional(...)`) in the validator. The presence of `stimulus_onset_ms` and `status` is the minimum viable trial record.
+5. **Idempotency via trial UUID**: Use the trial UUID (generated client-side at trial start) as the document ID or a unique index. Convex mutations use `.replace()` semantics when writing by ID — this prevents duplicate trials if the client retries.
 
 **Warning signs:**
-- DevTools `three.js` inspector shows >50 renderable objects
-- Adding a new slice causes visible frame latency spike
-- `BurstEvolutionOverlay` connector lines cause frame drops when many slices exist
-
-**Prevention strategy:**
-1. **Merge static geometry:** Use `THREE.BufferGeometryUtils.mergeGeometries()` for secondary overlays. If overlays change infrequently, merge them into single geometries.
-2. **Reuse materials across slices:** All `SlicePlane` meshes can share a single `ShaderMaterial` instance. Create materials once, not per-slice component.
-3. **Eliminate redundant rendering:** `SliceCrimePoints` duplicates rendering done by `DataPoints` — replace with shader-based slice highlighting (already partially done via `uSliceRanges` uniforms). Remove `SliceCrimePoints` and rely on the uniform approach.
-4. **Line batching:** Replace per-segment `<line>` elements in `BurstEvolutionOverlay` with a single `<lineSegments>` mesh that batches all connectors.
+- Convex function logs show validation errors for "missing required field: accuracy"
+- Analysis script throws "Cannot read property of null" on RT values
+- Dropout rate is 0% in data but participants reported quitting early (means abandoned trials are silently dropped)
+- Trial count per participant doesn't equal 24 (some trials failed silently)
 
 **Phase to address:**
-Phase 1 (Burst Visibility) — the evolution overlay and per-slice highlights are core burst-visibility features. Refactoring to batched geometry should be done when implementing these features, not retrofitted.
+Phase 2 (Convex Schema & Data Pipeline) — schema must be designed for failure modes before any trial data is collected.
 
 ---
 
-### Pitfall 3: Shader Compilation Stalls from Dynamic Uniform Reload
+### Pitfall 3: SVG Rendering Differs Across Browsers, Breaking Stimulus Consistency
 
 **What goes wrong:**
-Every time filters change, time range adjusts, or slice data updates, the ghosting shader (`shaders/ghosting.ts`) recompiles because `onBeforeCompile` produces different shader code for different configuration states. The `applyGhostingShader` function injects template literal values (`${typeMapSize}`, `${districtMapSize}`) that change when filter config changes, triggering WebGL program recompilation. This causes visible 100–500ms hitches during interaction.
+The ATS vs Uniform stimulus is an SVG timeline (event rug marks + allocation bands) rendered client-side. In Chrome, the band heights are rendered with `stroke-alignment: inner` by default; in Firefox, the same SVG property is interpreted as `center`; in Safari, sub-pixel anti-aliasing makes thin event rug lines (1px stroke-width) appear at different opacities. The result: participants on different browsers see measurably different stimuli — the ATS condition's expanded burst intervals look 2-3px wider in Chrome than Firefox, creating a confound where browser choice affects accuracy, not the timeline condition.
 
 **Why it happens:**
-- `onBeforeCompile` pattern (used in `DataPoints`) patches shader source at runtime — this invalidates the cached WebGL program
-- Template literals in the shader source (`#include <common>` replacements) mean any dynamic value change triggers full recompilation
-- The `useEffect` chain in `DataPoints` (10+ effects updating uniforms) frequently triggers material re-evaluation that leads to recompilation
-- The existing code has 10 independent `useEffect` blocks in `DataPoints`, each updating different subsets of uniforms — this makes it hard to reason about when recompilation occurs
+- SVG 1.1 and SVG 2 have subtle rendering differences across browser engines (Blink vs Gecko vs WebKit)
+- CSS properties like `stroke-width`, `shape-rendering`, and `text-rendering` have browser-specific defaults
+- Sub-pixel positioning: Chrome snaps to pixel boundaries for crisp lines; Firefox uses anti-aliased sub-pixel rendering for smoother appearance — this changes perceived line weight
+- Font rendering: if any text labels use system fonts, `font-family: sans-serif` resolves to different fonts on different OSes (Arial on Windows, Helvetica on macOS, Roboto on ChromeOS), changing text width and potentially clipping labels
+- SVG `viewBox` scaling: if the SVG uses a fixed `viewBox` with `preserveAspectRatio`, different container sizes produce different effective resolutions
+
+**How to avoid:**
+1. **Explicit rendering properties**: Set `shape-rendering="crispEdges"` on all event rug marks to force pixel-snapped rendering across browsers. Set `text-rendering="optimizeLegibility"` on labels. Set `vector-effect="non-scaling-stroke"` on lines so stroke width stays consistent regardless of SVG scale.
+2. **Web font for labels**: Use a single web font (e.g., the existing Geist font already loaded in the app) for all SVG text elements instead of system fonts. This ensures identical text metrics across OSes.
+3. **Browser-normalized viewport**: Render the SVG into a fixed-aspect-ratio container (e.g., 800×200 logical pixels) and use CSS `width: 100%` with `max-width` to scale. The `viewBox` establishes a resolution-independent coordinate space — but the container size must be identical across viewports to produce identical rasterization.
+4. **Screenshot verification**: During Phase 3 (Stimulus Rendering), take reference screenshots of each stimulus in Chrome, Firefox, and Safari via Playwright or manual comparison. Measure pixel differences between browsers. Any difference >1% of pixels between browsers for the same stimulus is a confound that must be fixed.
+5. **No CSS animations on stimuli**: Don't animate stimulus elements with CSS transitions or `requestAnimationFrame`. The stimulus must be a static render for the duration of the trial. Any motion introduces a timing confound.
+6. **Pre-render to canvas if SVG is insufficient**: If cross-browser SVG consistency cannot be achieved, render the stimulus to an offscreen `<canvas>` using identical drawing commands. Canvas 2D rendering is more consistent across browsers than SVG.
 
 **Warning signs:**
-- Frame time spikes (visible as "freeze then jump") when adjusting filter controls
-- Chrome DevTools "Shader Compile" events appearing in Performance tab during normal interaction
-- First interaction after page load is always slow (cold shader cache)
-
-**Prevention strategy:**
-1. **Eliminate dynamic shader patching:** Hard-code typeMapSize and districtMapSize (they're already fixed at 36 in practice). Remove template literals from shader source — use a fixed maximum and pass actual sizes via uniforms.
-2. **Batch uniform updates:** Consolidate the 10+ individual `useEffect` blocks into a single `useFrame` or imperative update loop. The ghosting shader already has `useFrame` logic (lines 370–428 of DataPoints) but also has ~10 separate `useEffect` hooks for uniforms — consolidate.
-3. **WebGLProgram caching:** Ensure the material's `needsUpdate` flag is only set when the shader source actually changes, not when uniforms change. Use `material.customProgramCacheKey()` to provide stable cache keys.
-4. **Pre-warm shaders:** On app load, render a dummy pass that invokes the ghosting shader to populate the WebGL program cache before the user interacts.
+- Screenshots of the same stimulus at the same viewport size look different in Chrome vs Firefox side-by-side
+- Event rug marks appear "thicker" in one browser
+- Text labels overflow or clip in Safari but not Chrome
+- Per-browser accuracy analysis shows a significant browser × condition interaction
 
 **Phase to address:**
-Phase 1 (Burst Visibility) — burst visibility requires new uniform channels for opacity, density amplification, etc. This is the right time to refactor the shader patch approach.
+Phase 3 (Stimulus Rendering Engine) — must include cross-browser verification before any participant data is collected.
 
 ---
 
-### Pitfall 4: MapLibre + R3F Double Rendering Overhead
+### Pitfall 4: Vercel Build Includes All 21 Prototype Routes + DuckDB WASM → Slow Cold Starts
 
 **What goes wrong:**
-When the app runs in map mode (`mode === 'map'` in `MainScene`), MapLibre renders the 2D map AND the R3F canvas renders the 3D space-time cube as a transparent overlay. Both use WebGL, both consume GPU resources, and both render at the same viewport size. This halves the effective GPU budget for each renderer.
+The `ats-study` branch deploys to Vercel. Even though only the experiment route (`/experiment`) is needed, Next.js's build process includes ALL pages under `src/app/` — all 21 routes. This means the build output includes:
+- Three.js (~600 KB gzipped)
+- MapLibre GL (~230 KB gzipped)
+- DuckDB WASM binary (~20 MB)
+- All dashboard-demo components, stores, shaders, and workers
+- All STKDE, figure, and evaluation route code
+
+The deployment artifact is 50+ MB instead of ~2 MB. Vercel cold starts take 4-8 seconds instead of <1 second. The first participant to load the experiment waits 8 seconds on a white screen — they assume the page is broken and leave. Additionally, the large bundle uses Vercel's bandwidth quota and may trigger function execution timeouts for API routes that reference DuckDB which isn't available on the stripped branch.
 
 **Why it happens:**
-- The architecture splits map and 3D cube into separate layers: MapLibre is a full-screen `<Map>` component, R3F is a full-screen transparent `<Canvas>` overlay on top
-- Both renderers independently allocate framebuffers, textures, and GPU state
-- R3F's transparent canvas means Three.js cannot use certain early-z optimizations
-- The existing `MapTileSource` pattern (in `Stkde3DScene`) captures MapLibre output to a texture — this requires a `gl.readPixels` (or canvas-to-texture) round-trip that stalls the GPU pipeline
-- In `MainScene`, the map and canvas are always layered but `showMapBackground` controls visibility — however toggling visibility doesn't release GPU resources from the hidden renderer
+- Next.js builds all pages in `src/app/` by default — there's no built-in "build only these routes" configuration
+- `outputFileTracingExcludes` (in `next.config.ts`) can exclude files from the deployment package, but Next.js still compiles and code-splits ALL page entry points
+- The existing `next.config.ts` has `serverExternalPackages: ['duckdb']` which tells Next.js to NOT bundle DuckDB, but the import statement in `src/lib/db.ts` still gets traced and included in server bundles for API routes
+- Branch-based file deletion (removing prototype routes from `ats-study` branch) needs to be done explicitly — Next.js won't skip them just because they're unused
+- The Convex client import pattern means Convex's bundle (~150 KB) is fine, but the prototype's visualization dependencies are still tree-shaken into shared chunks if any component is imported anywhere in the tree
+
+**How to avoid:**
+1. **Dedicated layout for experiment route**: Create `src/app/experiment/layout.tsx` that does NOT import the root layout's providers (ThemeProvider from the prototype, QueryProvider, OnboardingTour). The experiment route should be fully self-contained with its own minimal layout — no `@/components/viz/*`, `@/store/*`, or `@/lib/db.ts` imports.
+2. **Delete prototype routes from branch**: On the `ats-study` branch, physically remove all prototype page directories:
+   ```
+   rm -rf src/app/dashboard-demo src/app/stkde src/app/stkde-3d src/app/timeline-test \
+          src/app/timeline-test-3d src/app/timeslicing src/app/timeslicing-algos \
+          src/app/evaluation src/app/stats src/app/hotspot-evolution src/app/figures \
+          src/app/cube-sandbox src/app/demo src/app/docs src/app/algorithms
+   ```
+   Keep only `src/app/experiment/`, `src/app/page.tsx` (redirect to experiment), `src/app/layout.tsx` (minimal), and `src/app/api/` (if needed).
+3. **Remove DuckDB dependency from branch**: Delete or stub `src/lib/db.ts` on the `ats-study` branch. The experiment uses Convex exclusively — DuckDB's `serverExternalPackages` entry in `next.config.ts` can be removed on this branch. Verify no experiment code imports from `@/lib/db` or `@/lib/queries/`.
+4. **Vercel project config**: Set the build command on Vercel to `pnpm build` (standard). Add `DUCKDB_PATH` and `DISABLE_DUCKDB` env vars on Vercel to prevent DuckDB initialization attempts. Set `NEXT_PUBLIC_CONVEX_URL` to the Convex deployment URL.
+5. **Bundle analysis gate**: Before deploying, run `pnpm build && npx next-bundle-analyzer` (or `ANALYZE=true pnpm build`) and verify: no Three.js chunk, no MapLibre chunk, no DuckDB WASM, total JS <500 KB gzipped. If any visualization library appears in the bundle, trace the import and remove it.
 
 **Warning signs:**
-- GPU utilization doubles when switching between map and 3d modes (visible in GPU profiling tools)
-- Frame rate is consistently lower in map mode than 3d-only mode
-- Dragging the map feels sluggish because both renderers compete for GPU time
-
-**Prevention strategy:**
-1. **Unmount inactive renderer:** When `mode === 'map'`, fully unmount the R3F `<Canvas>` or at minimum use `<Canvas gl={{ ... }}>` with `framebuffer` release on unmount. Don't just toggle opacity/pointer-events.
-2. **Single renderer architecture:** Investigate using MapLibre's custom layer API to render Three.js content inside MapLibre's GL context (MapLibre supports `addLayer` with custom `render` functions in WebGL). This shares a single GL context and eliminates double-framebuffering.
-3. **Texture capture optimization:** If capturing map tiles to a Three.js texture is needed (Stkde3DScene pattern), use `Map.getCanvas()` directly as an R3F texture source with `map.needsUpdate = true` on camera moves, rather than creating new CanvasTexture objects.
-4. **Render budget split:** If dual renderers are unavoidable, reduce the R3F render resolution when overlaying the map (`const dpr = useThree(state => state.viewport.dpr)` → dynamically lower when in map mode).
+- `pnpm build` on ats-study branch takes >2 minutes (indicates full prototype build)
+- `.next/standalone/` directory is >20 MB
+- Vercel deployment log shows "Compiled /dashboard-demo" or "Compiled /stkde" pages
+- First participant reports "the page took forever to load"
+- Vercel function logs show "Cannot find module 'duckdb'" errors (indicates DuckDB import was traced but not available)
 
 **Phase to address:**
-Phase 2 (Temporal Evolution / Aging Fading Trails) — temporal evolution features add more render passes (accumulation buffers, trail fading) that exacerbate the double-rendering problem. Address the architecture before adding these features.
+Phase 4 (Deployment & Route Stripping) — must be done before any participants access the deployed URL. The branch is the right isolation mechanism; this phase executes the physical stripping.
 
 ---
 
-### Pitfall 5: Camera Disorientation in Axis-Less 3D Space
+### Pitfall 5: Counterbalancing Logic Produces Uneven Condition Distribution
 
 **What goes wrong:**
-Users in the 3D space-time cube lose spatial context. The cube renders crime points on X (space), Z (space), Y (time) axes, but without clear axis labels, grid lines, or reference markers, users cannot tell which direction corresponds to which geographic dimension. When the camera rotates (even slightly with `maxPolarAngle: Math.PI / 2` in `CameraControls`), the spatial reference is lost, and users can't relate 3D positions back to the 2D map.
+The experiment design calls for 24 trials: 12 Uniform, 12 ATS, counterbalanced across participants so half see Uniform first (block A) and half see ATS first (block B). The counterbalancing logic accidentally produces an uneven distribution: 70% of participants get Uniform-first, 30% get ATS-first. This is discovered after 40 participants have completed the study. The data is still usable but statistical power for the order × condition interaction is reduced, and the thesis committee questions the randomization method.
 
 **Why it happens:**
-- The existing `Scene` has no axis helpers, no north indicator, no grid labels
-- `CameraControls` allows free rotation within a hemisphere, which disorients users who expect north-up
-- The coordinate system shifts between views: map uses geographic (lng/lat), 3D uses normalized (-50 to 50) — no visual mapping shows this relationship
-- The 3D scene has `fog` but no reference plane or ground texture that would anchor spatial understanding
-- Color encoding (crime type) is the only visual channel — there's no constant visual reference for geography
+- The existing Phase 80 code (`src/lib/study/condition-order.ts`) hard-codes `'A->B' = { blockA: 'uniform', blockB: 'adaptive' }` and `'B->A' = { blockA: 'adaptive', blockB: 'uniform' }` — this maps block labels to conditions deterministically. But it doesn't specify HOW the block order is assigned to participants.
+- Common naive implementations: alternating assignment (A-B-A-B...) is predictable; `Math.random() > 0.5` can produce streaks (e.g., 7 A's in a row in a small sample); `participantId % 2` biases if participant IDs have parity patterns.
+- Within-block trial order: if trials 1-12 are all Uniform and 13-24 are all ATS, fatigue effects confound the condition comparison. True counterbalancing requires interleaving or Latin square design across stimulus sets.
+- The 3 task types (Peak Identification, Period Comparison, Pattern Recognition) add another counterbalancing dimension: if all Peak tasks happen in the first block for most participants, task type is confounded with block order.
+
+**How to avoid:**
+1. **Latin square for condition × task × dataset assignment**: A 2 (condition) × 3 (task type) × 8 (datasets) design requires a balanced assignment matrix. Use a pre-computed Latin square where each participant sees each task type 8 times (4 Uniform, 4 ATS) and each dataset appears exactly once per condition across all participants. Generate this matrix once, commit it as a JSON file (`src/experiment/design/assignment-matrix.json`), and iterate through participants sequentially.
+2. **Sequential participant counter**: Instead of random assignment, use a sequential counter. Participant 1 gets assignment row 1, participant 2 gets row 2, etc. The matrix guarantees balance. Store the next participant index in Convex (atomic increment) to prevent race conditions in concurrent participant starts.
+3. **Seed-based reproducibility**: Use a seeded PRNG (e.g., `seedrandom` library or a simple mulberry32 implementation) with a fixed seed committed to the repo. Generate the assignment matrix from the seed. This means the assignment is deterministic, reproducible, and auditable — the thesis can state "assignments were generated from seed 0xDEADBEEF using a 32-bit LCG."
+4. **Within-block interleaving**: Don't group all Uniform trials together and all ATS trials together. Interleave using a balanced sequence: e.g., U-A-A-U-A-U-U-A... where no condition appears more than 2 times consecutively. This controls for fatigue and practice effects within block.
+5. **Task type counterbalancing**: Ensure each task type appears equally often in the first half vs second half of the experiment. A participant's first 12 trials and last 12 trials should each contain 4 Peak, 4 Period, 4 Pattern tasks.
+6. **Balance check function**: Write a pure function `validateAssignmentMatrix(matrix)` that asserts: (a) each participant has exactly 12 Uniform + 12 ATS, (b) each task type appears 4× per condition per participant, (c) overall, Uniform-first and ATS-first participant counts differ by ≤1. Run this in CI.
 
 **Warning signs:**
-- Users frequently toggle between map and 3D views (to reorient themselves)
-- Test participants ask "which way is north?" in usability sessions
-- Users rotate the camera then struggle to return to the default view
-- The "Reset View" button is used excessively
-
-**Prevention strategy:**
-1. **Constrained camera for analysis tasks:** Default to orbit mode with restricted polar angle (like looking at a tilted table, not full 3D rotation). The existing `maxPolarAngle: Math.PI / 2` is too permissive — constrain to ~π/4 from horizontal for the default "desk" view.
-2. **Persistent spatial anchors:** Render a semi-transparent basemap plane at Y=0 (or minimal elevation) that shows street outlines or neighborhood boundaries derived from MapLibre tiles. The `MapTileSource` pattern from `Stkde3DScene` is exactly right — use it consistently across all 3D views.
-3. **Axis cues in the scene:** Add minimal axis helpers with labels (N/S, E/W) using `drei`'s `<Text>` component. A translucent ring or ground grid with compass directions provides constant spatial reference.
-4. **North-up lock toggle:** Provide a snap-back button that resets camera to north-up orientation without full reset. Save the user's preferred azimuth as a store value.
-5. **Eagle-eye minimap:** Add a small inset map (like a mini-map in games) that shows a north-up 2D view with the 3D camera's frustum overlaid. This gives constant orientation context.
+- After 10 participants: condition-first distribution is 8/2 instead of ~5/5
+- A specific dataset ID appears 3× in Uniform but 0× in ATS across participants
+- Participant debriefing reveals "all the hard tasks were in the second half"
+- Analysis reveals a significant order effect (block A > block B) that's larger than the condition effect (ATS vs Uniform) — indicates counterbalancing failure
 
 **Phase to address:**
-Phase 3 (Spatial Orientation) — this phase specifically targets spatial orientation improvements. The constrained camera, axis cues, and basemap plane are the core deliverables.
+Phase 2 (Convex Schema & Data Pipeline) — the assignment matrix must be designed alongside the schema, and the balance validation must run before any participant is recruited.
 
 ---
 
-### Pitfall 6: Occlusion-Driven Information Loss in Dense Views
+### Pitfall 6: Anonymous Participant Data Is Stored With Identifiable Metadata
 
 **What goes wrong:**
-When 8.5M crime points are projected into a 100×100×100 unit cube with camera at [50, 50, 50], points naturally overlap and occlude each other. Higher points (later in time) obscure lower points (earlier in time). In dense crime areas (e.g., downtown Chicago), this can hide 60-80% of points behind a few visible layers. Users have no way to know they're missing data.
+The study is designed to be anonymous — participants are identified only by a UUID. However, Convex automatically logs request metadata including IP addresses, user agents, and timestamps in its execution log. If the Convex dashboard is accessible to anyone on the team, participant IP addresses can be mapped to approximate locations. Additionally, the Vercel deployment logs request IPs and user agents. If a participant's browser sends a `Referer` header (e.g., they clicked a link from their university email), their identity can be inferred. This violates the anonymity guarantee in the consent form and may breach the university's ethics committee requirements.
 
 **Why it happens:**
-- Three.js renders in painter's algorithm (farthest to nearest by default) or z-buffer — points with the same z-value fight for the same pixel
-- The ghosting shader can discard context points (dithering), but the remaining visible points still occlude each other
-- Opacity dithering creates a perceptual illusion of transparency but doesn't help with z-fighting between overlapping point instances
-- The `sphereGeometry` with radius 0.5 in a 100-unit cube means each point occupies ~0.003% of one axis — the volume seems small but points cluster in geographic hotspots (downtown), creating dense vertical columns
-- The `depthWrite: false` on overlay elements causes incorrect occlusion ordering between slices and points
+- Convex stores request metadata automatically — it's part of the platform's observability, not an explicit developer decision
+- Vercel's default logging includes client IP addresses in access logs (available in the Vercel dashboard for 24 hours)
+- Browser fingerprints (screen resolution, timezone, language, installed fonts, WebGL renderer string) are sent automatically with every request — even without cookies, participants can be re-identified across sessions
+- The consent form says "anonymous" but the technical implementation defaults to identifying
+- Ethics forms (participant information sheet, consent form) are often written before the technical implementation is designed — the two drift apart
+
+**How to avoid:**
+1. **Minimal data collection principle**: The Convex schema should store ONLY: `participantUUID`, `trialId`, `condition`, `taskType`, `datasetId`, `stimulus_onset_ms`, `response`, `accuracy`, `rt_ms`, `confidence`, `status`, `completed_at`. No IP, no user agent, no screen resolution, no browser fingerprint. Document this in the ethics application as "data minimization."
+2. **Convex environment isolation**: Use a separate Convex project (not the prototype's Convex deployment) for the perception study. The study Convex project has a single purpose: store de-identified trial data. Access is limited to the researcher.
+3. **Disable Vercel access logging**: In Vercel project settings, disable "Access Logs" or set retention to 0. Alternatively, use Vercel's "Audience" analytics only for aggregate page view counts, not individual request logs.
+4. **No third-party analytics on experiment page**: Remove any analytics scripts (Google Analytics, Vercel Analytics, Sentry, LogRocket) from the experiment route. The `<head>` of the experiment page must contain zero external script tags that phone home with participant data.
+5. **Data export and deletion**: Build a Convex action that exports all trial data for a given `participantUUID` as a JSON file AND a mutation that deletes all data for that UUID. This supports the ethics requirement of "right to withdraw your data." Include a "Withdraw My Data" link on the post-study debriefing page.
+6. **Ethics-first consent flow**: The first screen the participant sees is the consent form (plain HTML, no tracking). They must explicitly click "I consent" before ANY data is sent to Convex. The consent acceptance is the only record stored before the participant UUID is generated. Store consent as a separate Convex document with only `participantUUID` and `consented_at` — no PII.
+7. **IP-blind Convex**: Convex does not expose client IP to mutation handlers by default — only to the execution log in the dashboard. Restrict dashboard access to the researcher only. Document in the ethics application that "server logs are accessible only to the principal investigator and are not analyzed."
 
 **Warning signs:**
-- A selected burst window shows a density spike, but the 3D view doesn't look meaningfully different
-- Counts from data queries don't match visual density
-- Users zoom into the cube but still can't make out individual points in dense areas
-- Screenshots of burst windows look similar to screenshots of non-burst windows
-
-**Prevention strategy:**
-1. **Adaptive transparency:** When point density exceeds a threshold in a region, automatically reduce opacity and/or switch to a density heatmap overlay for that region. The shader's `uBurstThreshold` and density texture already enable burst highlighting — extend to occlusion detection.
-2. **Depth-peel rendering:** For critical views (inspecting a specific slice), use a depth-peeling technique (multi-pass rendering with incremental depth comparison) to reveal occluded points. This is expensive but justified for the "inspect" workflow.
-3. **Screen-space density visualization:** When zoomed out past a threshold, replace individual points with a 2D screen-space density heatmap (like a "perceived density" overlay that shows where points would be if you could see through the occlusion).
-4. **Automatic slice inspection mode:** When the user selects a slice and enters inspect mode, temporarily hide non-slice points and show only points in the slice's time range with spatial density coloring. The existing `SliceCrimePoints` pattern hints at this — make it the default for inspection.
-5. **Z-fighting mitigation:** Ensure `depthWrite` and `depthTest` settings are consistent across all materials in the scene. For overlay elements, use `polygonOffset` to nudge them above points in z-space without affecting appearance.
+- Convex dashboard log shows `remoteAddress: 192.168.x.x` or actual client IPs
+- The experiment page loads Google Fonts (phones home to Google) or any CDN resource that logs requests
+- Browser DevTools Network tab shows requests to `vitals.vercel-insights.com` or `www.google-analytics.com` on the experiment page
+- Ethics committee feedback: "How is anonymity technically enforced?" — need to answer with specific technical measures, not general statements
 
 **Phase to address:**
-Phase 4 (Dense Data Readability) — occlusion management is the primary challenge of readable dense data. Also feeds into Phase 2 (temporal accumulation buffers must handle occlusion).
+Phase 1 (Experiment Shell & Participant Flow) — the consent flow, privacy architecture, and data minimization must be designed before any participant-facing code is written. Ethics approval should reference the technical architecture.
 
 ---
 
-### Pitfall 7: Animation Interpolation Jitter from React Re-Renders
+### Pitfall 7: Response Time Measurement Uses Inaccurate Clock Source
 
 **What goes wrong:**
-Animated transitions (warp factor interpolation, temporal evolution trails, burst emphasis fading) stutter or jump because R3F's `useFrame` runs at 60fps but React state updates (filter changes, slice modifications) re-render components at unpredictable intervals. When a React state change triggers a re-render mid-animation, the animation loop's interpolated values reset or jump.
+Reaction time (RT) is the primary dependent variable. The experiment measures RT from stimulus onset to participant click using `Date.now()` or a `setInterval`-based timer. `Date.now()` has ~1-5ms granularity and is subject to system clock adjustments (NTP sync, daylight savings). More critically, if the participant switches tabs and the timer uses wall-clock time, a 30-second tab switch is recorded as a 30-second RT. The resulting RT distribution has a long tail of spurious values that cannot be distinguished from genuine slow responses without visibility data.
 
 **Why it happens:**
-- The ghosting shader's `uWarpFactor` is interpolated in `useFrame` via `MathUtils.damp` (line 381 of `DataPoints`), but the warp factor value comes from Zustand store — when the store updates mid-animation, the GPU uniform gets a discontinuous value
-- `useFrame` in `DataPoints` reads from multiple Zustand stores (line 398: `useSliceStore.getState()`, line 394: `useAggregationStore.getState()`) — these reads don't trigger re-renders but they do read potentially stale values during animation frames
-- React reconciliation can cause `<group>` and component unmount/remount during animation (state-driven overlay visibility), which destroys and recreates Three.js objects mid-frame
-- The `BurstEvolutionOverlay` re-creates all connector lines whenever slices change — no animation interpolation at all, just immediate visual replacement
+- `Date.now()` is the most familiar time API — developers reach for it by default
+- `performance.now()` returns a `DOMHighResTimeStamp` with sub-millisecond precision (typically 5μs resolution) and is monotonically increasing (not affected by system clock adjustments). It is the correct API for RT measurement per the W3C High Resolution Time specification.
+- Most tutorial code uses `Date.now()` for simplicity; few web experiment tutorials mention `performance.now()`
+- The existing Phase 80 protocol (`src/lib/study/storage.ts`) uses `startedAt: number` and `completedAt: number` as epoch timestamps — no distinction between wall-clock and high-resolution time
+- `requestAnimationFrame` stops in background tabs — any timer driven by RAF will freeze. But `performance.now()` continues to advance — the timer must be explicitly paused on visibility loss.
+
+**How to avoid:**
+1. **Use `performance.now()` exclusively for RT**: Capture `const onset = performance.now()` at stimulus render. Capture `const offset = performance.now()` at participant click. RT = `offset - onset`. Store RT as a float in milliseconds (e.g., `1234.567`). Also store the wall-clock times (`Date.now()`) as secondary fields for debugging but NOT for primary analysis.
+2. **Visibility-gated timing accumulator**: Maintain a `pausedDuration` accumulator. On `visibilitychange` to `hidden`, record `pauseStart = performance.now()`. On `visibilitychange` to `visible`, add `performance.now() - pauseStart` to `pausedDuration`. The effective RT is `(offset - onset) - pausedDuration`. Store both raw RT and effective RT in the trial record.
+3. **Hardware timer validation**: On experiment load, run a calibration: record 1000 `performance.now()` samples in a tight loop. Verify the minimum delta is <1ms (sub-millisecond precision available). If the minimum delta is >5ms, the browser is throttling the timer — flag this in the data as a `timer_precision: 'low'` quality flag.
+4. **No `setTimeout`/`setInterval` for timing**: These are throttled to ≤1Hz in background tabs. Use them only for trial timeout enforcement (e.g., "show feedback after 2 seconds"), never for RT measurement.
+5. **RT sanity bounds**: Reject (flag, don't delete) RTs <100ms (anticipatory response — participant clicked before processing stimulus) and RTs >10,000ms (likely inattention). These are valuable data quality indicators even if excluded from primary analysis.
 
 **Warning signs:**
-- Warp factor transition looks smooth then suddenly jumps to the target value
-- Evolution overlay lines appear/disappear without interpolation when slices update
-- Burst emphasis highlights pop in instead of fading
-- Filter changes cause visible "flash" where all points reset position before warping again
-
-**Prevention strategy:**
-1. **Animation state outside React:** Store interpolation targets and current values in React refs or a dedicated animation state object (not Zustand or React state). Update these in `useFrame` directly. Read target values from Zustand but write interpolated output to GPU uniforms — don't round-trip through React.
-2. **Stable component identity:** Key Three.js objects by persistent IDs (not by render index). Use `useMemo` with stable dependencies for geometries and materials so React reconciliation doesn't destroy/recreate them when parent state changes.
-3. **Animation completion callbacks:** When an animation reaches its target, fire a callback (not a React state transition) to advance to the next visual state. This decouples animation timing from React render cycle.
-4. **Frame-synchronized state reads:** In `useFrame`, batch all Zustand store reads at the start of the frame using `getState()` (not hooks). This ensures a consistent snapshot for the entire frame and prevents mid-frame state changes from causing discontinuity.
+- RT histogram shows spikes at exactly 1000ms intervals (indicates `setInterval`-based timing)
+- RT values change by exactly 3600 seconds (daylight savings time shift — indicates `Date.now()` usage)
+- All RTs are integers (indicates `Date.now()` — `performance.now()` returns fractional milliseconds)
+- 5% of trials have RT exactly 0 (indicates uninitialized timer variable)
 
 **Phase to address:**
-Phase 2 (Temporal Evolution) — evolution trails, aging, and interpolation are the main animation features. Get the animation architecture right here.
+Phase 3 (Stimulus Rendering Engine) — the timing infrastructure must be built into the trial component that renders stimuli. The stimulus component is the natural owner of RT measurement.
 
 ---
 
-### Pitfall 8: Cross-Store Synchronization Deadlock
+### Pitfall 8: Experiment State Machine Allows Invalid State Transitions
 
 **What goes wrong:**
-The app has 20+ Zustand stores (coordination, time, filter, adaptive, slice, cluster, STKDE, UI, heatmap, aggregation, layout, etc.) that all read from and write to each other. State updates can cascade: `FilterStore` → `CoordinationStore` → `TimeStore` → `DataPoints` (uniforms) → `AggregationStore` → `HeatmapOverlay` (FBO re-render). Each step triggers React re-renders in different components. Under rapid user interaction (brush scrubbing, filter toggling), this creates a domino effect where the UI freezes for 100-500ms while stores notify subscribers.
+The experiment progresses through states: Welcome → Instructions → Practice → Block-A → Block-B → Questionnaire → Debrief. The state machine is implemented as a React `useState` with a string literal (`const [step, setStep] = useState('welcome')`). A race condition in a Convex mutation callback triggers `setStep('block-b')` before Block-A's final trial response is acknowledged by Convex. The participant sees Block-B's first stimulus while Block-A's last trial is still in-flight. The trial data arrives at Convex out of order: Block-B trial 1 is written before Block-A trial 12. The analysis script joins on `trial_order` and silently pairs Block-B's RT with Block-A's stimulus, producing garbage data.
 
 **Why it happens:**
-- Zustand subscriptions are synchronous and trigger immediate React re-renders via `useStore` selectors
-- The coordination store is supposed to be the "conductor" (`useSelectionSync`) but the actual synchronization is spread across multiple `useEffect` hooks in different components
-- `DataPoints` subscribes to 10+ different store slices directly (lines 54–84), bypassing the coordination store entirely
-- Each `useEffect` that calls `adaptiveStore.getState().computeMaps()` (in `MainScene`) triggers a new recomputation that writes back to the store, causing another cascade
-- There's no rate limiting or batching for store mutations during continuous interaction (brush scrubbing sends events at 60fps)
+- React state updates are asynchronous and batched — `setStep` calls from different event handlers can interleave unpredictably
+- Convex mutations are optimistic (the UI updates immediately, the server confirms later) — the state machine advances based on optimistic success, but a network failure could mean the trial was never written
+- React state machines are inherently fragile: no transition guards, no state history, no validation that the previous step actually completed
+- The existing study protocol (`src/lib/study/protocol.ts`) defines `StudyStepId` as a linear sequence but doesn't implement transition validation
+
+**How to avoid:**
+1. **Formal state machine (XState or explicit FSM)**: Define the experiment as a finite state machine with explicit transitions:
+   ```typescript
+   type ExperimentState = 'welcome' | 'consent' | 'instructions' | 'practice' | 'block-a' | 'block-b' | 'questionnaire' | 'debrief' | 'done';
+   type ExperimentEvent = 'CONSENT_GIVEN' | 'INSTRUCTIONS_READ' | 'PRACTICE_COMPLETE' | 'TRIAL_COMPLETE' | 'BLOCK_COMPLETE' | 'QUESTIONNAIRE_COMPLETE' | 'DEBRIEF_READ';
+   
+   const transitions: Record<ExperimentState, Partial<Record<ExperimentEvent, ExperimentState>>> = {
+     welcome: { CONSENT_GIVEN: 'consent' },
+     consent: { CONSENT_GIVEN: 'instructions' }, // re-entry guard
+     instructions: { INSTRUCTIONS_READ: 'practice' },
+     practice: { PRACTICE_COMPLETE: 'block-a' },
+     'block-a': { TRIAL_COMPLETE: 'block-a', BLOCK_COMPLETE: 'block-b' },
+     'block-b': { TRIAL_COMPLETE: 'block-b', BLOCK_COMPLETE: 'questionnaire' },
+     questionnaire: { QUESTIONNAIRE_COMPLETE: 'debrief' },
+     debrief: { DEBRIEF_READ: 'done' },
+     done: {},
+   };
+   ```
+   This makes invalid transitions impossible by construction. The `TRIAL_COMPLETE` event doesn't advance the block — only `BLOCK_COMPLETE` does (fired after the Nth trial's Convex write is confirmed).
+2. **Convex-confirmed state transitions**: Don't advance the block until ALL trials in the block have been confirmed written to Convex. Maintain a `pendingTrialWrites: Set<string>` set — when a trial write is acknowledged, remove it from the set. Only fire `BLOCK_COMPLETE` when the set is empty.
+3. **State serialization**: Persist the current state machine position to `sessionStorage` after every transition. On page load, hydrate from `sessionStorage`. This survives refreshes and provides a recovery path for crashed tabs.
+4. **Transition logging**: Log every state transition to Convex as an `experiment_event` table row: `{ participantId, fromState, toState, event, timestamp }`. This provides an audit trail for debugging state machine bugs and can be analyzed to detect unexpected transition patterns (e.g., a participant jumping from block-a directly to debrief).
 
 **Warning signs:**
-- Brush scrubbing on the timeline causes visible UI stutter
-- Toggling a filter type produces a 200-400ms delay before the view updates
-- Multiple "computing..." or "loading..." indicators flash simultaneously
-- Chrome DevTools "Recalculating Style" frames take >50ms during interaction
-
-**Prevention strategy:**
-1. **Unidirectional data flow enforcement:** Make the CoordinationStore the SINGLE source of truth for interaction state (selection, brush range, active slice, workflow phase). Other stores read from CoordinationStore's output — they don't write back to it. Filter/Adaptive stores are inputs (they write to CoordinationStore, not vice versa).
-2. **Debounce rapid mutations:** Use `debounce` (already available as `lodash.debounce` in the project) for store updates during continuous interactions. The brush change events should be debounced so the store sees at most 10 updates/second during scrubbing.
-3. **Subscription optimization:** Replace `useStore(store, selector)` subscriptions in R3F components with `useStore(store).getState()` reads in `useFrame`. The `DataPoints` component doesn't need React re-renders for uniform updates — it needs frame-synchronous reads.
-4. **Batch cascade writes:** When multiple stores need to update in response to a single user action, batch all writes into one microtask using `React.startTransition` or `queueMicrotask`. The CoordinationStore's `setSelectedIndex` already does this partly — extend to all cascade paths.
-5. **Store dependency graph audit:** Document which stores depend on which. The current 58-store ecosystem (see `src/store/` listing) likely has circular or redundant dependencies. Remove any store that can be derived from another.
+- Convex data shows trials with `trial_order` out of sequence (e.g., order 13 written before order 12)
+- Two trials have the same `trial_order` value for the same participant
+- A participant's state log shows `block-a → debrief` (skipped block-b and questionnaire)
+- The browser console shows React warnings about "Cannot update during an existing state transition"
 
 **Phase to address:**
-Phase 1 (Burst Visibility Foundation) — burst visibility adds new visual channels that require new store interactions. This is the time to clean up the store architecture before adding more state.
+Phase 1 (Experiment Shell & Participant Flow) — the state machine is the backbone of the experiment. It must be implemented before any trial UI.
 
 ---
 
-### Pitfall 9: Web Worker Overcontribution for Real-Time Visualization
+### Pitfall 9: Brownfield Imports Leak Into Experiment Bundle Despite Route Isolation
 
 **What goes wrong:**
-The app uses Web Workers for heavy computation (adaptive time warping, STKDE hotspot detection). Workers are correctly used for these batch operations. The pitfall is OVER-using workers for visualization work that should stay on the main thread — or, conversely, NOT using workers for work that should be offloaded. Specifically: per-frame computation (like the `computeMaps` call in `MainScene`'s `useEffect` that triggers on every viewport data change) blocks the main thread even though the result feeds a visualization pipeline.
+The experiment route is designed to be self-contained: `src/app/experiment/page.tsx` imports only experiment components. But a utility function in `src/lib/study/` imports from `@/lib/db` (DuckDB), which in turn imports `duckdb` WASM. Next.js's tree-shaking can't eliminate the DuckDB import because it's a side-effectful module (registering WASM, opening database connections). The experiment deployment still includes DuckDB WASM in the server bundle. On Vercel, the serverless function tries to initialize DuckDB on cold start, fails because the WASM file isn't available at the expected path, and throws — taking down the experiment API route.
 
 **Why it happens:**
-- The `computeMaps` call (line 71 of `MainScene`) runs on the main thread: `adaptiveStore.getState().computeMaps(timestamps, [minT, maxT])` — this is a synchronous computation on 8.5M records
-- The `useEffect` that triggers `computeMaps` fires on every viewport data change (which happens frequently as zoom/pan changes)
-- The existing workers (`adaptiveTime.worker.ts`, `stkdeHotspot.worker.ts`) are only used for the initial precomputation and for batch hotspot detection — they're not consulted for real-time visual updates
-- There's no "is a computation already running" guard — rapid viewport changes can queue multiple `computeMaps` calls that all execute sequentially, each blocking the UI
-- The `loadGlobalMaps` fetch request (line 129 of `MainScene`) runs in parallel but the fallback `computeMaps` on failure does not
+- Next.js tree-shaking is conservative with modules that have side effects (`duckdb` initializes WASM at import time)
+- Import chains are hard to audit manually: `experiment/page.tsx` → `@/lib/study/protocol.ts` → (doesn't import db directly, but `@/lib/study/storage.ts` does) → `@/lib/db` → `duckdb`
+- The `serverExternalPackages: ['duckdb']` config tells Next.js to keep DuckDB as an external dependency at runtime — but on Vercel's serverless environment, the DuckDB native module isn't available
+- Even if the experiment code doesn't call `insertStudy()`, the import of `@/lib/study/storage.ts` (for type definitions, maybe) pulls in the entire module including its dependencies
+- `tsconfig.json` path aliases (`@/*` → `src/*`) make it easy to accidentally import from the prototype's lib directory
+
+**How to avoid:**
+1. **No imports from `@/lib/study/` in experiment code**: Create a parallel experiment library at `src/experiment/lib/` that duplicates ONLY the types and pure functions needed (e.g., the `StudyStepId` type without the DuckDB-backed storage). The experiment code NEVER imports from `src/lib/study/` or `src/lib/db` or `src/lib/queries/`.
+2. **Bundle import guard**: Add an ESLint rule on the `ats-study` branch that forbids imports from `@/lib/db`, `@/lib/study/storage`, `@/lib/queries/` in any file under `src/experiment/` or `src/app/experiment/`:
+   ```json
+   {
+     "rules": {
+       "no-restricted-imports": ["error", {
+         "patterns": ["@/lib/db*", "@/lib/study/storage*", "@/lib/queries*"]
+       }]
+     }
+   }
+   ```
+3. **Dead-code elimination verification**: After build, run `npx next-bundle-analyzer` and grep for `duckdb` in the output. If `duckdb` appears in any chunk, trace the import and eliminate it. Add this check to a pre-deploy CI step.
+4. **Experiment-only tsconfig**: Consider a separate `tsconfig.experiment.json` that excludes prototype paths from compilation. The experiment code shouldn't reference types that pull in visualization dependencies.
+5. **Keep experiment types self-contained**: The experiment needs its own lightweight types, not the full Phase 80 protocol types that reference DuckDB tables. Define `ExperimentTrial`, `ExperimentParticipant`, etc. in `src/experiment/types.ts` with only Convex-compatible validators.
 
 **Warning signs:**
-- Viewport changes during map navigation cause 100-300ms freezes
-- Toggling between map and 3D views triggers visible computation lag
-- Console logs show repeated "computeMaps" calls stacking up
-- The main thread profile shows long (>50ms) synchronous JavaScript tasks
-
-**Prevention strategy:**
-1. **Worker-based incremental update:** For viewport-dependent adaptive maps, send computation to the adaptive time worker. The worker can compute the warp map incrementally and post back the result buffer. The main thread never blocks.
-2. **Computation deduplication:** Before starting any computation, cancel any in-flight computation for the same key (viewport bounds + time range). Use an abort pattern: `let currentComputation = null; if (currentComputation) currentComputation.abort();`.
-3. **Transferable buffers for worker results:** When the worker returns results (Float32Array for warp/density maps), use `postMessage(..., [buffer.buffer])` with transferable ownership. This avoids copying the array data between threads.
-4. **Frame budget estimation:** Before dispatching worker work, estimate whether the computation will fit in the remaining frame budget (~12ms at 60fps). If not, defer to next frame or reduce computation scope (e.g., lower bin count for the warp map).
-5. **Warm the worker pool:** Pre-allocate the adaptive-time worker on app load so there's no cold-start latency when computation is needed.
+- `pnpm build` on ats-study branch shows `duckdb` in the output (grep for it)
+- Vercel function logs show "Error: Cannot find module 'duckdb'" or WASM loading errors
+- The experiment page's JavaScript bundle includes references to `@/lib/db` or `@/lib/study/storage`
+- Import autocomplete in the IDE suggests `@/lib/study/` paths from experiment files
 
 **Phase to address:**
-Phase 1 (Burst Visibility Foundation) — burst computation is the primary consumer of viewport-triggered adaptive work. Offload it to workers before scaling up visualization features.
+Phase 4 (Deployment & Route Stripping) — the import audit must happen when the experiment is isolated for deployment. Phase 1-3 code should already follow the import guard rule.
 
 ---
 
-### Pitfall 10: Evaluation-Antipattern — Inconsistent Interactions Across Views
+### Pitfall 10: Convex Real-Time Sync Overwrites Participant Responses During Network Flakiness
 
 **What goes wrong:**
-Users can select a crime point in the 3D cube (click → `setSelectedIndex`), brush on the timeline, and click on the map — but these interactions have subtly different behaviors. Clicking in the cube selects by instance ID, brushing on the timeline filters by time range, and clicking on the map selects by geographic location. These produce different coordination store states that downstream components interpret inconsistently.
+Convex's real-time reactivity means that when a participant's trial data is written via a mutation, any subscribed queries automatically re-fetch. The experiment UI subscribes to a `getParticipantProgress` query to show "Trial 8 of 24". During a network hiccup, the mutation succeeds on the server but the client times out waiting for acknowledgment. The client retries the mutation (deterministic trial UUID makes this safe — see Pitfall 2), but in the meantime, the UI re-renders with stale query data showing "Trial 7 of 24". The participant, confused by the UI regression, clicks the submit button again, triggering a THIRD mutation for the same trial. Convex's optimistic updates and automatic retry make this particularly tricky — the platform's reliability features become foot-guns when state machine transitions depend on write acknowledgment.
 
 **Why it happens:**
-- `useSelectionSync` tries to reconcile these but only handles cube→timeline (scroll to point time) and cube→slices (activate containing slice). It does NOT handle timeline→cube or map→cube synchronization.
-- The coordination store's `selectedIndex` and `selectedSource` track which view initiated the selection, but there's no logic to convert between representations (instance ID vs time range vs geographic point)
-- `DemoMapVisualization` and `Demo3dSpatialView` use different store overrides (`useDashboardDemoCoordinationStore` vs `useCoordinationStore`) — they can drift apart
-- The `brushRange` in coordination store (timeline brush) is completely independent of `selectedIndex` (cube click) — there's no code that says "when brush range changes, interpret selection differently"
+- Convex mutations are automatically retried on network failure — but the retry happens after a delay, during which the client's local state may have advanced
+- Convex queries re-subscribe when the underlying data changes — a mutation that writes trial 8 triggers a re-fetch of `getParticipantProgress` which may briefly show stale data before the new data arrives
+- The participant sees the UI "flicker" (advance, regress, advance again) and loses trust in the system
+- In a perception experiment where timing matters, a mutation retry that takes 3 seconds means the participant has moved on to the next trial while the previous trial's data is still unsettled
+
+**How to avoid:**
+1. **Optimistic UI with local state**: Don't derive UI state (current trial, progress bar) from Convex queries. Maintain a local Zustand store or React state that advances optimistically when the participant clicks. Use Convex mutations as fire-and-forget writes (with retry) — the UI doesn't wait for confirmation to display the next trial. The Convex query for progress is only used for recovery (page refresh), not for driving the live UI.
+2. **Idempotent writes**: Every mutation uses the trial UUID as the document ID. `ctx.db.replace(trialId, { ... })` ensures that retries don't create duplicate records. This is Convex's recommended pattern for at-least-once delivery semantics.
+3. **Debounce progress queries**: If you must use a Convex query for progress display, subscribe with a `{ cacheTTL: 5000 }` option (or use TanStack Query with `staleTime: 5000`) so the UI doesn't flicker on every write.
+4. **Write-ahead log in sessionStorage**: Before firing a Convex mutation, write the trial data to `sessionStorage` as a write-ahead log entry. If the page crashes or the network fails, the recovery logic replays unacknowledged WAL entries on next load. This ensures no trial data is lost even if Convex is unreachable.
+5. **Mutation timeout + fallback**: Set a 5-second timeout on mutation acknowledgment. If the mutation hasn't been acknowledged after 5 seconds, show a subtle "Saving..." indicator but DO NOT block the participant from proceeding to the next trial. Queue the unacknowledged write and retry it in the background. The participant should never wait for network I/O.
 
 **Warning signs:**
-- Clicking a point in the cube scrolls the timeline but doesn't highlight the point on the map
-- Brushing the timeline filters the 3D view but the map shows old filter state
-- The coordination store's `syncStatus` frequently shows `'partial'` or `'syncing'`
-- Usability test participants say "I clicked here but nothing changed there"
-
-**Prevention strategy:**
-1. **Interaction representation model:** Define a canonical interaction representation that all views can produce and consume — e.g., `{ timeRange: [number, number], spatialBounds: [number, number, number, number], instanceIds?: number[] }`. Each view maps its native interaction to this model. The coordination store broadcasts this model to all views.
-2. **View-transformer pattern:** For each view, implement a transformer function that converts the canonical interaction to view-specific state: `cubeTransformer(canonical) → selectedIndex`, `mapTransformer(canonical) → featureId`, `timelineTransformer(canonical) → brushRange`.
-3. **Sync status enforcement:** Any interaction that produces a `syncStatus: 'syncing'` must produce a matching `'synchronized'` within one animation frame. Implement a timeout that warns (in dev) if sync takes longer.
-4. **Unified store for interactive views:** Use a SINGLE coordination store across all views in the demo shell. Currently `useCoordinationStore` and `useDashboardDemoCoordinationStore` are separate — this is the root cause of view drift.
-5. **Interaction trace logger:** Add a dev-mode logger that records every interaction and its propagation through views. This makes synchronization bugs visible during development instead of discovered during evaluations.
+- Progress counter briefly shows "Trial 7" after the participant just completed trial 8 (flicker)
+- Convex dashboard shows duplicate trial writes for the same trial UUID (retry without idempotency)
+- Network throttle (DevTools "Slow 3G") causes the experiment to freeze between trials
+- Participants report "the page was laggy" or "it showed the wrong trial number"
 
 **Phase to address:**
-Phase 8 (Usability Evaluation Readiness) — this phase specifically targets evaluation readiness. However, the unified coordination store fix should be in Phase 1 since it affects all subsequent development.
-
----
-
-### Pitfall 11: Hidden Visualization States That Confuse Evaluation
-
-**What goes wrong:**
-During usability evaluations, participants encounter visualization states that the evaluator cannot reproduce or understand. The warp factor slider is at 0.7, the density metric is "burstiness" with threshold 0.6, the time range is filtered to Q2 2023, and the camera has been freely rotated for 30 seconds. This exact state is almost impossible to reproduce for the next participant, making between-subject comparisons invalid.
-
-**Why it happens:**
-- Camera position, zoom, and rotation are not stored in any persistent state — they're local to the `CameraControls` ref
-- The app has 20+ parameters controlling the visualization (warp factor, burst threshold, density metric, time range, type filter, district filter, spatial bounds, context opacity, show heatmap, slice opacity, view mode, etc.) — no single "state capture" mechanism
-- The `CubeVisualization` component reads from multiple stores but writes a debug overlay that shows current state — this is helpful but doesn't allow replay or sharing
-- `CameraControls.reset()` resets the camera but doesn't reset visualization parameters — so "reset view" means different things to different participants
-- Non-deterministic elements: `lodash.debounce` timers, async data fetching, and `MathUtils.damp` interpolation mean the same settings can produce different visual states depending on timing
-
-**Warning signs:**
-- Evaluation notes say "participant saw X" but the evaluator can't reproduce X
-- Different participants' sessions show different default visualization states
-- Bug reports mention states that the developer can't reproduce
-- The "export state" feature request comes up in every evaluation
-
-**Prevention strategy:**
-1. **Visualization state serialization:** Create a `VisualizationState` type that captures all parameters: camera position/target, warp factor, filters, time range, slice visibility, view mode, etc. Implement `serialize()` and `deserialize()` that produce a URL hash or query string.
-2. **State replay in dev mode:** Add a keyboard shortcut (e.g., `Ctrl+Shift+E`) that copies the current state as a URL. Opening that URL reproduces the exact visualization state, including camera position.
-3. **Evaluation parameter lock:** During evaluations, lock the visualization to a known set of parameters unless the participant specifically adjusts them. Log all adjustments with timestamps.
-4. **Deterministic animation paths:** When `animate` is requested, always animate from the current state to the target state over a fixed duration (not frame-dependent delta). This makes timing more predictable.
-5. **Reset-to-baseline function:** One click that resets ALL state (camera, filters, warp factor, slices, view mode) to the application default — not just camera position.
-
-**Phase to address:**
-Phase 8 (Usability Evaluation Readiness) — serialization and replay are evaluation-hardening features. However, the state capture architecture should be designed in Phase 1 to avoid retrofitting.
-
----
-
-### Pitfall 12: Over-Animated Transitions That Obscure Data Changes
-
-**What goes wrong:**
-Smooth transitions (warp factor blending, slice fade-in/out, burst intensity ramp) create a visually appealing experience but make it harder for users to compare states. When the warp factor transitions from 0 to 1 over 500ms, the user cannot tell "is this point in this position because of the data or because of the transition?" Similarly, slice highlight fade-in can obscure when a new point enters the slice.
-
-**Why it happens:**
-- The `MathUtils.damp` interpolation (line 381-387 of `DataPoints`) continuously smooths the warp factor — it never arrives at the exact target until several frames later
-- `BurstEvolutionOverlay` and `EvolutionFlowOverlay` have no explicit transition timing — they appear/disappear based on store state changes
-- The `BurstEvolutionOverlay` uses a sphere mesh with `radius: Math.max(0.55, 0.55 + score * 0.55)` — this changes size based on burst score but without any interpolation, creating visual pops
-- There's no visual indication that "the transition is still in progress" vs "the visualization is settled" — users assume what they see is the final state
-- Cosine interpolation or custom easing functions could provide psychologically smoother transitions, but no easing is applied — just linear damp
-
-**Warning signs:**
-- Users make decisions based on intermediate animation states ("the point was in that cluster for a moment")
-- Comparative analysis tasks take longer than expected because users wait for animations to settle
-- Animation artifacts (e.g., points passing through each other during warp transition) are mistaken for data patterns
-- The "warp transition makes spatial patterns illegible" feedback appears in evaluations
-
-**Prevention strategy:**
-1. **Settled-state indicator:** Change a visual cue (subtle halo, axis label color, or a small dot in the corner) when ALL animations have reached their target values. This tells users "this is the real view."
-2. **Skip-animation mode:** Provide a toggle (e.g., holding Shift) that snaps directly to the target state without animation. This is critical for comparison tasks where animation would confuse the comparison.
-3. **Animation policy:** Define a clear animation policy: transitions between analytical states should be ≤200ms (short enough to not confuse, long enough to avoid pop). Only orientation/decorative transitions get longer durations.
-4. **Interpolation with constant-time arrival:** Replace `MathUtils.damp` (which asymptotically approaches the target) with a constant-time lerp that guarantees arrival at the target within a fixed number of frames. This prevents the "never quite settled" feel.
-5. **Ease-out for analysis, ease-in-out for orientation:** Use `easeOutCubic` for analytical changes (quick start, slow finish so the user sees the final state soon) and `easeInOutCubic` for camera/orientation changes (smooth throughout).
-
-**Phase to address:**
-Phase 2 (Temporal Evolution) — the animation policy should be established when the first animated visualizations (evolution trails, aging) are built.
+Phase 2 (Convex Schema & Data Pipeline) — the write pattern (optimistic UI, idempotent writes, WAL backup) must be designed with the schema.
 
 ---
 
@@ -360,122 +353,120 @@ Phase 2 (Temporal Evolution) — the animation policy should be established when
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| `frustumCulled={false}` on DataPoints | Prevents points from disappearing when camera angles hide them | GPU processes all 8.5M points every frame | NEVER in production — fix culling calculation |
-| Individual `useEffect` for each uniform | Easy to add new uniform during development | 10+ effects create unpredictable recompilation, hard to debug | Only during initial development; consolidate before milestone |
-| Separate coordination stores per-demo (`useCoordinationStore` + `useDashboardDemoCoordinationStore`) | Isolates demo shell changes from legacy | View state drifts, inconsistent behavior, hard to reason about | Never — merge into single store |
-| Per-segment `<line>` elements in BurstEvolutionOverlay | Simple to implement, easy to style individually | Each line is a separate draw call, creates 20+ geometries | Only if segment count is guaranteed <5; current code creates N per slice pair |
-| Templates in shader source strings (`${typeMapSize}`) | Enables dynamic shader generation | Forces WebGL recompilation on every change | Never for runtime values — use uniforms for dynamic, compile-time only for hardware limits |
-| React state for animation targets (`const [showOverlay, setShowOverlay]`) | Familiar React pattern | Animation bounces through React reconciliation, causes jitter | For UI chrome transitions only; not for in-scene animation |
-| `computeMaps` on main thread for viewport changes | Simpler code, no worker communication overhead | Blocks main thread for 50-200ms during continuous interaction | Only when data size is <100K points; at 8.5M, must use worker |
-| InstancedMesh with all 8.5M points always loaded | Single mesh, simple raycasting, uniform management | Full VRAM usage regardless of zoom level, no LOD | Acceptable for MVP target of specific zoom level; not for general exploration |
-
----
+| Using `Date.now()` instead of `performance.now()` for RT | Familiar API, works in all environments | RT precision drops to ~5ms; system clock adjustments corrupt data; tab-switch time included. Invalidates RT as a dependent variable. | **Never** — `performance.now()` is supported in all browsers since 2012. No excuse. |
+| String-literal state machine (`useState('welcome')`) | Zero dependencies, quick to implement | Invalid transitions are impossible to prevent; state history lost; concurrent updates create race conditions. | Only for a static single-page form with <3 states. Not for a 26-trial experiment. |
+| Importing `@/lib/study/protocol.ts` for type definitions in experiment code | Reuse existing types, less code to write | Pulls in DuckDB imports via transitive dependencies; unnecessarily couples experiment to prototype. | Never — define experiment-specific types. The cost of type duplication is negligible compared to bundle bloat from unwanted imports. |
+| Deriving UI state from live Convex queries | "Reactive UI" sounds appealing | Network latency causes progress flicker; query re-subscription races with mutation acknowledgment; participant sees stale state. | Only for the researcher dashboard (post-experiment), never for the participant-facing trial UI. |
+| Alternating assignment (`participantId % 2`) for counterbalancing | One line of code | Predictable, potentially biased by ID parity patterns, uneven distribution in small samples | Never for a thesis experiment. Use a pre-computed Latin square. |
+| Not implementing `beforeunload` guard | Cleaner code, no "unsaved changes" dialog | One accidental refresh by a participant loses all their data; they won't redo the experiment. | Never — a web experiment MUST guard against accidental navigation. |
+| CSS `opacity` for stimulus hiding (instead of removing from DOM) | Simpler animation code | Hidden elements remain in the accessibility tree; screen readers announce invisible stimuli; `opacity: 0` still occupies layout space and can affect sibling element positioning. | Only during development. Production experiment stimuli must use `visibility: hidden` + `aria-hidden="true"` or conditional rendering. |
+| Storing all trial data in a single Convex document (array of trials) | Fewer documents, simpler queries | Convex documents have a 1MB size limit. 24 trials × ~500 bytes each = 12KB — fine. But if you add stimulus metadata (full SVG markup, allocation weights), a single document hits the limit. Also: concurrent updates to the same document risk OCC conflicts. | Acceptable if trials are small (<100 bytes each) and written sequentially. For this experiment with stimulus metadata, one document per trial is safer. |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| R3F Canvas over MapLibre | Both renderers use WebGL context 0, causing context loss when switching | Use `gl={canvas => new THREE.WebGLRenderer({ canvas, context: mapLibre.getGLContext() })}` OR fully unmount Canvas when hidden |
-| MapLibre tiles → R3F texture | Calling `map.getCanvas().toDataURL()` or `readPixels` synchronously on every frame | Use the canvas reference directly and set `texture.needsUpdate = true` on map `idle` events |
-| Zustand store → `useFrame` uniform sync | Using `const value = useStore(store, s => s.value)` in component body, then accessing in `useFrame` | Use `store.getState().value` in `useFrame` to avoid React re-render costs |
-| Web Worker → Float32Array transfer | `postMessage({ data: array })` copies the buffer (2x memory) | `postMessage({ data: array.buffer }, [array.buffer])` transfers ownership (zero-copy) |
-| CameraControls → R3F Canvas | Creating new `CameraControls` on every state change (key changes re-mount component) | Create once, use `ref` to access, only call `.setLookAt()` on target changes |
-| DuckDB → client visualization | Fetching full 8.5M records for every filter change | Use DuckDB's aggregation capabilities (GROUP BY, COUNT) to send pre-aggregated data; use Apache Arrow for streaming large results |
-| Radix UI overlay → R3F Canvas | Radix dialog/popover mounted over Canvas blocks pointer events but Canvas still processes events | Set `pointerEvents: 'none'` on Canvas when a modal is open, restore on close |
-
----
+| Convex + Next.js App Router | Using Convex client directly in React Server Components (RSC). Convex is a client-side library — mutations and queries don't work in RSC. | Wrap Convex usage in `'use client'` components. Use the Convex provider at the experiment layout level (not root layout, which would leak it to prototype routes). |
+| Vercel + Convex environment | Hardcoding Convex URL in source code instead of using `NEXT_PUBLIC_CONVEX_URL`. Different branches need different Convex deployments (dev vs prod). | Set `NEXT_PUBLIC_CONVEX_URL` as a Vercel environment variable per-branch. Use Vercel's "Preview Deployments" feature to automatically deploy `ats-study` branch with its own env vars. |
+| SVG rendering in React | Inlining SVG as JSX (React components) instead of raw SVG markup. React's reconciliation can re-render SVG mid-trial if parent state changes, causing visual flicker. | Render stimulus SVG as a static string (`dangerouslySetInnerHTML`) inside a `useMemo` with no dependencies (or only `datasetId` + `condition`). The SVG DOM should never re-render during a trial. |
+| Zustand + Convex | Storing Convex query results in Zustand, creating a second source of truth. Zustand and Convex's reactive cache diverge, causing stale UI. | Zustand for local experiment state (current trial, condition, participant UUID); Convex for persistent data (trial records). Never store Convex query results in Zustand — use TanStack Query for caching if needed, but ideally read from Convex directly via hooks. |
+| `next/font` + experiment page | Using `next/font` with Google Fonts — the font loader makes a request to Google's servers during page load. This leaks participant IP to Google and violates the anonymity requirement. | Use self-hosted fonts (the existing Geist font in the project is already self-hosted via `next/font/google` with `subsets` — verify it doesn't phone home). For monospace/stimulus fonts, use a local font file or `font-family: monospace`. |
+| Vercel Serverless Functions + DuckDB WASM | Assuming `serverExternalPackages: ['duckdb']` prevents DuckDB from being included in the deployment. It prevents BUNDLING but Next.js's output file tracing still includes the DuckDB WASM file if `src/lib/db.ts` is imported anywhere. | Remove ALL imports of `@/lib/db` and `@/lib/queries/*` from the `ats-study` branch. Delete `src/lib/db.ts` on the branch if necessary. Use `outputFileTracingExcludes` in `next.config.ts` to explicitly exclude `node_modules/duckdb/**`. |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| 8.5M InstancedMesh spheres | VRAM > 3.5GB, frame rate < 15fps at full zoom-out | LOD: switch to aggregated density at camera distance > 100 units | Works at 100K, breaks at 1M+ points |
-| Individual materials per slice | Chrome DevTools shows 30+ draw calls for slice overlays | Share one ShaderMaterial across all slices, pass per-slice data as uniforms | Works at 3 slices, breaks at 10+ |
-| `onBeforeCompile` for shader patching | Visible 100ms pause when toggling filters (program recompile) | Eliminate dynamic templates in shader source; use uniforms for all config | Breaks as soon as a user changes any filter |
-| FBO texture creation in `useMemo` per render | Frame rate drop from texture uploads, stale textures accumulate | Pool FBOs, reuse them, dispose explicitly in `useEffect` cleanup | Subtle at first, catastrophic after repeated view changes |
-| MapLibre + R3F both rendering | GPU utilization 2× higher in map mode than 3D-only mode | Unmount inactive renderer, or share GL context | Always (structural — map mode always has this overhead) |
-| Series-parallel `useEffect` cascade | 200-400ms delay after single filter toggle | Consolidate to one store mutation per user action, use `startTransition` | Gets worse as more stores are added |
-| Per-frame `computeMaps` on viewport change | Main thread blocked for 50-200ms during zoom/pan | Move to Web Worker with transferable result buffers | Breaks with any zoom/pan interaction on full dataset |
-| `depthWrite: false` on multiple overlays | Overlay z-fighting, disappearing slice planes, incorrect occlusion ordering | Set `polygonOffset` on overlay materials, keep `depthWrite: true` when possible | Subtle artifacts that compound with more overlays |
-| `lodash.debounce` on store updates | Delayed visual feedback, state inconsistency with fast interactions | Use `requestAnimationFrame` throttle instead of time-based debounce for visual updates | Depends on debounce timeout vs frame rate mismatch |
+| Large SVG DOM for 24 stimuli pre-rendered on page | Initial page load >3 seconds; 24 × 200 DOM nodes = 4,800 SVG nodes in memory | Render only the CURRENT trial's stimulus. Dispose previous stimulus DOM on trial advance. Use `<g display="none">` for pre-warming if needed. | Breaks at ~15 trials with complex band allocation SVGs (>500 nodes each) |
+| Convex query subscription for every trial renders | 24 concurrent subscriptions per participant; 100 participants = 2,400 active subscriptions on Convex backend | Use a SINGLE query that returns all trials for the participant, with incremental updates via a mutation that appends. Or use TanStack Query with `refetchInterval: false` (manual invalidation). | Breaks at ~50 concurrent participants with real-time subscriptions |
+| `useEffect` with empty deps for stimulus render timing | Stimulus onset timestamp is captured in `useEffect`, but React 19's Strict Mode double-mounts effects in development, causing double onset captures | Use a ref flag (`const hasCaptured = useRef(false)`) to guard onset capture. Or use `useLayoutEffect` for synchronous capture before paint. | Breaks in React 19 Strict Mode (dev only — but pollutes dev data) |
+| `sessionStorage.setItem` on every frame during trial | 60 writes/second to sessionStorage during a trial; synchronous I/O blocks the main thread | Write to sessionStorage only at trial BOUNDARIES (stimulus onset, response, trial advance). Use an in-memory buffer for frame-level data (if collecting mouse trajectory data, batch writes every 500ms). | Breaks at 60fps with large state objects (>10KB per write) |
+| Convex mutation per individual questionnaire item | 12 NASA-RTLX items + 6 interpretability items = 18 mutations fired simultaneously; OCC conflicts if mutations touch the same document | Batch all questionnaire responses into a SINGLE mutation that writes one document with an array of responses. Convex mutations are atomic — batch writes that must be consistent. | Breaks when 18 concurrent mutations compete for the same participant document |
+| Absolute-positioned stimulus overlay over full viewport | Stimulus renders at 1920×1080 on a 13" laptop with browser zoom ≠ 100%, clipping the edges | Use relative positioning within a container. Check `window.devicePixelRatio` and scale SVG `viewBox` accordingly. Test at 90%, 100%, 110%, 125% browser zoom. | Breaks at browser zoom ≠ 100% — stimulus elements are clipped or misaligned |
 
----
+## Security & Ethics Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Collecting IP addresses via Convex or Vercel logs | Participant re-identification; ethics violation; GDPR breach if EU participants | Use separate Convex project with dashboard access restricted to PI. Disable Vercel access logging. Document in ethics application. |
+| Using `NEXT_PUBLIC_` env vars for Convex deployment URL | Convex URL is exposed in client-side JavaScript bundle — expected and fine for Convex. But accidentally prefixing a secret (e.g., `CONVEX_DEPLOY_KEY`) with `NEXT_PUBLIC_` exposes it to the browser. | Audit all `NEXT_PUBLIC_*` env vars on the `ats-study` branch. Only the Convex URL should be public. Use `.env.local` (gitignored) for secrets. |
+| No data retention policy | Data stored indefinitely; if a participant requests deletion years later, no process exists | Define data retention: "Data retained until thesis defense (December 2026), then anonymized dataset published; raw data deleted." Build a Convex scheduled job that flags data for deletion, with manual confirmation required. |
+| Consent form not matching technical reality | Consent says "anonymous" but browser fingerprinting via CDN fonts, analytics scripts, or Vercel logs re-identifies participants | Audit the consent form against the technical architecture. If any re-identification vector exists, either eliminate it or update the consent form to "pseudonymous" and explain the limits. |
+| No withdrawal mechanism | Participant completes study, regrets participation, but has no way to delete their data — they email the researcher who may not respond promptly | Include a "Withdraw My Data" link on the debriefing page. Implementation: enter participant UUID → Convex mutation deletes all associated documents → confirmation shown. Test this flow before recruiting. |
+| Experiment URL shared publicly | Someone finds the URL and completes the study non-seriously (random clicking), producing junk data that can't be distinguished from genuine responses | Add a simple CAPTCHA or access code on the welcome screen. Not a full authentication system — just a shared passphrase that participants receive in their recruitment email. Track `access_code_used` as a metadata field. |
+| Cross-site request forgery (CSRF) on Convex mutations | A malicious site could trigger Convex mutations on behalf of a participant who has the experiment open in another tab. Since Convex uses token-based auth (not cookies), this is mitigated but not impossible if the token leaks. | Convex's authentication model is token-based (the token is stored in `localStorage`, not cookies), which inherently prevents CSRF. Don't add cookie-based auth that would reintroduce the CSRF vector. |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Free-camera orbit in 3D cube | User loses spatial orientation, cannot relate 3D to map | Constrained pitch (±15° from horizontal), north-up snap button |
-| Warp factor animation obscures pattern comparison | User can't tell which points moved due to warp vs which moved from different data | Settled-state indicator + skip-animation mode (hold Shift) |
-| 20+ visualization parameters with no presets | Users get lost in configuration, cannot reproduce interesting views | Named presets (capture all state) + URL-based state sharing |
-| Color encoding by crime type only | Dense areas show all colors blending to brown; legend has 36 categories | Combine type color with density encoding; limit legend to 8-10 categories maximum |
-| Occluded points in dense areas | User thinks "this area has no data" when it actually has buried points | Automatic density overlay when occlusion is detected; depth-peeling in inspect mode |
-| No spatial reference in 3D (no grid, no north, no basemap) | "Which way is north?" every session | Axis labels, translucent basemap texture, compass rose, eagle-eye minimap |
-| Separate map and 3D views (toggle, not overlay) | User must mentally map between views, context-switch cost | Default to MapLibre as basemap under transparent 3D canvas (when GPU budget allows) |
-| Animation never settles (asymptotic damp) | User waits for transition to finish before analyzing | Constant-time arrival animation with explicit completion signal |
-
----
+| No progress indicator during trials | Participant doesn't know how many trials remain; feels the experiment is endless; increases dropout rate | Show a progress bar: "Trial 8 of 24" with a visual bar. Update optimistically (don't wait for Convex confirmation). Include block transitions: "Block A complete — short break before Block B." |
+| Full-screen lock-in without escape | Participant's browser is hijacked; they can't access other tabs without the experiment detecting it and flagging their data; feels coerced | Request fullscreen politely: "For best results, please stay on this tab." Detect tab switches and log them but don't punish the participant. Never use `document.exitFullscreen()` as a penalty. |
+| Stimulus disappears before participant can respond | Auto-advancing trials with a short timeout (e.g., 3 seconds). Participants feel rushed; RT data is censored at 3 seconds (right-censored data requires special statistical handling). | Use a generous timeout (30 seconds for perception tasks). Log both RT and whether the trial timed out. Right-censored RT data is analyzable with survival analysis (Cox regression) — the thesis can handle it, but it's better to avoid it. |
+| No practice feedback | Participant doesn't know if they're doing the task correctly; they develop incorrect response strategies that persist through all 24 trials | After each of the 2 practice trials, show feedback: "Correct! The peak was at January 15." or "The peak was at March 3 — you selected February 20. In the real trials, you won't see feedback." |
+| Confidence scale is confusing | 1-5 Likert scale with unlabeled anchors: participant doesn't know if 1 or 5 means "very confident" | Use labeled radio buttons: "1 - Not at all confident", "2 - Slightly confident", "3 - Moderately confident", "4 - Very confident", "5 - Extremely confident". Include a brief description of what "confidence" means in this context. |
+| Post-study debriefing is an afterthought | Participant finishes 24 trials, sees "Thank you!" and a close button. Doesn't learn the study's purpose, feels used as a data source. | Full debriefing screen explains: the two conditions (ATS vs Uniform), the research hypothesis, expected findings, and contact information. Include the "Withdraw My Data" option. This is both ethical and required by most ethics boards. |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **LOD system:** The `uLodFactor` dither only affects fragment discard, not vertex count. Points still cost the same to transform. True LOD (switch from instances to aggregated view) is missing.
-- [ ] **VRAM cleanup:** `useEffect(() => () => texture.dispose())` exists for warpTexture and densityTexture but NOT for the heatmap FBO, aggregation geometry, or per-slice textures.
-- [ ] **R3F Canvas unmount:** When switching from 3D to map mode, the Canvas is hidden with CSS (`z-10 pointer-events-none`). The WebGL context is NOT released. GPU memory persists.
-- [ ] **Shader recompilation guard:** The `onBeforeCompile` function has no `customProgramCacheKey` — every filter change can trigger recompilation. Needs a stable shader key.
-- [ ] **Cross-store consistency:** `useCoordinationStore` and `useDashboardDemoCoordinationStore` both exist. They can have different `selectedIndex`, `brushRange`, or `syncStatus`. No reconciliation logic exists.
-- [ ] **Worker result transfer:** `computeMaps` returns `Float32Array` from worker but it's copied, not transferred. For 8.5M records, this is 68MB of copying per call.
-- [ ] **Animation completion callback:** `MathUtils.damp` never completes. The animation asymptotically approaches the target. No callback fires when "done enough" (e.g., within 0.5% of target).
-- [ ] **State serialization:** No mechanism to capture and replay visualization state. Camera position, filter settings, warp factor, and slice state cannot be shared or reproduced.
-- [ ] **Occlusion detection:** No code measures whether points are visually occluded. The view looks different from the data.
-- [ ] **Reset-to-baseline:** `triggerReset` in `handleReset` only resets the camera (`controlsRef.current.reset(true)`). Filters, warp factor, and other state persist.
-- [ ] **Map ↔ 3D sync:** When switching views, the 3D camera position does not correspond to the map's current viewport. No coordinate transformation exists between the two.
-
----
+- [ ] **Browser navigation guard:** `beforeunload` handler fires on refresh/close; `popstate` handler intercepts back button; visibility change pauses trial timer. Verified by manually pressing Back, Refresh, and switching tabs during a trial.
+- [ ] **Convex schema supports partial trials:** `status` field with `started`/`responded`/`completed`/`abandoned`/`timeout` values. Optional response fields. Idempotent writes by trial UUID. Verified by killing the browser during a trial and checking Convex dashboard for partial records.
+- [ ] **Cross-browser SVG consistency:** Stimulus screenshots in Chrome, Firefox, Safari are pixel-identical for the same stimulus at the same viewport size. Verified with Playwright screenshot comparison (pixel difference < 1%).
+- [ ] **Vercel deployment is stripped:** `pnpm build` on `ats-study` branch produces <2 MB total bundle. No Three.js, MapLibre, or DuckDB in bundle analyzer output. Only `/experiment` page renders; all other routes return 404. Verified by deploying to Vercel preview and checking Network tab.
+- [ ] **Counterbalancing verified:** Assignment matrix passes balance checks: exactly 12 Uniform + 12 ATS per participant; task types balanced across blocks; overall Uniform-first vs ATS-first count differs by ≤1. Verified by running validation function in CI.
+- [ ] **No PII in Convex data:** Convex dashboard shows only `participantUUID`, trial data, and questionnaire responses. No IP addresses, user agents, or screen dimensions in any table. Verified by auditing Convex schema and functions.
+- [ ] **Timing uses `performance.now()`:** All RT calculations use `performance.now()` with visibility-gated pause accumulator. Wall-clock `Date.now()` is stored for debugging only, not primary analysis. Verified by code audit: grep for `Date.now()` in experiment code — should appear only in debug fields.
+- [ ] **State machine has transition guards:** Invalid state transitions throw errors (not silently corrupt state). State machine is serialized to `sessionStorage`. Verified by attempting to call `transition('BLOCK_COMPLETE')` twice — second call should be a no-op.
+- [ ] **Import guard in place:** ESLint rule blocks imports from `@/lib/db`, `@/lib/study/storage`, `@/lib/queries` in experiment code. Build fails if violated. Verified by adding a violating import and running `pnpm lint`.
+- [ ] **Consent flow works end-to-end:** Participant sees consent form → clicks "I Consent" → consent record written to Convex → participant UUID generated → experiment begins. Participant who doesn't consent sees "Thank you for your interest" and no data is sent. Verified by testing both paths.
+- [ ] **Withdrawal mechanism works:** "Withdraw My Data" on debriefing page accepts participant UUID → Convex mutation deletes all associated documents → confirmation shown. Verified by completing a test session, withdrawing data, and confirming Convex dashboard shows 0 records for that UUID.
+- [ ] **Convex write-ahead log (WAL) in sessionStorage:** Every trial write is first saved to `sessionStorage` WAL. If page crashes, recovery replays WAL entries. Verified by killing the browser process mid-experiment and reloading — data from completed trials should be present.
+- [ ] **Stimulus container works at all browser zoom levels:** Tested at 90%, 100%, 110%, 125% browser zoom. No clipping, no misalignment, no text overflow. Verified with Playwright at multiple viewport sizes.
+- [ ] **No external CDN requests on experiment page:** Network tab shows requests only to self (Next.js) and Convex backend. No Google Fonts, no analytics, no CDN libraries. Verified by loading experiment page with Network tab open and filtering by third-party requests.
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| GPU memory saturation | HIGH — requires tab reload, possible data loss | 1. Kill all Three.js geometries via `dispose()` 2. Release WebGL context 3. Reload only visualization module 4. Detect 80%+ VRAM usage and warn user proactively |
-| Shader recompilation cascade | MEDIUM — causes UX jitter but no data loss | 1. Implement `material.customProgramCacheKey` 2. Warm shader cache at startup 3. Implement uniform batching to reduce per-frame recompile triggers |
-| Cross-store state drift | MEDIUM — inconsistent views degrade usability | 1. Pause all view updates 2. Read canonical state from CoordinationStore 3. Push to each view one at a time 4. Verify all views show identical state |
-| Worker computation pileup | LOW — wasted computation but auto-corrects | 1. Abort all in-flight worker tasks 2. Dispatch single consolidated computation 3. Implement debounce on future dispatches |
-| Camera disorientation | LOW — user clicks "reset" button | 1. Implement smooth camera transition to north-up 2. Show compass overlay during transition 3. Save/restore camera state in store for "back to previous view" |
-
----
+| Counterbalancing bug discovered after N participants | HIGH — N participants' data may need exclusion from primary analysis | 1. Run balance check on collected data. 2. If imbalance is severe (>60/40 split), exclude data from participants after the imbalance was detected. 3. Fix the assignment logic. 4. Recruit N replacement participants. 5. Run sensitivity analysis: "Results are robust to excluding the first N participants where counterbalancing was imperfect." |
+| Convex schema missing `status` field after 20 participants tested | MEDIUM — data is still usable but partial trials are lost | 1. Add `status` field with default `'completed'` for existing rows (they were all completed). 2. New participants get full status tracking. 3. Note in thesis: "Partial trial tracking was implemented after participant 20." |
+| DuckDB WASM found in Vercel deployment after first participant | LOW — fix is quick, but first participant's experience was degraded | 1. Remove DuckDB import from branch. 2. Redeploy. 3. Note the cold-start time for participant 1 may be an outlier — exclude their RT data from analysis if cold start affected trial timing. |
+| Browser back button not guarded; 3 participants lost data | MEDIUM — data is lost, participants must be re-recruited | 1. Implement `beforeunload` + `popstate` guards. 2. Contact affected participants (if possible) to redo the study. 3. Report dropout rate in thesis: "3 participants were excluded due to technical issues with browser navigation." |
+| `Date.now()` used instead of `performance.now()` in production | HIGH — ALL RT data is degraded | 1. Fix the code. 2. If the study is ongoing, restart data collection. 3. If all data is collected, analyze RT data with a note: "RT measurements have ±5ms precision due to Date.now() usage. Effect sizes >10ms are still detectable." 4. This is nearly a showstopper — prevention is critical. |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| 1 — GPU Memory from Instanced Geometry | Phase 1 (Burst Visibility) | VRAM monitoring shows 70%+ headroom with full dataset; `frustumCulled` enabled and verified |
-| 2 — Draw-Call Explosion from Per-Slice | Phase 1 (Burst Visibility) | DevTools shows <30 render calls in scene with 10+ slices active |
-| 3 — Shader Compilation Stalls | Phase 1 (Burst Visibility) | Performance tab shows zero "Shader Compile" events during normal filter interaction |
-| 4 — MapLibre + R3F Double Rendering | Phase 2 (Temporal Evolution) | GPU utilization same in map mode as 3D-only mode; Canvas unmounts fully when hidden |
-| 5 — Camera Disorientation | Phase 3 (Spatial Orientation) | Test users can identify north in 3D view without asking; camera resets to consistent default |
-| 6 — Occlusion-Driven Info Loss | Phase 4 (Dense Data Readability) | Point count from query matches visually counted density in occluded regions |
-| 7 — Animation Jitter from Re-renders | Phase 2 (Temporal Evolution) | `useFrame` stores all state in refs; animations reach target within 2% in constant time |
-| 8 — Cross-Store Synchronization Deadlock | Phase 1 (Burst Visibility) | Filter change cascade completes within one frame (<16ms); no redundant store writes |
-| 9 — Web Worker Overcontribution | Phase 1 (Burst Visibility) | `computeMaps` runs in worker; main thread shows no >16ms tasks during viewport change |
-| 10 — Inconsistent Interactions | Phase 1 (design) + Phase 8 (verify) | Single CoordinationStore; all views produce identical canonical interaction model |
-| 11 — Hidden Visualization States | Phase 8 (Evaluation Readiness) | State serialization captures all 20+ parameters; URL-based replay reproduces exact view |
-| 12 — Over-Animated Transitions | Phase 2 (Temporal Evolution) | Animation duration <200ms for analytical state changes; skip-animation mode available |
+| 1 — Browser Navigation Corrupts State | Phase 1 (Experiment Shell & Participant Flow) | `beforeunload` dialog fires; `visibilitychange` pauses timer; `popstate` shows confirmation; sessionStorage checkpoint survives refresh |
+| 2 — Convex Schema Doesn't Support Partial Trials | Phase 2 (Convex Schema & Data Pipeline) | Convex functions accept optional fields; `status` enum present; idempotent writes by trial UUID; partial trial visible in dashboard after browser kill |
+| 3 — SVG Rendering Differs Across Browsers | Phase 3 (Stimulus Rendering Engine) | Playwright screenshots across Chrome/Firefox/Safari show <1% pixel difference; explicit `shape-rendering`/`vector-effect` set on all SVG elements |
+| 4 — Vercel Build Includes Prototype Routes | Phase 4 (Deployment & Route Stripping) | Bundle analyzer shows no Three.js/MapLibre/DuckDB; total JS <500KB gzipped; all non-experiment routes return 404 |
+| 5 — Counterbalancing Produces Uneven Distribution | Phase 2 (Convex Schema & Data Pipeline) | Balance check function passes in CI; assignment matrix committed to repo; after 10 participants, condition-first split is 5/5 or 6/4 |
+| 6 — Anonymous Data Stored With Identifiable Metadata | Phase 1 (Experiment Shell & Participant Flow) | Convex dashboard shows no IP/user agent fields; no third-party CDN requests on experiment page; consent flow verified end-to-end |
+| 7 — RT Measurement Uses Inaccurate Clock Source | Phase 3 (Stimulus Rendering Engine) | Code audit: zero `Date.now()` in RT calculation; `performance.now()` with visibility-gated accumulator; calibration test confirms sub-ms precision |
+| 8 — State Machine Allows Invalid Transitions | Phase 1 (Experiment Shell & Participant Flow) | FSM transition table enforced; invalid transition throws; state log in Convex shows valid sequence for all participants |
+| 9 — Brownfield Imports Leak Into Experiment Bundle | Phase 4 (Deployment & Route Stripping) | ESLint import guard passes; bundle analyzer shows zero prototype imports; `outputFileTracingExcludes` verified |
+| 10 — Convex Real-Time Sync Overwrites Responses | Phase 2 (Convex Schema & Data Pipeline) | Optimistic UI updates without Convex query dependency; idempotent writes prevent duplicates; WAL in sessionStorage survives crash |
 
 ---
 
 ## Sources
 
-- The existing codebase (reverse-engineered from `src/` for current patterns): DataPoints (`src/components/viz/DataPoints.tsx`), ghosting shader (`src/components/viz/shaders/ghosting.ts`), heatmap pipeline (`src/components/viz/HeatmapOverlay.tsx`), MainScene (`src/components/viz/MainScene.tsx`), Scene (`src/components/viz/Scene.tsx`), TimeSlices (`src/components/viz/TimeSlices.tsx`), BurstEvolutionOverlay (`src/components/viz/BurstEvolutionOverlay.tsx`), DashboardDemoShell (`src/components/dashboard-demo/DashboardDemoShell.tsx`), Demo3dSpatialView (`src/components/dashboard-demo/Demo3dSpatialView.tsx`), Stkde3DScene (`src/app/stkde-3d/components/Stkde3DScene.tsx`), coordination store (`src/store/useCoordinationStore.ts`), selection sync (`src/hooks/useSelectionSync.ts`)
-- Three.js performance best practices (official): https://threejs.org/manual/#en/optimize-lots-of-objects — instancing, merging, LOD
-- React Three Fiber performance guide: https://docs.pmnd.rs/react-three-fiber/advanced/performance — avoiding re-renders, useFrame patterns, dispose
-- MapLibre custom layer render (WebGL context sharing): https://maplibre.org/maplibre-gl-js/docs/API/ — `Map.addLayer` with custom `render` function
-- Web Workers + Transferable objects: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers — zero-copy ArrayBuffer transfer
-- Evaluate visualization spatial orientation: https://graphics.wikia.org/wiki/Occlusion_culling — depth-peel technique for dense point cloud rendering
-- Shader compilation best practices: https://webglfundamentals.org/webgl/lessons/webgl-boilerplate.html — program caching, `getProgramParameter(ACTIVE_UNIFORMS)` for debug
-- Zustand performance patterns: https://github.com/pmndrs/zustand — selector-based subscriptions, `getState()` vs hooks, `subscribeWithSelector`
-- Lodash debounce vs RAF throttle: https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame — for visual synchronization, RAF is frame-accurate
+- **MDN Page Visibility API** (HIGH): `document.visibilityState`, `visibilitychange` event, background tab throttling of `requestAnimationFrame` and timers — [MDN Page Visibility API](https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API)
+- **MDN History API** (HIGH): `pushState`/`replaceState` for SPA history management, `popstate` event for back/forward detection — [MDN History API](https://developer.mozilla.org/en-US/docs/Web/API/History_API/Working_with_the_History_API)
+- **W3C High Resolution Time** (HIGH): `performance.now()` specification — sub-millisecond precision, monotonically increasing, not subject to system clock skew. [MDN Performance API](https://developer.mozilla.org/en-US/docs/Web/API/Performance_API)
+- **Convex Documentation** (HIGH — Context7 verified): Schema definition with `defineTable`, `v.union`, `v.optional`, `v.literal`; idempotent writes via `ctx.db.replace`; mutation retry semantics; partial rollback pattern with `ctx.runMutation` — [Convex Docs](https://docs.convex.dev/llms-full.txt)
+- **Next.js 16 Documentation** (HIGH — Context7 verified): `outputFileTracingExcludes`, `output: 'standalone'`, middleware `matcher` configuration, `serverExternalPackages`, proxy/middleware conditional routing — [Next.js Docs](https://nextjs.org/docs)
+- **Existing Codebase Analysis** (HIGH): Phase 80 study protocol (`src/lib/study/protocol.ts`), condition order (`src/lib/study/condition-order.ts`), DuckDB-backed storage (`src/lib/study/storage.ts`), root layout (`src/app/layout.tsx`), next.config.ts — all reviewed for v4.0 relevance
+- **Project Context** (HIGH): PROJECT.md defines v4.0 ATS Perception Study milestone with 8 experiment requirements (EXP-01 through EXP-08), dedicated `ats-study` branch decision, Convex-only backend constraint
+- **Existing Research** (HIGH): The v3.x pitfalls research (`PITFALLS.md`) documents 12 visualization pitfalls including GPU memory, shader compilation, and cross-store sync — these are the prototype's existing issues that the experiment must avoid inheriting
+- **Web Experiment Methodology** (MEDIUM — unverified community practice): Patterns for beforeunload guards, visibility-gated timing, Latin square counterbalancing, sessionStorage checkpointing, WAL patterns for unreliable networks — synthesized from common practice in jsPsych, PsychoJS, and lab.js frameworks
+- **GDPR & Research Ethics** (MEDIUM): Data minimization principle (Art. 5(1)(c) GDPR), right to erasure (Art. 17 GDPR), informed consent requirements for anonymous data collection. University ethics committee requirements vary — verify with your institution's specific guidelines.
 
 ---
 
-*Pitfalls research for: Visualization Level-Up — Burst Visibility, Temporal Evolution, Spatial Orientation, Dense Data Readability, Evaluation Readiness*
-*Researched: 2026-05-26*
+*Pitfalls research for: ATS Perception Study (v4.0) — Web-based within-subjects perception experiment on brownfield Next.js 16 application*
+*Researched: 2026-06-30*
+*Sources: MDN (HIGH), Convex (HIGH), Next.js (HIGH), Codebase Analysis (HIGH), Web Experiment Community Practice (MEDIUM)*
+*Ready for: Phase 1 (Experiment Shell & Participant Flow) planning*

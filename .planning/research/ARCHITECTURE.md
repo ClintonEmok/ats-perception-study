@@ -1,781 +1,681 @@
-# Architecture Research — Visualization Level-Up
+# Architecture: ATS Perception Study Integration
 
-**Domain:** Spatiotemporal crime visualization with adaptive space-time cube
-**Researched:** 2026-05-26
-**Confidence:** HIGH (sourced from existing codebase analysis, verified via Context7 for R3F/post-processing capabilities)
+**Domain:** Controlled within-subjects web experiment (24 trials, 3 task types, counterbalanced Uniform vs ATS conditions) embedded in a Next.js 16 App Router brownfield prototype.
 
-## System Overview
-
-### Current Architecture (v3.1)
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      DashboardDemoShell                              │
-│  ┌──────────────────────────────────────┐  ┌──────────────────────┐  │
-│  │          Shared Viewport              │  │   Rail Tabs (5)      │  │
-│  │  ┌──────────┐  ┌──────────────────┐   │  │  ┌──────────────┐   │  │
-│  │  │ Map OR   │  │ Timeline Panel    │   │  │  │Scan         │   │  │
-│  │  │ 3D View  │  │ (DualTimeline)    │   │  │  │Detect       │   │  │
-│  │  │ (toggle) │  │ SVG + @visx       │   │  │  │Slices       │   │  │
-│  │  └──────────┘  └──────────────────┘   │  │  │Inspect      │   │  │
-│  └──────────────────────────────────────┘  │  │Configure    │   │  │
-│                                            │  └──────────────┘   │  │
-│                                            └──────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-
-3D Pipeline (current):
-┌─────────────────────────────────────────────────────────────┐
-│ Demo3dSpatialView                                            │
-│  ├─ Fetches crime data per slice via /api/crimes/range       │
-│  ├─ Computes KDE in main thread (computeSliceKde)           │
-│  └─ Stkde3DScene (R3F Canvas)                                │
-│      ├─ MapTileSource (hidden MapLibre → CanvasTexture)     │
-│      ├─ StkdeSliceStack                                     │
-│      │   └─ Canvas2D → texture → planeMesh (no shaders)     │
-│      ├─ RawEventPoints (THREE.Points)                       │
-│      └─ CameraControls (static position)                    │
-└─────────────────────────────────────────────────────────────┘
-
-Map Pipeline (current):
-┌─────────────────────────────────────────────────────────────┐
-│ DemoMapVisualization                                         │
-│  └─ MapVisualization (MapLibre GL + react-map-gl)            │
-│      ├─ MapBase (map container)                              │
-│      ├─ MapEventLayer (points)                               │
-│      ├─ MapHeatmapOverlay (heatmap)                          │
-│      ├─ MapStkdeHeatmapLayer (STKDE from API)                │
-│      ├─ MapClusterHighlights / MapTrajectoryLayer            │
-│      └─ MapSelectionOverlay / MapSelectionMarker             │
-└─────────────────────────────────────────────────────────────┘
-
-Timeline Pipeline (current):
-┌─────────────────────────────────────────────────────────────┐
-│ DemoDualTimeline                                             │
-│  └─ DualTimelineSurface (SVG via @visx/brush, @visx/shape)   │
-│      ├─ DensityHeatStrip                                     │
-│      ├─ Overview track (brush-zoom)                          │
-│      ├─ Detail track (slice geometries)                      │
-│      └─ Burst windows overlay                                │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Target Architecture (post-viz-level-up)
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      DashboardDemoShell                              │
-│  ┌──────────────────────────────────────┐  ┌──────────────────────┐  │
-│  │          Shared Viewport              │  │   Rail Tabs (5)      │  │
-│  │  ┌──────────┐  ┌──────────────────┐   │  │  + CameraPreset     │  │
-│  │  │ MAP OR   │  │ Timeline Panel    │   │  │  + VizControls      │  │
-│  │  │ 3D View  │  │ +MultiScaleBand   │   │  │                     │  │
-│  │  │          │  │ (dynamic aggreg.)  │   │  │                     │  │
-│  │  │ 3D View: │  └──────────────────┘   │  │                     │  │
-│  │  │ PostFX   │                         │  │                     │  │
-│  │  │ Burst    │                         │  │                     │  │
-│  │  │ Temporal │                         │  │                     │  │
-│  │  └──────────┘                         │  └──────────────────────┘  │
-│  └──────────────────────────────────────┘                            │
-└─────────────────────────────────────────────────────────────────────┘
-
-3D Pipeline (target):
-┌──────────────────────────────────────────────────────────────────────┐
-│ Demo3dSpatialView (extended)                                          │
-│  ├─ Fetches crime data (same, but parallelized, streaming)           │
-│  ├─ Computes KDE in Worker (NEW: offloaded from main thread)         │
-│  ├─ Applies burst amplification data from store (NEW)                │
-│  └─ Stkde3DScene (R3F Canvas)                                         │
-│      ├─ MapTileSource (same)                                          │
-│      ├─ EffectComposer (NEW: @react-three/postprocessing)             │
-│      │   ├─ DepthOfField (NEW)                                        │
-│      │   ├─ Bloom (NEW, selective)                                    │
-│      │   └─ Custom burst pass (NEW: shader)                           │
-│      ├─ StkdeSliceStack_Extended (NEW: shader-based rendering)        │
-│      │   ├─ ShaderMaterial per slice (replaces Canvas2D textures)     │
-│      │   └─ Burst amplification via uniforms                           │
-│      ├─ TemporalTrailLayer (NEW: frame accumulation)                  │
-│      ├─ AxisHelper3D + Grid (NEW: spatial orientation)                │
-│      ├─ CameraControls (extended: presets, constrained, map-synced)   │
-│      └─ RawEventPoints (same)                                         │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-## Current Architecture Deep-Dive
-
-### Component Boundaries (Current)
-
-| Component | Responsibility | Key Files |
-|-----------|---------------|-----------|
-| DashboardDemoShell | Orchestrates viewport toggle, timeline, rail; triggers auto-switch on apply | `DashboardDemoShell.tsx` |
-| Demo3dSpatialView | Fetches crime data per slice range, runs computeSliceKde, passes to Stkde3DScene | `Demo3dSpatialView.tsx` |
-| Stkde3DScene | R3F Canvas, camera, lighting, hidden map tile source, renders slices | `Stkde3DScene.tsx` |
-| StkdeSliceStack | Builds Canvas2D textures per-slice KDE, renders as planes with grid/labels | `StkdeSliceStack.tsx` |
-| MapVisualization | MapLibre GL container with event layers, heatmap, STKDE, controls | `MapVisualization.tsx` |
-| DemoDualTimeline | SVG timeline with overview/detail tracks, brush, burst windows | `DualTimelineSurface.tsx` |
-| DemoInspectPanel | Slice scrubber, playback controls, opacity, comparison | `DemoInspectPanel.tsx` |
-| DemoConfigurePanel | Warp factor, threshold, adaptive mode | `DemoConfigurePanel.tsx` |
-
-### Data Flow (Current)
-
-```
-DuckDB → API Route (/api/crimes/range, /api/stkde/hotspots)
-   ↓
-TanStack Query / fetch() in components
-   ↓
-Demo3dSpatialView: crime data → computeSliceKde (main thread) → sliceKdes[]
-   ↓
-Stkde3DScene: sliceKdes[] → Canvas2D → texture → plane mesh
-
-Timeline:
-DuckDB → /api/crime/bins → useTimelineDataStore → DualTimelineSurface SVGs
-
-STKDE:
-DuckDB → /api/stkde/hotspots → useDemoStkde → DemoMapVisualization / MapStkdeHeatmapLayer
-```
-
-### State Management (Current)
-
-| Store | State | Used By |
-|-------|-------|---------|
-| useDashboardDemoCoordinationStore | activeSliceIndex, viewMode, brushRange, comparison data, activeRailTab, crimeFetchStatus, inspectPlayback | Shell, 3D, Map, Timeline, all panels |
-| useSliceDomainStore | slices array (core/creation/adjustment/selection) | Persisted, all views |
-| useDashboardDemoTimeslicingModeStore | generation inputs, burst draft generation | Detect panel |
-| useDashboardDemoAnalysisStore | STKDE params, response, districts, hotspots | Map, STKDE panel |
-| useDashboardDemoFilterStore | Crime type, district filters | Map |
-| useDashboardDemoAdaptiveStore | burstThreshold | Map, timeline |
-| useDashboardDemoMapLayerStore | Layer visibility, opacity | Map |
-| useDashboardDemoWarpStore | densityMap, warpMap | Detect panel |
-
-### Rendering Gap Analysis
-
-The dashboard-demo 3D pipeline (`StkdeSliceStack`) uses **zero custom shaders or post-processing**. All KDE heatmap textures are rendered via `Canvas2D` (CPU) with radial gradients, then uploaded as `THREE.CanvasTexture` to a basic `MeshBasicMaterial`. The main viz pipeline (`src/components/viz/`) has sophisticated shader infrastructure (GhostingShader, heatmap ShaderMaterial) but it's entirely separate — the dashboard-demo never touches it.
-
-## Target Architecture — New Capabilities
-
-### 1. Burst Visibility Rendering
-
-**Where it lives:** `src/components/dashboard-demo/shaders/burst-amplify.ts`
-
-**New dependency:** None (pure GLSL via `THREE.ShaderMaterial` or custom `shaderMaterial` from drei)
-
-**Data flow:**
-```
-useDashboardDemoCoordinationStore (burst data)
-   ↓
-Demo3dSpatialView reads burstScore per slice, burstConfidence, burstClass
-   ↓
-Stkde3DScene passes as uniforms to BurstAmplifyShader
-   ↓
-Shader applies: color boost (hue shift toward amber/red), opacity ramp, glow intensity
-```
-
-**Architecture decision:**
-- **Option A: Replace Canvas2D textures with ShaderMaterial** — Eliminates CPU texture generation entirely. KDE data passed as float32 texture or uniform array. Burst amplification is a uniform mix. **Recommended.**
-- **Option B: Post-process bloom on active burst slices** — Keep Canvas2D, add selective bloom via EffectComposer. Simpler but less visual control.
-
-**Recommendation:** Option A for the core rendering, with Option B's selective bloom as an additive enhancement. Phase 1 = A, Phase X = combine with B.
-
-**Implementation sketch:**
-```typescript
-// src/components/dashboard-demo/shaders/burst-amplify.ts
-// ShaderMaterial that renders KDE cells directly from data textures
-// with burst amplification uniforms:
-//   uBurstScore: float (0-1) → controls intensity boost
-//   uBurstClass: int → style selection (spike/peak/valley)
-//   uActiveIntensity: float → active slice glow
-```
-
-**New files:**
-- `src/shaders/burst-amplify.ts` — shared burst shader logic
-- `src/components/dashboard-demo/shaders/slice-kde-material.tsx` — R3F wrapper component
-
-### 2. Temporal Evolution
-
-**Where it lives:** `src/components/dashboard-demo/TemporalTrailLayer.tsx`
-
-**New data needed:**
-- Per-slice: frame position, duration, interpolation target
-- Accumulation: blend factor between consecutive slices
-- Trail: decay rate, max trail length
-
-**Data flow:**
-```
-useDashboardDemoCoordinationStore (inspectIsPlaying, inspectPlaybackSpeed)
-   ↓
-TemporalTrailLayer reads activeSliceIndex, play state
-   ↓
-useFrame interpolates between slice[i] and slice[i+1]
-   ↓
-Custom ShaderMaterial with:
-  - uFrameAlpha: current interpolation mix
-  - uAccumTexture: frame buffer for trail accumulation
-  - uDecayRate: trail fade speed
-```
-
-**Architecture decision:**
-- **CPU interpolation:** Simple to implement, interpolate KDE cells in JS, re-upload texture each frame. Fine for ≤30 slices.
-- **GPU interpolation:** Upload start/end KDE data as textures, interpolate in fragment shader. More performant, more complex.
-- **Recommendation:** CPU first (MVP), GPU as optimization if frame rate drops below 30fps.
-
-**New files:**
-- `src/components/dashboard-demo/TemporalTrailLayer.tsx` — trail accumulation
-- `src/components/dashboard-demo/effects/InterpolationEffect.ts` — R3F post-processing effect for frame blending
-
-### 3. Spatial Orientation
-
-**Where it lives:** `src/components/dashboard-demo/SpatialOrientation.tsx`
-
-**New components:**
-- `AxisHelper3D.tsx` — annotated X/Z axes with crime-type labels, scale bar
-- `CameraPresetsManager.tsx` — preset views (overhead = STKDE view, oblique = standard, side = temporal profile)
-- `ConstrainedCamera.tsx` — wrapper around CameraControls with configurable bounds
-
-**Data flow:**
-```
-New store: useCameraStore
-  ├─ presets: CameraPreset[] (defined, user-saved)
-  ├─ activePresetId: string | null
-  ├─ constraints: { minDistance, maxDistance, minPolarAngle, maxPolarAngle, bounds }
-  └─ followMap: boolean (sync with map on pan/zoom)
-   ↓
-ConstrainedCamera component applies limits to CameraControls
-   ↓
-CameraPresetsManager triggers setLookAt with saved position/target
-```
-
-**Map + 3D camera sync approach:**
-```
-Map pan event → update cameraStore.mapCenter (lng/lat)
-   ↓
-project(mapCenter.lng, mapCenter.lat) → 3D scene coords (x, z)
-   ↓
-CameraControls.setTarget(x, 0, z)   // keep current pitch/zoom
-   ↓
-Reverse: 3D camera move → update map center?
-   ⚠️ Only if followMap is active — bidirectional sync can be disorienting.
-   Recommendation: Unidirectional (Map → 3D) by default. Bidirectional as opt-in.
-```
-
-**Key insight:** The existing `project()` function in `src/lib/projection.ts` already converts lat/lng to x/z scene coordinates. The map uses normalized `[0, 100]` time for Y, while 3D uses slice-stack Y positions. These coordinate systems are compatible — the bridge just needs to transform map viewport center to 3D scene coordinates.
-
-**New files:**
-- `src/store/useCameraStore.ts`
-- `src/components/dashboard-demo/CameraPresetsManager.tsx`
-- `src/components/dashboard-demo/ConstrainedCamera.tsx`
-- `src/components/dashboard-demo/AxisHelper3D.tsx`
-
-### 4. 3D Cognitive Load — Depth of Field & Occlusion Management
-
-**Where it lives:** `src/components/dashboard-demo/effects/`
-
-**New dependency:** `@react-three/postprocessing` + `postprocessing` (peer dep)
-
-**Stack:**
-```
-EffectComposer (wraps existing Canvas children)
-  ├─ DepthOfField (focus on active slice, blur inactive)
-  │    → target: active slice Y position
-  │    → bokehScale: configurable (0 = disabled)
-  ├─ Bloom (selective: active slice glow)
-  │    → luminanceThreshold: highlight burst cells
-  │    → intensity: mild (subtle, not gaming-style)
-  └─ Custom OcclusionPass (future: auto-dim occluded slices)
-```
-
-**Integration with existing Canvas:**
-```typescript
-// In Stkde3DScene.tsx, wrap SceneContent with EffectComposer:
-import { EffectComposer, DepthOfField, Bloom } from '@react-three/postprocessing';
-
-<Canvas ...>
-  <EffectComposer>
-    <DepthOfField
-      target={[0, activeSliceY, 0]}
-      focalLength={0.02}
-      bokehScale={postProcessingParams.dofIntensity}
-    />
-    <Bloom
-      luminanceThreshold={0.8}
-      intensity={postProcessingParams.bloomIntensity}
-      mipmapBlur
-    />
-  </EffectComposer>
-
-  <SceneContent ... />
-</Canvas>
-```
-
-**Key consideration:** EffectComposer introduces an additional render pass. For the dashboard-demo's use case (single Canvas, <200k triangles), this is negligible. But the `MapTileSource` texture (injected into scene via `group` at fixed position) must render before the EffectComposer to avoid post-processing the map tile plane. **Set `renderPriority` on map tile group or use a separate render layer for the map background.**
-
-**New files:**
-- `src/components/dashboard-demo/effects/VizPostProcessing.tsx` — effect composer controller
-- `src/store/usePostProcessingStore.ts` — DoF/Bloom params with presets
-
-### 5. Multi-Scale Temporal (Dynamic Aggregation Windows)
-
-**Where it lives:** Integrated into timeline and 3D view
-
-**Timeline integration:**
-- Extend `DualTimelineSurface` with an additional band showing aggregated bins at multiple resolutions
-- Add `MultiScaleTimelineBand.tsx` as a new track in the timeline
-
-**3D integration:**
-- Extend `StkdeSliceStack` to accept variable-width bins (currently all slices have uniform spacing via `SLICE_SPACING = 7.25`)
-- Add uniform behavior via `yForIndex` that accounts for temporal duration
-
-**Data flow:**
-```
-New store: useMultiScaleStore
-  ├─ resolution: 'coarse' | 'medium' | 'fine'
-  ├─ aggregationWindow: number (hours)
-  ├─ binCount: number
-  └─ bins: { start, end, crimeCount, density }[]
-   ↓
-Timeline: renders bands at current resolution
-3D view: renders slice planes at variable Y positions proportional to temporal span
-```
-
-**New files:**
-- `src/store/useMultiScaleStore.ts`
-- `src/components/timeline/MultiScaleTimelineBand.tsx`
-- `src/lib/aggregation/multi-scale.ts` — server-side or worker aggregation
-
-### 6. Dense Data Readability — Adaptive Transparency & Saliency
-
-**Where it lives:** In the slice rendering shader + new overlay components
-
-**Approach:**
-- **Adaptive transparency:** Shader computes local density from a low-res texture and adjusts opacity per cell. High-density cells get more opaque, low-density get more transparent. This replaces the current fixed `planeOpacity`.
-- **Saliency highlighting:** Cells above a configurable density percentile get a color boost/halo effect in the shader.
-
-**Shader integration:**
-```
-uSaliencyThreshold: float (percentile 0-1)
-uDensityRamp: { lowOpacity, highOpacity }
-Cells with intensity > threshold → amplified color + glow
-Cells with intensity < threshold → reduced opacity (fade into background)
-```
-
-**New files:**
-- Extends `src/shaders/burst-amplify.ts` with saliency uniforms (same shader, more parameters)
-
-## State Management Changes
-
-### New Stores
-
-| Store | Purpose | Key State |
-|-------|---------|-----------|
-| `useCameraStore` | 3D camera state for presets and map sync | `presets`, `activePresetId`, `followMap`, `constraints`, `lastTarget` |
-| `usePostProcessingStore` | Post-processing effect parameters | `dofEnabled`, `dofIntensity`, `bloomEnabled`, `bloomIntensity`, `effectPreset` |
-| `useMultiScaleStore` | Multi-scale aggregation state | `resolution`, `aggregationWindow`, `bins`, `isComputing` |
-| `useVizAnimationStore` | Temporal evolution animation state | `interpolationMode`, `trailDecay`, `accumulatedFrames`, `isPlaying` |
-
-### Extended Stores
-
-| Store | Additions | Rationale |
-|-------|-----------|-----------|
-| `useDashboardDemoCoordinationStore` | `burstAmplifyEnabled: boolean`, `burstAmplifyIntensity: number` | Burst rendering is a view-level toggle, belongs with other view settings |
-| `useDashboardDemoCoordinationStore` | `temporalEvolutionMode: 'off' | 'interpolate' | 'trail' | 'accumulate'` | Temporal evolution mode is a coordination concern across views |
-| `useDashboardDemoMapLayerStore` | `cameraSync: 'independent' | 'follow-3d' | 'bidirectional'` | Camera sync mode controls map behavior |
-| `useDashboardDemoAnalysisStore` | `saliencyThreshold: number`, `saliencyEnabled: boolean` | Saliency is an analysis view parameter |
-
-### Store Dependency Graph
-
-```
-useCameraStore ───→ ConstrainedCamera, CameraPresetsManager
-     │
-     ├──→ useDashboardDemoCoordinationStore (syncState)
-     │
-     └──→ DemoMapVisualization (when followMap)
-
-usePostProcessingStore ───→ VizPostProcessing (EffectComposer params)
-
-useVizAnimationStore ───→ TemporalTrailLayer, DemoInspectPanel
-
-useMultiScaleStore ───→ MultiScaleTimelineBand, StkdeSliceStack (variable Y)
-```
-
-## Component Structure — New vs Modified
-
-### New Components
-
-| Component | Purpose | Phase |
-|-----------|---------|-------|
-| `src/shaders/burst-amplify.ts` | Shared burst amplification GLSL logic | 2 |
-| `src/components/dashboard-demo/StkdeSliceStackExtended.tsx` | Shader-based replacement for Canvas2D stacks | 2 |
-| `src/components/dashboard-demo/effects/VizPostProcessing.tsx` | EffectComposer + DoF + Bloom wrapper | 4 |
-| `src/components/dashboard-demo/TemporalTrailLayer.tsx` | Frame accumulation and interpolation | 3 |
-| `src/components/dashboard-demo/CameraPresetsManager.tsx` | Camera preset switcher UI + logic | 3 |
-| `src/components/dashboard-demo/ConstrainedCamera.tsx` | CameraControls with configurable limits | 3 |
-| `src/components/dashboard-demo/AxisHelper3D.tsx` | Annotated 3D axes, grid, scale bar | 3 |
-| `src/components/timeline/MultiScaleTimelineBand.tsx` | Aggregation resolution band in timeline | 5 |
-| `src/components/dashboard-demo/VizControlsPanel.tsx` | UI panel for viz toggles (burst, DoF, sync) | 4 |
-| `src/lib/aggregation/multi-scale.ts` | Server/worker multi-resolution aggregation | 5 |
-
-### Modified Components
-
-| Component | Changes | Phase |
-|-----------|---------|-------|
-| `Demo3dSpatialView.tsx` | Add burst data passthrough, camera store integration, animation state, effect composer | 2-3-4 |
-| `Stkde3DScene.tsx` | Wrap in EffectComposer, add post-processing, replace StkdeSliceStack with shader variant, add TemporalTrailLayer, add AxisHelper3D, add constrained camera | 2-3-4 |
-| `StkdeSliceStack.tsx` | Keep as fallback (non-shader mode). Add burst uniform support if used | 2 |
-| `DashboardDemoShell.tsx` | Add camera sync state bridge between map/3d toggle | 3 |
-| `DemoInspectPanel.tsx` | Add temporal evolution mode controls, camera preset quick buttons | 3 |
-| `DemoConfigurePanel.tsx` | Add visualization quality toggles (burst, DoF, bloom, saliency) | 4 |
-| `DemoDualTimeline.tsx` | Accept multi-scale band data, new optional track | 5 |
-| `MapVisualization.tsx` | Accept camera sync state from coordination store, update viewport on 3D changes | 3 |
-
-### Components NOT Modified (unchanged)
-
-| Component | Reason |
-|-----------|--------|
-| `DemoSlicePanel.tsx` | Slice review/apply workflow is already solid |
-| `DemoDetectPanel.tsx` | Burst detection is complete |
-| `DemoStkdePanel.tsx` | STKDE analysis flow is independent |
-| `DemoStatsPanel.tsx` | Statistical summaries are separate concern |
-| `DemoTimelineSettingsCard.tsx` | Already has adaptive controls |
-| `DashboardDemoRailTabs.tsx` | Rail tab structure is stable |
-| `MapStkdeHeatmapLayer.tsx` | Map heatmap works independently |
-
-## Data Flow Changes
-
-### New Data Pipelines
-
-**Burst Visibility Pipeline:**
-```
-useSliceDomainStore (slices[].burstScore, burstClass)
-   ↓
-Demo3dSpatialView computes burst amplification params per slice
-   ↓
-{ burstAmplifyMap: Map<sliceId, { boost, color, glow }> }
-   ↓
-Stkde3DScene → shader uniforms per slice mesh
-```
-
-**Temporal Evolution Pipeline:**
-```
-useDashboardDemoCoordinationStore (inspectIsPlaying, playbackSpeed)
-   ↓
-TemporalTrailLayer (useFrame-based interpolation)
-   ├─ startKDE: KDE cells for current slice
-   ├─ endKDE: KDE cells for next slice
-   └─ t: [0, 1] interpolant per frame
-   ↓
-Blended texture uploaded each frame → plane material
-```
-
-**Camera Sync Pipeline:**
-```
-MapLibre map.on('move') → { lng, lat, zoom }
-   ↓
-project(lat, lng) → { x, z } (scene coordinates)
-   ↓
-useCameraStore.setMapCenter({ x, z })
-   ↓
-ConstrainedCamera.setTarget(x, 0, z)
-   (if followMap is enabled)
-```
-
-**Multi-Scale Aggregation Pipeline:**
-```
-Worker: adaptiveTime.worker.ts (extended)
-   or NEW: aggregation.worker.ts
-   ↓
-Aggregates crime timestamps at multiple resolutions
-   { coarse: binCount=12, medium: binCount=48, fine: binCount=192 }
-   ↓
-useMultiScaleStore.setBins(resolution, bins)
-   ↓
-MultiScaleTimelineBand re-renders
-StkdeSliceStack adjusts Y positions
-```
-
-### Modified Data Flows
-
-**Crime Data Fetch (Demo3dSpatialView):**
-- Current: Sequential per-slice fetch → `crimesBySlice[]` → KDE main thread
-- Target: **Parallel fetch** (Promise.all per slice batch) + **Worker KDE** via existing stkdeHotspot.worker extended pattern
-
-**KDE Computation:**
-- Current: `computeSliceKde()` directly in component, main thread
-- Target: New `kde.worker.ts` or extend `stkdeHotspot.worker.ts` to accept point arrays and return KDE cell arrays
-
-## Performance Strategy
-
-### GPU Work (Free — no main thread impact)
-
-| Feature | GPU Cost | Notes |
-|---------|----------|-------|
-| Shader-based burst amplification | ~0 (single uniform branch) | Replaces Canvas2D texture generation |
-| Post-processing (DoF) | 1 render target | ~0.5-1ms on modern GPUs |
-| Post-processing (Bloom) | 2 render targets (downsample) | ~0.5-2ms depending on resolution |
-| Temporal trail accumulation | 1 render target | Same as bloom cost |
-| Shader-based KDE rendering | ~0 (data texture sampling) | Eliminates CPU texture generation entirely |
-
-### CPU Work (Offloaded to Workers)
-
-| Computation | Current Location | Target Location | Worker |
-|-------------|-----------------|-----------------|--------|
-| KDE per slice | Main thread (Demo3dSpatialView) | Worker | NEW: `kde.worker.ts` |
-| Multi-scale temporal aggregation | N/A | Worker | NEW: `aggregation.worker.ts` |
-| Burst scoring (already in worker) | Worker | Worker (unchanged) | `adaptiveTime.worker.ts` |
-
-### Optimization Strategy
-
-```
-1.  Canvas2D texture generation (current bottleneck for >5 slices)
-    → ShaderMaterial rendering (GPU, free)
-    
-2.  KDE computation (current: main thread, blocks UI for >100k points)
-    → Worker offloading (CPU, non-blocking)
-    
-3.  Post-processing overhead (new)
-    → Only render effects when enabled (store toggle)
-    → Reduce resolution for bloom (half-res)
-    
-4.  Camera sync recomputation (new)
-    → Only on map pan/zoom end, not every frame
-    → Debounce map move events
-```
-
-## Integration Points
-
-### R3F Post-Processing Integration with Existing Canvas
-
-**Current Canvas setup (Stkde3DScene.tsx):**
-```typescript
-<Canvas
-  camera={{ position: CAMERA_POSITION, fov: 38 }}
-  gl={{ alpha: true, antialias: true }}
->
-```
-
-**Target:**
-```typescript
-<Canvas
-  camera={{ position: CAMERA_POSITION, fov: 38 }}
-  gl={{ alpha: true, antialias: true, depth: true }}
->
-  {postProcessingEnabled && (
-    <EffectComposer>
-      <DepthOfField
-        target={activeSlicePosition}
-        focalLength={postProcessingParams.dofFocalLength}
-        bokehScale={postProcessingParams.dofIntensity}
-      />
-      <Bloom
-        luminanceThreshold={0.6}
-        intensity={postProcessingParams.bloomIntensity}
-        mipmapBlur
-      />
-    </EffectComposer>
-  )}
-
-  <SceneContent ... />
-</Canvas>
-```
-
-**Critical detail:** The `MapTileSource` texture (hidden MapLibre map captured to CanvasTexture) currently renders at `position={[0, MAP_PLANE_Y, 0]}` inside the scene with `renderOrder={-20}`. With EffectComposer:
-- The map tile plane should render **before** post-processing (it's a reference background, should not have DoF/bloom applied)
-- Solution: Wrap map tile in a `<layer/>` or use `EffectsScope` to exclude background meshes from post-processing
-- Alternative: Render map tile as a separate `Scene` overlay (not recommended — would lose depth integration)
-
-**Recommendation:** Use `selection` property on `EffectComposer` and `selectionLayer` to exclude the map plane mesh from effects:
-```typescript
-const mapPlaneRef = useRef<Mesh>(null);
-
-<EffectComposer selectionLayer={1}>
-  <Bloom selection={[mapPlaneRef]} ... />
-</EffectComposer>
-```
-Or simply don't apply effects to `renderOrder` < 0 meshes via custom logic.
-
-### Map + 3D Camera Sync
-
-**Sync mechanism:**
-
-```
-Map Events ──→ Camera Store ──→ 3D Camera Controls
-   (unidirectional by default)
-
-Map pan/zoom:
-  map.on('move') → debounce(100ms) →
-    project(mapCenter.lat, mapCenter.lng) → (x, z) →
-    cameraStore.setMapCenter(x, z) →
-    if (followMap) → cameraControls.setTarget(x, 0, z, smooth=true)
-
-Map → 3D projection bridge:
-  project(lat, lng) → { x, z }
-    // Already exists in src/lib/projection.ts
-    // Uses Web Mercator projection → [-50, 50] scene coords
-
-3D → Map (optional, bidirectional):
-  3D camera orbit end → cameraStore.lastTarget →
-    inverseProject(x, z) → { lat, lng } →
-    mapRef.flyTo({ center: [lng, lat], duration: 200 })
-```
-
-**State management:**
-```typescript
-// useCameraStore
-interface CameraState {
-  // Current 3D camera state
-  target: [number, number, number];   // [x, y, z] in scene coords
-  position: [number, number, number]; // camera world position
-  
-  // Map sync
-  followMap: boolean;
-  mapCenter3D: { x: number; z: number } | null;  // projected map center
-  
-  // Presets
-  presets: CameraPreset[];
-  activePresetId: string | null;
-  
-  // Constraints
-  constraints: {
-    minDistance: number;
-    maxDistance: number;
-    minPolarAngle: number;
-    maxPolarAngle: number;
-    bounds?: AxisAlignedCubeBounds;  // optional spatial bounds
-  };
-  
-  // Actions
-  setTarget: (x: number, y: number, z: number) => void;
-  setMapCenter: (x: number, z: number) => void;
-  applyPreset: (presetId: string) => void;
-  saveCurrentAsPreset: (name: string) => void;
-  setFollowMap: (enabled: boolean) => void;
-}
-```
-
-## Build Order — Dependency Graph
-
-```
-Phase 1: Shader Infrastructure
-  ├── Install @react-three/postprocessing + postprocessing (peer)
-  ├── Create src/shaders/ directory structure
-  ├── Create burst-amplify.ts (shareable GLSL fragments/uniforms)
-  └── No visual change — foundation only
-
-Phase 2: Burst Visibility Rendering (depends on Phase 1)
-  ├── Create StkdeSliceStackExtended.tsx (shader-based, replaces Canvas2D)
-  │   └── Uses burst-amplify shader
-  ├── Demo3dSpatialView: pass burst data as uniforms
-  ├── DemoConfigurePanel: burst toggles
-  └── Phase 2a: Keep Canvas2D as fallback for non-shader mode
-
-Phase 3: Spatial Orientation & Camera Sync (partially dependent on Phase 1)
-  ├── Create useCameraStore
-  ├── Create AxisHelper3D.tsx
-  ├── Create CameraPresetsManager.tsx
-  ├── Create ConstrainedCamera.tsx  
-  ├── Demo3dSpatialView: integrate camera store
-  ├── MapVisualization: add followMap mode
-  ├── DemoInspectPanel: camera preset buttons
-  └── Independent of Phase 2 — can build in parallel or before
-
-Phase 4: Post-Processing & Temporal Evolution (depends on Phase 1)
-  ├── Create VizPostProcessing.tsx (EffectComposer wrapper)
-  ├── Create usePostProcessingStore
-  ├── Create TemporalTrailLayer.tsx
-  ├── Stkde3DScene: wrap in EffectComposer, add layers
-  ├── DemoConfigurePanel: DoF/Bloom controls
-  └── Depends on Phase 1 (needs postprocessing dependency)
-       Independent of Phase 2,3
-
-Phase 5: Multi-Scale Temporal (depends on Phase 3 timeline knowledge)
-  ├── Create useMultiScaleStore
-  ├── Create aggregation.worker.ts (or extend existing worker)
-  ├── Create MultiScaleTimelineBand.tsx
-  ├── StkdeSliceStack: variable Y positioning
-  └── Partially depends on Phase 3 (timeline structure)
-
-Phase 6: Dense Data Readability (depends on Phase 2 shader work)
-  ├── Extend burst-amplify.ts with adaptive transparency + saliency
-  ├── Add saliency controls to DemoConfigurePanel
-  └── Pure shader extension — no new components needed
-```
-
-### Recommended Build Order
-
-```
-Phase 1 ──→ Phase 3 ──→ Phase 2 ──→ Phase 4 ──→ Phase 5 ──→ Phase 6
-(Foundation)  (Orientation)  (Burst)    (PostFX +  (Multi-    (Readability)
-                                        Temporal)  scale)
-```
-
-**Rationale:**
-- **Phase 1 first** always — shader infrastructure + dependency install is prerequisite for any GPU work
-- **Phase 3 early** — camera presets and spatial orientation are "quick wins" with high visual impact, no shader complexity
-- **Phase 2 before 4** — burst shader is simpler than full post-processing, validates the shader pipeline
-- **Phase 4 after 2** — EffectComposer builds on shader pipeline, temporal evolution needs stable slice rendering
-- **Phase 5 later** — multi-scale depends on stable timeline + needs worker changes
-- **Phase 6 last** — pure polish, requires all other rendering to be stable first
-
-## Anti-Patterns to Avoid
-
-### 1. Mixing shader pipelines across routes
-
-**What:** Sharing custom shader code between `src/components/viz/shaders/` (main route) and the new dashboard-demo shaders.
-**Problem:** The main route uses `onBeforeCompile` patching of Three.js built-in shaders (fragile, version-specific). Dashboard-demo should use clean `ShaderMaterial` instances.
-**Instead:** Keep dashboard-demo shaders separate in `src/shaders/` using `ShaderMaterial` from Three.js or `shaderMaterial` from drei. Don't reuse the fragile `onBeforeCompile` pattern.
-
-### 2. Over-processing canvas texture map tiles
-
-**What:** Applying bloom/DoF to the captured map tile texture.
-**Problem:** The map tile is a static reference image — blurring it or blooming it creates visual confusion (blurred streets).
-**Instead:** Exclude the map plane from post-processing via `selection`, `renderOrder`, or separate render layers.
-
-### 3. Bidirectional camera sync without guardrails
-
-**What:** Mirroring every 3D camera move back to the map and every map move to 3D.
-**Problem:** Infinite feedback loop, disorienting when zooming in 3D (map zoom level doesn't map 1:1 to 3D camera distance).
-**Instead:** Use unidirectional sync by default (map → 3D only). Bidirectional only when user explicitly enables it, with hysteresis/debounce.
-
-### 4. Recomputing KDE on the main thread for many slices
-
-**What:** Running `computeSliceKde()` in `Demo3dSpatialView` for 15+ slices.
-**Problem:** Each call is ~2-5ms for 32x32 grid. 15 slices = 30-75ms of blocked main thread.
-**Instead:** Offload to `kde.worker.ts`. The worker pattern is already established (`adaptiveTime.worker.ts`, `stkdeHotspot.worker.ts`).
-
-### 5. Adding post-processing without toggles
-
-**What:** Always rendering DepthOfField or Bloom.
-**Problem:** On integrated GPUs (common in laptops), even simple post-processing adds 1-3ms per frame. Always-on effects degrade interactivity.
-**Instead:** All post-processing effects must be toggleable. Default to off for DoF (subtle enhancement), on for Bloom (mild, low cost). Store preferences in `usePostProcessingStore`.
-
-## Scaling Considerations
-
-| Concern | Current (v3.1) | Post-Level-Up | 
-|---------|----------------|---------------|
-| **Shader complexity** | None in dashboard-demo 3D | 2-3 ShaderMaterials + 1-2 post effects |
-| **Render passes** | 1 (forward) | 2-3 (forward + 1-2 post) |
-| **KDE computation** | Main thread, sequential | Worker, parallel per slice batch |
-| **Canvas texture upload** | 1 per slice (CPU) | 0 (GPU data textures) |
-| **Camera state** | Local state in Stkde3DScene | Shared store, presets, constraints |
-| **Timeline aggregation** | Fixed bins | Dynamic multi-resolution |
-| **Map-3D sync** | None (independent toggle) | Unidirectional, opt-in bidirectional |
-
-### Bottleneck Analysis
-
-| Bottleneck | Where | Mitigation |
-|------------|-------|------------|
-| KDE computation | CPU (main thread) | Worker offloading (Phase 0 of this milestone) |
-| Canvas2D texture generation | CPU (main thread) | ShaderMaterial rendering (Phase 2) |
-| Post-processing passes | GPU | Toggleable, low-res bloom |
-| Camera sync frequency | JS main thread | Debounce, event-driven not frame-driven |
-
-## Sources
-
-- Existing codebase analysis: `src/components/dashboard-demo/*`, `src/app/stkde-3d/*`, `src/store/*`, `src/workers/*`
-- `@react-three/postprocessing` — verified via Context7 for API surface: EffectComposer, DepthOfField, Bloom, Selection
-- Three.js ShaderMaterial — verified via Context7 for texture sampling uniforms, onBeforeCompile alternatives
-- `src/lib/projection.ts` — existing coordinate projection bridge (verified in codebase)
-- `src/components/viz/shaders/ghosting.ts` — existing shader pattern reference (separate pipeline, not reusable)
-- `src/components/viz/shaders/heatmap.ts` — existing ShaderMaterial reference pattern
+**Researched:** 2026-06-30
+**Confidence:** HIGH (codebase analyzed, Convex docs verified via Context7, existing patterns inspected)
 
 ---
 
-*Architecture research for: Adaptive Space-Time Cube Visualization Level-Up*
-*Researched: 2026-05-26*
+## Recommended Architecture
+
+### Overall Picture
+
+The ATS Perception Study is a **self-contained standalone web experiment** that runs as a dedicated `/experiment` route inside the existing Next.js 16 App Router project. It lives on the `ats-study` branch where all prototype routes, DuckDB dependencies, Web Workers, and visualization libraries are stripped away — leaving a lean experiment-only deployment surface.
+
+The architecture has three layers:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    BROWSER (CLIENT)                          │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ /experiment  │  │ SVG Stimulus │  │ Trial Runner       │  │
+│  │ page.tsx     │  │ Components   │  │ (Zustand store)    │  │
+│  └──────┬───────┘  └──────┬───────┘  └─────────┬──────────┘  │
+│         │                 │                     │             │
+│  ┌──────┴─────────────────┴─────────────────────┴──────────┐  │
+│  │            ATS Mapping Lib (src/lib/ats/)                │  │
+│  │  - Compute per-interval allocation weights from          │  │
+│  │    burstiness-derived event distribution                 │  │
+│  │  - Pure functions, no side effects, testable             │  │
+│  └──────────────────────────┬──────────────────────────────┘  │
+│                             │                                  │
+│  ┌──────────────────────────┴──────────────────────────────┐  │
+│  │         ConvexClientProvider (React context)             │  │
+│  │  - ConvexReactClient initialized once at layout level    │  │
+│  │  - useMutation / useQuery hooks for response storage     │  │
+│  └──────────────────────────┬──────────────────────────────┘  │
+└─────────────────────────────┼─────────────────────────────────┘
+                              │ HTTPS
+┌─────────────────────────────┼─────────────────────────────────┐
+│                   CONVEX CLOUD (BACKEND)                      │
+│  ┌──────────────────────────┴──────────────────────────────┐  │
+│  │  convex/schema.ts  │  convex/responses.ts               │  │
+│  │  - responses table  │  - submitResponse mutation        │  │
+│  │  - sessions table   │  - getResponses query             │  │
+│  │  - participants tbl │  - startSession mutation          │  │
+│  └─────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+The study uses **no DuckDB, no Three.js, no MapLibre, no deck.gl, no Web Workers, no Apache Arrow**. The only backend is Convex (for response storage). All stimulus computation happens client-side in pure TypeScript.
+
+---
+
+## Component Boundaries
+
+| Component | Responsibility | Communicates With | Location |
+|-----------|---------------|-------------------|----------|
+| `/experiment` route | Shell page that composes the experiment flow | Zustand store, stimulus components, Convex hooks | `src/app/experiment/page.tsx` |
+| ConvexClientProvider | Initializes ConvexReactClient, wraps app with ConvexProvider | Next.js layout | `src/providers/ConvexClientProvider.tsx` (NEW) |
+| SVG Stimulus Components | Render event rug + allocation bands for Uniform and ATS conditions | ATS mapping lib, trial runner store | `src/components/stimulus/` (NEW) |
+| Trial Runner Store | Manages experiment state machine (flows, trials, responses, session) | Convex hooks, ATS mapping lib | `src/store/useExperimentStore.ts` (NEW) |
+| ATS Mapping Lib | Computes per-interval allocation weights from event distribution | Synthetic event generator, stimulus components | `src/lib/ats/` (NEW) |
+| Convex Schema | Defines database tables and validators | Convex mutations/queries | `convex/schema.ts` (NEW) |
+| Convex Mutations | Server-side write operations for response storage | Convex database | `convex/responses.ts` (NEW) |
+| Layout (root) | Wraps children with ConvexProvider + ThemeProvider | All pages | `src/app/layout.tsx` (MODIFIED) |
+| Landing page | Redirects to /experiment; strips prototype demo links | Browser | `src/app/page.tsx` (MODIFIED) |
+
+---
+
+## Integration Points
+
+### 1. Root Layout — ConvexProvider Injection
+
+**What changes:** The existing root layout at `src/app/layout.tsx` must wrap children in `ConvexClientProvider` alongside the existing `ThemeProvider`. The `QueryProvider` (TanStack) can be conditionally kept or removed — Convex provides its own data-fetching via `useQuery`/`useMutation`, making TanStack Query unnecessary for the experiment route. **Recommendation: Keep QueryProvider** but it becomes inert since no `useCrimeData` hooks will exist on the stripped branch.
+
+**How it integrates:**
+
+```typescript
+// src/app/layout.tsx (MODIFIED — adds ConvexClientProvider)
+import { ConvexClientProvider } from "@/providers/ConvexClientProvider";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className={`...`}>
+        <ThemeProvider>
+          <ConvexClientProvider>
+            {children}
+            <Toaster />
+          </ConvexClientProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+The new file `src/providers/ConvexClientProvider.tsx`:
+
+```typescript
+// src/providers/ConvexClientProvider.tsx (NEW)
+'use client';
+
+import { ReactNode } from 'react';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
+
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+if (!convexUrl) throw new Error('Missing NEXT_PUBLIC_CONVEX_URL');
+
+const convex = new ConvexReactClient(convexUrl);
+
+export function ConvexClientProvider({ children }: { children: ReactNode }) {
+  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+}
+```
+
+**Dependency:** `NEXT_PUBLIC_CONVEX_URL` env var must be set in `.env.local` (obtained from `npx convex dev`).
+
+### 2. Convex Directory Structure
+
+**New top-level directory:** `convex/` at the project root (sibling to `src/`, `package.json`).
+
+```
+convex/
+├── schema.ts          # Table definitions with validators
+├── responses.ts       # Mutations (submitTrialResponse, startSession, etc.)
+├── _generated/        # Auto-generated by npx convex dev (gitignored)
+│   ├── api.d.ts
+│   ├── dataModel.d.ts
+│   └── server.js
+└── tsconfig.json      # Convex-specific TypeScript config
+```
+
+**Schema design (`convex/schema.ts`):**
+
+```typescript
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  // One row per participant session
+  sessions: defineTable({
+    participantId: v.string(),
+    blockOrder: v.union(v.literal("A->B"), v.literal("B->A")),
+    startedAt: v.number(),       // epoch ms
+    completedAt: v.optional(v.number()),
+    conditionOrder: v.string(),  // JSON string: {blockA: "uniform"|"adaptive", blockB: "uniform"|"adaptive"}
+  }).index("by_participant", ["participantId"]),
+
+  // One row per trial response
+  trialResponses: defineTable({
+    sessionId: v.id("sessions"),
+    participantId: v.string(),
+    trialIndex: v.number(),      // 0-23 (24 experimental trials)
+    block: v.union(v.literal("A"), v.literal("B")),
+    condition: v.union(v.literal("uniform"), v.literal("adaptive")),
+    taskType: v.union(
+      v.literal("peak-identification"),
+      v.literal("period-comparison"),
+      v.literal("pattern-recognition")
+    ),
+    datasetId: v.string(),       // synthetic dataset identifier
+    selectedAnswer: v.union(v.string(), v.number()),  // MCQ choice or binary
+    isCorrect: v.boolean(),
+    responseTimeMs: v.number(),
+    confidence: v.number(),      // 1-5 scale
+    completedAt: v.number(),
+  }).index("by_session", ["sessionId"]),
+
+  // Post-study questionnaire
+  questionnaireResponses: defineTable({
+    sessionId: v.id("sessions"),
+    participantId: v.string(),
+    items: v.string(),           // JSON: [{itemId, scale, value}, ...]
+    completedAt: v.number(),
+  }).index("by_session", ["sessionId"]),
+});
+```
+
+### 3. Next.js Configuration
+
+**`next.config.ts` (MODIFIED — for ats-study branch):**
+
+```typescript
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  // REMOVED: serverExternalPackages: ['duckdb'] — DuckDB is stripped
+  turbopack: {
+    root: process.cwd(),
+  },
+};
+
+export default nextConfig;
+```
+
+**`package.json` (MODIFIED — for ats-study branch):**
+- **ADD:** `"convex": "^1.x"` dependency
+- **REMOVE:** `duckdb`, `apache-arrow`, `@loaders.gl/*`, `three`, `@react-three/*`, `deck.gl`, `@deck.gl/*`, `maplibre-gl`, `react-map-gl`, `leaflet`, `react-leaflet`, `leaflet-draw`, `leaflet.markercluster`, `density-clustering`, `@math.gl/web-mercator`
+- **REMOVE:** `"postinstall": "patch-package && ..."` (DuckDB symlink no longer needed)
+- **REMOVE:** `patch-package`, `patches/`
+
+### 4. Environment Variables
+
+**`.env.local` (ats-study branch):**
+
+```dotenv
+# Convex deployment URL (from npx convex dev)
+NEXT_PUBLIC_CONVEX_URL=https://example-project-123.convex.cloud
+
+# REMOVED: USE_MOCK_DATA, DISABLE_DUCKDB, DUCKDB_PATH, DUCKDB_THREADS, STKDE_QA_FULL_POP_ENABLED
+```
+
+### 5. Synthetic Event Data Reuse
+
+**What stays:** The existing `src/lib/synthetic/goh-barabasi.ts` generator is the source of truth for producing bursty crime event sequences. For the experiment, we generate **24 fixed-seed datasets** at build time (or at experiment load time) that serve as the stimulus material. Each dataset is an array of `{ timestamp: number, type: string }` events.
+
+**What changes for the experiment:**
+- The existing generator produces full `CrimeRecord[]` with lat/lon/coordinate data.
+- The study only needs `{ timestamp: number }[]` — a subset of the output.
+- **Recommendation:** Create a thin wrapper `src/lib/ats/generate-datasets.ts` that:
+  1. Calls `generateBurstySequence()` with 24 fixed seeds
+  2. Extracts only timestamp arrays
+  3. Caches results for reuse across trials
+
+This reuses the validated Goh-Barabási implementation without modification.
+
+---
+
+## Data Flow
+
+### Trial Lifecycle (happy path)
+
+```
+1. Participant lands on /experiment
+   → useExperimentStore initializes (fresh session)
+   → ConvexClientProvider is already active from layout
+
+2. Participant clicks "Start Study"
+   → useExperimentStore.startSession() → convex mutation → sessions.insert()
+
+3. Block A begins (e.g., Uniform condition, 12 trials)
+   → Trial 1 loads:
+     a. Synthetic dataset for trial index loaded from cached generator output
+     b. ATS mapping lib computes per-interval weights (for both conditions)
+     c. SVG stimulus renders for active condition (Uniform or ATS)
+     d. Trial runner tracks: question text, MCQ options, timer
+
+4. Participant selects answer + confidence slider
+   → useExperimentStore.submitResponse() fires:
+     a. Convex mutation trialResponses.insert() → persisted
+     b. Store advances trialIndex
+     c. Next trial stimulus renders
+
+5. After all 24 trials + practice:
+   → Questionnaire component renders
+   → Participant completes NASA-RTLX + interpretability items
+   → convex mutation questionnaireResponses.insert()
+   → Session marked complete
+
+6. Done screen with download/export option
+```
+
+### ATS Mapping Data Flow
+
+The ATS mapping is the core differentiator. For each synthetic dataset, we need two renderings:
+
+**Uniform condition:** Equal-width time bins. Each bin gets equal vertical allocation. Events are plotted at their exact position.
+
+**ATS (Adaptive Temporal Scaling) condition:** Bins are stretched/compressed based on event density. High-density intervals get more vertical space (wider bands); sparse intervals get compressed bands. Events are plotted at their warped positions.
+
+```
+Synthetic Event Array (timestamps)
+  │
+  ▼
+ATS Mapping Lib (src/lib/ats/mapper.ts)
+  ├── computeDensity(timestamps, numBins): number[]
+  ├── computeBurstiness(density): number[]        ← Goh-Barabási B(t)
+  ├── computeAllocationWeights(burstiness): number[] ← normalized weights
+  ├── computeWarpedPositions(timestamps, weights): number[]
+  └── output: AtsMapping { bins, weights, warpedPositions }
+  │
+  ▼
+SVG Stimulus Component
+  ├── EventRug: plots events as tick marks along timeline
+  ├── AllocationBands: renders vertical allocation stripes
+  └── ConditionLabel: "Uniform" or "Adaptive" indicator
+```
+
+The ATS mapping is computed **client-side, synchronously** for each trial (trials use small datasets of ~200-500 events, not the full 8.5M crime records). No Web Workers needed.
+
+---
+
+## Route Stripping Strategy
+
+The `ats-study` branch removes all prototype infrastructure to create a clean, deployable experiment surface.
+
+### Routes to KEEP
+
+| Route | Purpose | Status |
+|-------|---------|--------|
+| `/` (landing page) | Study landing page (redirects to /experiment or shows consent) | MODIFIED — strip demo links, add study info |
+| `/experiment` | Main experiment page with trial runner, stimulus, questionnaire | NEW |
+| `/api/study/log` | Acknowledged study event ingestion (already exists) | KEEP (optional fallback; Convex is primary) |
+
+### Routes to STRIP (remove directories)
+
+All prototype routes are removed from the `ats-study` branch:
+
+```
+src/app/stats/              # Statistics dashboard
+src/app/stkde/              # STKDE 2D view
+src/app/stkde-3d/           # STKDE 3D view
+src/app/timeline-test/      # Timeline testing
+src/app/timeline-test-3d/   # 3D timeline testing
+src/app/timeslicing/        # Time slicing controls
+src/app/timeslicing-algos/  # Algorithm views
+src/app/dashboard-demo/     # Main dashboard shell
+src/app/hotspot-evolution/  # Hotspot analysis
+src/app/cube-sandbox/       # 3D cube sandbox
+src/app/evaluation/         # Phase 80 evaluation
+src/app/figures/*           # Publication figures
+src/app/demo/*              # Demo pages
+src/app/docs/               # Documentation
+src/app/algorithms/         # Algorithm explanations
+```
+
+### API Routes to STRIP (remove directories)
+
+```
+src/app/api/crime/*         # Crime data queries (DuckDB)
+src/app/api/crimes/*        # Crime range queries (DuckDB)
+src/app/api/stkde/*         # STKDE computation (DuckDB)
+src/app/api/adaptive/*      # Adaptive scaling (DuckDB)
+src/app/api/synthetic/*     # Synthetic generator API (DuckDB)
+src/app/api/neighbourhood/* # POI queries (DuckDB)
+```
+
+### Packages to REMOVE from dependencies
+
+```bash
+pnpm remove duckdb apache-arrow @loaders.gl/core @loaders.gl/arrow \
+  three @react-three/fiber @react-three/drei \
+  deck.gl @deck.gl/aggregation-layers @deck.gl/mapbox \
+  maplibre-gl react-map-gl leaflet react-leaflet \
+  leaflet-draw leaflet.markercluster @math.gl/web-mercator \
+  density-clustering patch-package
+```
+
+### Packages to ADD
+
+```bash
+pnpm add convex
+```
+
+---
+
+## New vs Modified Components
+
+### NEW Files
+
+| File | Purpose | Dependencies |
+|------|---------|-------------|
+| `src/app/experiment/page.tsx` | Experiment route shell | Zustand store, stimulus components, Convex hooks |
+| `src/app/experiment/layout.tsx` | Experiment-specific layout (if needed) | None |
+| `src/providers/ConvexClientProvider.tsx` | Convex React client initialization | `convex/react` |
+| `src/components/stimulus/EventRug.tsx` | SVG event tick marks | ATS mapping lib |
+| `src/components/stimulus/AllocationBands.tsx` | SVG allocation stripes | ATS mapping lib |
+| `src/components/stimulus/StimulusView.tsx` | Combined stimulus (rug + bands) | EventRug, AllocationBands |
+| `src/components/stimulus/MCQPanel.tsx` | Multiple-choice response interface | shadcn/ui (RadioGroup, Slider) |
+| `src/components/experiment/InstructionsScreen.tsx` | Pre-trial instructions | Store |
+| `src/components/experiment/PracticeTrial.tsx` | Practice trial flow | StimulusView, MCQPanel, Store |
+| `src/components/experiment/ExperimentTrial.tsx` | Main trial flow | StimulusView, MCQPanel, Store |
+| `src/components/experiment/QuestionnaireScreen.tsx` | Post-study questionnaire | shadcn/ui (Slider, RadioGroup) |
+| `src/components/experiment/DoneScreen.tsx` | Completion/export screen | Store, Convex query |
+| `src/components/experiment/ProgressBar.tsx` | Trial progress indicator | Store |
+| `src/store/useExperimentStore.ts` | Trial runner state machine | Zustand, Convex hooks |
+| `src/lib/ats/mapper.ts` | ATS weight computation | Synthetic generator output |
+| `src/lib/ats/generate-datasets.ts` | Fixed-seed dataset generation | `src/lib/synthetic/goh-barabasi.ts` |
+| `src/lib/ats/types.ts` | ATS mapping type definitions | None |
+| `convex/schema.ts` | Convex database schema | `convex/server`, `convex/values` |
+| `convex/responses.ts` | Convex mutations (submit/query) | Schema |
+| `convex/tsconfig.json` | Convex TypeScript config | None |
+
+### MODIFIED Files
+
+| File | Change | Reason |
+|------|--------|--------|
+| `src/app/layout.tsx` | Add ConvexClientProvider wrapper | Convex hooks need provider context |
+| `src/app/page.tsx` | Strip demo links; add study landing | Route stripping + study focus |
+| `next.config.ts` | Remove serverExternalPackages | DuckDB stripped |
+| `package.json` | Remove prototype deps; add convex | Clean deployment surface |
+| `.env.local` | Add NEXT_PUBLIC_CONVEX_URL; remove DuckDB vars | Convex backend connection |
+| `pnpm-lock.yaml` | Regenerated after dep changes | pnpm consistency |
+
+### UNCHANGED (shared infrastructure)
+
+| File | Why Kept |
+|------|----------|
+| `src/lib/synthetic/goh-barabasi.ts` | Generates bursty event sequences for stimuli |
+| `src/lib/synthetic/prng.ts` | Seeded random for reproducible datasets |
+| `src/lib/synthetic/types.ts` | Type definitions for generator |
+| `src/lib/coordinate-normalization.ts` | Optional: if spatial variants needed later |
+| `src/components/layout/ThemeProvider.tsx` | Dark/light theme for study UI |
+| `src/components/ui/*` (shadcn) | UI primitives (buttons, sliders, radio groups) |
+| `src/lib/study/protocol.ts` | Reference for experiment constants (may be repurposed) |
+| `src/lib/study/condition-order.ts` | Counterbalancing logic (reused for trial ordering) |
+| `src/lib/logger.ts` | Optional fallback logging to `/api/study/log` |
+| `src/store/useStudyStore.ts` | Optional: legacy study store (can be kept or stripped) |
+| `tailwind.config.ts`, `globals.css` | Styling infrastructure |
+
+---
+
+## Build Order (Dependency Chain)
+
+Phase ordering considers what must exist before downstream code can be built or tested:
+
+```
+Wave 1: Infrastructure Foundation
+├── 1a. Create ats-study branch, strip prototype routes & deps
+│      (git rm prototype routes; pnpm remove heavy deps)
+├── 1b. Install Convex: pnpm add convex
+├── 1c. npx convex dev → creates convex/ project, generates _generated/
+├── 1d. Define convex/schema.ts (tables for sessions, trialResponses, questionnaireResponses)
+├── 1e. Create convex/responses.ts (submitTrialResponse mutation, startSession, etc.)
+└── 1f. Create ConvexClientProvider, wire into layout.tsx
+
+Wave 2: Core Logic
+├── 2a. Define ATS mapping types (src/lib/ats/types.ts)
+├── 2b. Build ATS mapper (src/lib/ats/mapper.ts) — pure functions
+├── 2c. Build dataset generator (src/lib/ats/generate-datasets.ts) — wraps goh-barabasi.ts
+├── 2d. Write unit tests for mapper and dataset generator
+└── 2e. Define experiment trial protocol (24 trial definitions, task types)
+
+Wave 3: Stimulus Rendering
+├── 3a. Build EventRug SVG component
+├── 3b. Build AllocationBands SVG component
+├── 3c. Build composite StimulusView (rug + bands + labels)
+└── 3d. Validate stimulus appearance against design spec
+
+Wave 4: Trial Runner
+├── 4a. Build useExperimentStore (Zustand state machine)
+├── 4b. Build InstructionsScreen, PracticeTrial components
+├── 4c. Build MCQPanel (response capture UI)
+├── 4d. Build ExperimentTrial (full trial flow)
+├── 4e. Wire Convex mutations into store (trial response persistence)
+└── 4f. End-to-end trial integration test
+
+Wave 5: Participant Flow
+├── 5a. Build ProgressBar component
+├── 5b. Build QuestionnaireScreen
+├── 5c. Build DoneScreen
+├── 5d. Wire full participant flow (consent → practice → block A → block B → questionnaire → done)
+└── 5e. Wire session lifecycle (startSession, completeSession)
+
+Wave 6: Deployment Polish
+├── 6a. Modify landing page (/) with study info
+├── 6b. Configure Vercel deployment for ats-study branch
+├── 6c. Set up Convex production deployment
+├── 6d. Final integration test (24-trial run-through)
+└── 6e. Pilot verification (N=2-3 internal testers)
+```
+
+---
+
+## Patterns to Follow
+
+### Pattern 1: Pure-Function Lib for Computation
+
+**What:** All ATS mapping math lives in `src/lib/ats/mapper.ts` as pure functions. No DOM, no state, no side effects.
+
+**Why:** Same pattern as existing `src/lib/adaptive/` and `src/lib/synthetic/`. Enables unit testing without mocking, reuse across stimulus components, and future extraction.
+
+**Example:**
+```typescript
+// src/lib/ats/mapper.ts
+export function computeDensity(timestamps: number[], numBins: number): number[] {
+  // Count events per bin
+}
+
+export function computeBurstiness(density: number[]): number[] {
+  // B(t) = (σ_τ - μ_τ) / (σ_τ + μ_τ) per sliding window (Goh-Barabási 2008)
+}
+
+export function computeAllocationWeights(burstiness: number[], baseWeight: number = 1): number[] {
+  // Normalize burstiness to allocation weights (sum = numBins)
+}
+
+export function computeWarpedPositions(timestamps: number[], weights: number[], domain: [number, number]): number[] {
+  // Map timestamps to warped positions based on cumulative weight distribution
+}
+
+export interface AtsMapping {
+  bins: { start: number; end: number; weight: number }[];
+  warpedPositions: number[];
+  condition: 'uniform' | 'adaptive';
+}
+```
+
+### Pattern 2: Zustand Store with Convex Integration
+
+**What:** `useExperimentStore` manages trial state machine and delegates persistence to Convex mutations.
+
+**Why:** Matches existing `useEvaluationStudyStore` pattern. Zustand provides reactive UI updates; Convex provides serverless persistence. No TanStack Query needed — Convex's `useMutation` handles the data layer.
+
+**Example:**
+```typescript
+// src/store/useExperimentStore.ts
+import { create } from 'zustand';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+
+interface ExperimentState {
+  // Session
+  sessionId: string | null;
+  participantId: string | null;
+  blockOrder: 'A->B' | 'B->A';
+  currentPhase: 'consent' | 'practice' | 'block-a' | 'block-b' | 'questionnaire' | 'done';
+
+  // Trial
+  trialIndex: number;        // 0-23
+  currentBlock: 'A' | 'B';
+  currentCondition: 'uniform' | 'adaptive';
+  trialState: 'stimulus' | 'responding' | 'feedback' | 'transition';
+
+  // Actions
+  startSession: (blockOrder: 'A->B' | 'B->A') => Promise<void>;
+  submitTrialResponse: (answer: string | number, confidence: number) => Promise<void>;
+  advanceTrial: () => void;
+}
+```
+
+### Pattern 3: Server Component Shell + Client Component Internals
+
+**What:** `src/app/experiment/page.tsx` is a Server Component. All interactivity lives in client components.
+
+**Why:** Matches existing pattern from `evaluation/page.tsx` (line 18-20). Preserves Next.js metadata conventions.
+
+```typescript
+// src/app/experiment/page.tsx
+import { ExperimentShell } from '@/components/experiment/ExperimentShell';
+
+export default function ExperimentPage() {
+  return <ExperimentShell />;
+}
+```
+
+### Pattern 4: Fixed-Seed Reproducibility
+
+**What:** All 24 synthetic datasets use fixed seeds so every participant sees the same stimulus material.
+
+**Why:** Critical for controlled experiment validity. Matches existing `createSeededRandom(seed)` from `src/lib/synthetic/prng.ts`.
+
+```typescript
+// src/lib/ats/generate-datasets.ts
+const DATASET_SEEDS = [
+  42, 137, 256, 389, 514, 671, 803, 947,
+  1023, 1158, 1297, 1412, 1589, 1723, 1845, 1967,
+  2034, 2189, 2345, 2501, 2678, 2812, 3947, 4200,
+];
+
+export function generateTrialDatasets(): Dataset[] {
+  return DATASET_SEEDS.map((seed, index) => {
+    const config = getTrialConfig(index); // varies alpha, delta, count per trial
+    const sequence = generateBurstySequence({ ...config, seed });
+    return {
+      id: `dataset-${index + 1}`,
+      timestamps: sequence.events.map(e => e.timestampSec),
+      config,
+    };
+  });
+}
+```
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Mixing Prototype Stores with Experiment Store
+
+**What:** Letting `useDashboardDemoCoordinationStore` or `useSliceDomainStore` remain importable in experiment code.
+
+**Why bad:** These stores depend on DuckDB data, Three.js state, and map coordinates — pulling in the entire prototype dependency graph. They also persist to localStorage, risking state leakage between experiment sessions.
+
+**Instead:** The `ats-study` branch strips these store files entirely. If any shared utility is needed, extract it into `src/lib/` as a pure function with no store dependencies.
+
+### Anti-Pattern 2: Direct DuckDB Import in Experiment Code
+
+**What:** Accidentally importing anything that transitively depends on `src/lib/db.ts`.
+
+**Why bad:** DuckDB's native binding requires `serverExternalPackages` in `next.config.ts` and the `patch-package` postinstall hook. On the stripped branch, DuckDB is removed from dependencies — any import will cause a build failure.
+
+**Prevention:** After stripping routes, run `pnpm typecheck` and `pnpm build` to catch residual imports.
+
+### Anti-Pattern 3: Web Workers for Small-Scale Computation
+
+**What:** Using `adaptiveTime.worker.ts` for computing ATS weights on 200-500 event datasets.
+
+**Why bad:** Worker instantiation overhead exceeds computation time for datasets this small. The worker pattern was designed for the full 8.5M record dataset.
+
+**Instead:** Synchronous pure functions in `src/lib/ats/mapper.ts`. For 500 events computing density, burstiness, and warped positions, the computation takes < 5ms — well within frame budget.
+
+### Anti-Pattern 4: Server-Side Stimulus Generation
+
+**What:** Generating SVG stimuli on the server (API route) and streaming them to the client.
+
+**Why bad:** Adds network latency to every trial advance. Breaks the "no DuckDB on ats-study" constraint since the synthetic generator API route depends on DuckDB.
+
+**Instead:** Generate synthetic data at experiment boot time (or build time) on the client. Cache the 24 datasets in a `Map<string, number[]>`. Same approach as the existing synthetic generator's client-side `generateBurstySequence()`.
+
+---
+
+## Isolation Checklist
+
+### What the `ats-study` branch REMOVES
+
+- [ ] 21 prototype route directories from `src/app/`
+- [ ] 16 API route directories from `src/app/api/` (keep only `/api/study/log/` if needed)
+- [ ] DuckDB dependency (`duckdb`, `apache-arrow`, `@loaders.gl/*`)
+- [ ] 3D rendering deps (`three`, `@react-three/fiber`, `@react-three/drei`, `deck.gl`, `@deck.gl/*`)
+- [ ] Mapping deps (`maplibre-gl`, `react-map-gl`, `leaflet`, `react-leaflet`, `leaflet-*`, `@math.gl/web-mercator`)
+- [ ] Clustering deps (`density-clustering`)
+- [ ] `serverExternalPackages: ['duckdb']` from `next.config.ts`
+- [ ] `patch-package` and `postinstall` DuckDB symlink from `package.json`
+- [ ] `patches/duckdb+1.4.4.patch`
+- [ ] Web Worker files (`src/workers/`)
+- [ ] Prototype Zustand stores (~40 stores; keep only experiment+study stores)
+- [ ] Prototype components (dashboard/, map/, timeline/, viz/, stkde/, binning/, onboarding/)
+- [ ] Prototype hooks (`useCrimeData`, `useAdaptiveScale`, `useStkde`, etc.)
+- [ ] `src/lib/db.ts` (DuckDB singleton)
+- [ ] `src/lib/queries/` (SQL builders — all depend on DuckDB)
+- [ ] `src/lib/stkde/` (hotspot pipeline)
+- [ ] `src/lib/binning/` (time bin engine — replaced by ATS mapper)
+- [ ] `src/lib/adaptive/` (route-based binning — replaced by ATS mapper)
+- [ ] Python scripts (`scripts/`, `datapreprocessing/`)
+- [ ] Environment vars: `USE_MOCK_DATA`, `DISABLE_DUCKDB`, `DUCKDB_PATH`, `DUCKDB_THREADS`, `STKDE_QA_FULL_POP_ENABLED`
+
+### What the `ats-study` branch KEEPS
+
+- [ ] `src/lib/synthetic/` (event generator — core stimulus source)
+- [ ] `src/lib/study/` (protocol, condition-order, storage — reference patterns)
+- [ ] `src/lib/logger.ts` (optional fallback logging)
+- [ ] `src/components/ui/` (shadcn primitives — buttons, sliders, etc.)
+- [ ] `src/components/layout/ThemeProvider.tsx` (theme)
+- [ ] `src/providers/` (modified: keep QueryProvider, add ConvexClientProvider)
+- [ ] `src/types/crime.ts` (CrimeRecord type — used by synthetic generator)
+- [ ] `src/lib/coordinate-normalization.ts` (used by synthetic generator)
+- [ ] `src/lib/category-maps.ts` (used by synthetic generator)
+- [ ] Tailwind CSS, shadcn/ui config (`components.json`, `tailwind.config.ts`, `globals.css`)
+- [ ] Next.js, React, TypeScript, Zustand core
+- [ ] date-fns, sonner, next-themes, clsx, tailwind-merge
+- [ ] Vitest, ESLint, TypeScript config
+
+---
+
+## Scalability Considerations
+
+| Concern | At N=10 participants | At N=200 participants | At N=1000 participants |
+|---------|---------------------|----------------------|------------------------|
+| Convex reads/writes | Negligible (~240 writes per participant) | 48K writes — well within free tier | 240K writes — may need paid tier |
+| Client computation | 24 datasets × 500 events = trivial | Same per-participant load | Same per-participant load |
+| Bundle size | ~50KB (SVG + Zustand) | Same | Same |
+| Storage | ~5KB per participant | ~1MB total | ~5MB total |
+| Cold starts | N/A (pure client + Convex cloud) | N/A | N/A |
+
+**Key insight:** The experiment scales horizontally by design. Each participant's browser does its own computation. Convex handles the backend. No server-side bottlenecks exist.
+
+---
+
+## Sources
+
+| Source | Confidence | Notes |
+|--------|-----------|-------|
+| Codebase analysis (`src/lib/study/*`, `src/store/*`, `src/app/*`) | HIGH | Direct inspection of existing architecture |
+| Context7 Convex docs (`/llmstxt/convex_dev_llms_txt`) | HIGH | Current as of 2026-06-30 — ConvexProvider, schema, mutations |
+| Next.js 16.2.9 docs (llms.txt index) | HIGH | App Router conventions, layout patterns |
+| Existing Phase 80 evaluation architecture | HIGH | Reference pattern: zustand + client-side + study API |
+| PROJECT.md v4.0 requirements (EXP-01 through EXP-08) | HIGH | Locked requirements from milestone specification |
+| STACK.md (codebase analysis 2026-06-27) | HIGH | Verified dependency list and configurations |
