@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
 const { parse } = require('csv-parse');
+const { parse: parseSync } = require('csv-parse/sync');
 const { scaleLinear } = require('d3-scale');
 
 const SCRIPT_DIR = __dirname;
@@ -205,7 +206,7 @@ function parseRawDateMs(s) {
 
 function loadShowcaseWindows(windowsPath) {
   const raw = fs.readFileSync(windowsPath, 'utf8');
-  const records = parse(raw, { columns: true, skip_empty_lines: true, trim: true });
+  const records = parseSync(raw, { columns: true, skip_empty_lines: true, trim: true });
   return records.map((row) => ({
     windowDays: Number(row.window_days),
     rank: Number(row.rank),
@@ -225,53 +226,90 @@ function dateStrToMs(iso) {
   );
 }
 
-async function buildTimestampsInWindow(csvPath, start, end) {
-  const startMs = dateStrToMs(start);
-  const endMs = dateStrToMs(end);
-  const out = [];
-  const parser = fs
-    .createReadStream(csvPath)
-    .pipe(
-      parse({
-        columns: true,
-        skip_empty_lines: true,
-        relax_column_count: true,
-        trim: true,
-      }),
-    );
-  for await (const row of parser) {
-    const ts = parseRawDateMs(row.Date);
-    if (!Number.isFinite(ts)) continue;
-    if (ts >= startMs && ts < endMs) out.push(ts);
-  }
-  out.sort((a, b) => a - b);
-  return out;
-}
-
 function inferWindowBinSpec(window) {
   if (window.windowDays <= 1) return [24, 1];
   return [window.windowDays, 24];
 }
 
-function aggregateHourlyCounts(timestamps, start, binCount, binHours) {
-  const startMs = dateStrToMs(start);
-  const hoursNeeded = binCount * binHours;
-  const counts = new Int32Array(hoursNeeded);
-  if (timestamps.length === 0) return Array.from(counts);
-  const hourMs = 3600 * 1000;
-  for (const ts of timestamps) {
-    const idx = Math.floor((ts - startMs) / hourMs);
-    if (idx >= 0 && idx < hoursNeeded) counts[idx] += 1;
+function prepareWindowStates(windows) {
+  return windows.map((window) => {
+    const [binCount, binHours] = inferWindowBinSpec(window);
+    const startMs = dateStrToMs(window.start);
+    return {
+      window,
+      binCount,
+      binHours,
+      startMs,
+      hoursNeeded: binCount * binHours,
+      hourMs: 3600 * 1000,
+      hourlyCounts: new Int32Array(binCount * binHours),
+      timestamps: [],
+    };
+  });
+}
+
+function finalizeWindowState(state) {
+  const { binCount, binHours, hourlyCounts } = state;
+  const counts = new Array(binCount);
+  if (binHours === 1) {
+    for (let i = 0; i < binCount; i += 1) counts[i] = hourlyCounts[i];
+  } else {
+    for (let i = 0; i < binCount; i += 1) {
+      let sum = 0;
+      const base = i * binHours;
+      for (let j = 0; j < binHours; j += 1) sum += hourlyCounts[base + j];
+      counts[i] = sum;
+    }
   }
-  if (binHours === 1) return Array.from(counts);
-  const out = new Array(binCount).fill(0);
-  for (let i = 0; i < binCount; i += 1) {
-    let sum = 0;
-    const base = i * binHours;
-    for (let j = 0; j < binHours; j += 1) sum += counts[base + j];
-    out[i] = sum;
+  state.timestamps.sort((a, b) => a - b);
+  return { window: state.window, counts, timestamps: state.timestamps };
+}
+
+async function streamAllWindows(csvPath, states) {
+  const totalSize = fs.statSync(csvPath).size;
+  const t0 = Date.now();
+  let rows = 0;
+  let bytes = 0;
+  let lastReport = t0;
+
+  const stream = fs.createReadStream(csvPath);
+  stream.on('data', (chunk) => {
+    bytes += chunk.length;
+  });
+  const parser = stream.pipe(
+    parse({
+      columns: true,
+      skip_empty_lines: true,
+      relax_column_count: true,
+      trim: true,
+    }),
+  );
+
+  for await (const row of parser) {
+    rows += 1;
+    const ts = parseRawDateMs(row.Date);
+    if (!Number.isFinite(ts)) continue;
+    for (const s of states) {
+      if (ts < s.startMs) continue;
+      const hourIdx = Math.floor((ts - s.startMs) / s.hourMs);
+      if (hourIdx < 0 || hourIdx >= s.hoursNeeded) continue;
+      s.hourlyCounts[hourIdx] += 1;
+      s.timestamps.push(ts);
+    }
+    const now = Date.now();
+    if (now - lastReport > 2000) {
+      const elapsed = (now - t0) / 1000;
+      const pct = (bytes / totalSize) * 100;
+      process.stderr.write(
+        `[stream] ${rows.toLocaleString('en-US')} rows  ${pct.toFixed(1)}%  ${elapsed.toFixed(0)}s\n`,
+      );
+      lastReport = now;
+    }
   }
-  return out;
+
+  const elapsed = (Date.now() - t0) / 1000;
+  process.stderr.write(`[stream] done — ${rows.toLocaleString('en-US')} rows in ${elapsed.toFixed(0)}s\n`);
+  return states.map(finalizeWindowState);
 }
 
 function weightDensity(counts) {
@@ -616,10 +654,9 @@ function writeRevealKey(outPath, results) {
   fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 }
 
-async function runForWindow(window, csvPath, outDir, rng) {
-  const timestamps = await buildTimestampsInWindow(csvPath, window.start, window.end);
-  const [binCount, binHours] = inferWindowBinSpec(window);
-  const counts = aggregateHourlyCounts(timestamps, window.start, binCount, binHours);
+async function runForWindow(data, outDir, rng) {
+  const { window, counts, timestamps } = data;
+  const [, binHours] = inferWindowBinSpec(window);
   const binSeconds = binHours * 3600;
   const totalSeconds = counts.length * binSeconds;
 
@@ -705,27 +742,38 @@ async function main() {
   const allWindows = loadShowcaseWindows(args.windowsPath);
   const byKey = new Map(allWindows.map((w) => [`${w.windowDays},${w.rank}`, w]));
 
-  process.stdout.write(`[setup] output = ${args.outputDir}\n`);
-  process.stdout.write(`[setup] seed   = ${args.seed}\n`);
-  process.stdout.write(`[setup] ${SELECTED_WINDOWS.length} windows selected\n`);
-
-  const results = [];
-  const windowDirs = [];
-  for (let i = 0; i < SELECTED_WINDOWS.length; i += 1) {
-    const [size, rank] = SELECTED_WINDOWS[i];
+  const selectedWindowMetas = [];
+  for (const [size, rank] of SELECTED_WINDOWS) {
     const window = byKey.get(`${size},${rank}`);
     if (!window) {
       process.stderr.write(`Missing window ${size}d #${rank} in ${args.windowsPath}\n`);
       process.exit(2);
     }
+    selectedWindowMetas.push(window);
+  }
+
+  process.stdout.write(`[setup] output = ${args.outputDir}\n`);
+  process.stdout.write(`[setup] seed   = ${args.seed}\n`);
+  process.stdout.write(`[setup] ${SELECTED_WINDOWS.length} windows selected\n`);
+  process.stdout.write(`[setup] streaming ${args.csvPath} once for all windows\n`);
+
+  const states = prepareWindowStates(selectedWindowMetas);
+  const datasets = await streamAllWindows(args.csvPath, states);
+
+  const results = [];
+  const windowDirs = [];
+  for (let i = 0; i < datasets.length; i += 1) {
+    const data = datasets[i];
+    const [size, rank] = SELECTED_WINDOWS[i];
     const outDir = path.join(
       args.outputDir,
       `window_${String(i + 1).padStart(2, '0')}_${size}d_rank${rank}`,
     );
     process.stdout.write(
-      `\n[window ${i + 1}/6] ${size}d #${rank}  ${window.start} → ${window.end}\n`,
+      `\n[window ${i + 1}/6] ${size}d #${rank}  ${data.window.start} → ${data.window.end}  ` +
+        `(${data.timestamps.length.toLocaleString('en-US')} events)\n`,
     );
-    const result = await runForWindow(window, args.csvPath, outDir, rng);
+    const result = await runForWindow(data, outDir, rng);
     results.push(result);
     windowDirs.push(outDir);
     process.stdout.write(`  [write] ${outDir}/test_figure.png\n`);

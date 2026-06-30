@@ -64,9 +64,9 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
       preserveAspectRatio="xMidYMid meet"
       style={{
         display: "block",
-        width: "100%",
+        maxWidth: "100%",
         height: "auto",
-        maxWidth: `${w}px`,
+        aspectRatio: `${w} / ${h}`,
         background: "#f8fafc",
         border: "1px solid #e2e8f0",
         borderRadius: "4px",
