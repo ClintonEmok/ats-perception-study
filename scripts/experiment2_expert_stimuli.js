@@ -654,6 +654,28 @@ function writeRevealKey(outPath, results) {
   fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
 }
 
+function writeDataJson(outPath, seed, results) {
+  const payload = {
+    seed,
+    generatedAt: new Date().toISOString(),
+    windows: results.map((r) => ({
+      key: `${r.window.windowDays},${r.window.rank}`,
+      windowDays: r.window.windowDays,
+      rank: r.window.rank,
+      start: r.window.start,
+      end: r.window.end,
+      cv: r.window.cv,
+      peakRatio: r.window.peakRatio,
+      totalEvents: r.nEvents,
+      counts: r.counts,
+      timestamps: r.timestamps,
+      strategyA: r.mapping['Visualization A'],
+      strategyB: r.mapping['Visualization B'],
+    })),
+  };
+  fs.writeFileSync(outPath, JSON.stringify(payload));
+}
+
 async function runForWindow(data, outDir, rng) {
   const { window, counts, timestamps } = data;
   const [, binHours] = inferWindowBinSpec(window);
@@ -714,7 +736,7 @@ async function runForWindow(data, outDir, rng) {
     ].join('\n') + '\n',
   );
 
-  return { window, mapping, nEvents: timestamps.length };
+  return { window, mapping, nEvents: timestamps.length, counts, timestamps };
 }
 
 async function main() {
@@ -797,6 +819,10 @@ async function main() {
   const revealPath = path.join(args.outputDir, 'REVEAL_KEY.md');
   writeRevealKey(revealPath, results);
   process.stdout.write(`[write] ${revealPath}\n`);
+
+  const dataJsonPath = path.join(args.outputDir, 'data.json');
+  writeDataJson(dataJsonPath, args.seed, results);
+  process.stdout.write(`[write] ${dataJsonPath}\n`);
 
   process.stdout.write('\nDone.\n');
 }
