@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TimelineStimulus } from "./TimelineStimulus";
+import { Timeline } from "./Timeline";
 import { useStimulusTiming } from "@/hooks/useStimulusTiming";
 import { PeakIdentificationChoice } from "./PeakIdentificationChoice";
 import { PeriodComparisonChoice } from "./PeriodComparisonChoice";
@@ -60,7 +60,7 @@ export function TrialRunner({ variant, taskType, correctAnswer, showFixation = t
       )}
       {phase !== "fixation" && (
         <>
-          <TimelineStimulus variant={variant} />
+          <Timeline variant={variant} />
           {taskType === "peak" && <PeakIdentificationChoice onChoose={choose} disabled={phase === "responded"} />}
           {taskType === "comparison" && <PeriodComparisonChoice onChoose={choose} disabled={phase === "responded"} />}
           {taskType === "pattern" && <PatternRecognitionChoice onChoose={choose} disabled={phase === "responded"} />}
