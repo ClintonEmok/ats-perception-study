@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ATS_PERCEPTION_SLUG } from "@/lib/ats-study/experiments";
 
 export default function Home() {
-  const href = `/experiment/${ATS_PERCEPTION_SLUG}`;
+  const href = `/experiment/consent?next=${ATS_PERCEPTION_SLUG}`;
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center justify-center gap-6 p-8 text-center">
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">ATS Perception Study</h1>

@@ -2,14 +2,8 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useExperimentStore,
-  getActiveExperiment,
-  getCurrentCondition,
-  getCurrentTrialSpec,
-} from "@/store/useExperimentStore";
-import { isValidExperimentSlug, getExperiment } from "@/lib/ats-study/experiments";
-import { ConsentScreen } from "@/components/study/screens/ConsentScreen";
+import { useExperimentStore } from "@/store/useExperimentStore";
+import { isValidExperimentSlug } from "@/lib/ats-study/experiments";
 import { InstructionsScreen } from "@/components/study/screens/InstructionsScreen";
 import { PracticeScreen } from "@/components/study/screens/PracticeScreen";
 import { TrialScreen } from "@/components/study/screens/TrialScreen";
@@ -20,12 +14,12 @@ export interface ExperimentPageProps {
   params: Promise<{ slug: string }>;
 }
 
-function InvalidSlug() {
+function InvalidSlug({ slug }: { slug: string }) {
   return (
     <section className="flex flex-col gap-2" data-testid="invalid-slug">
       <h1 className="text-2xl font-semibold">Unknown experiment</h1>
       <p className="text-sm text-slate-700">
-        That experiment slug is not registered. Use the link from the study coordinator.
+        No experiment is registered for <code>{slug}</code>. Use the link from the study coordinator.
       </p>
     </section>
   );
@@ -36,7 +30,6 @@ export default function ExperimentPage({ params }: ExperimentPageProps) {
   const router = useRouter();
   const phase = useExperimentStore((state) => state.phase);
   const storeSlug = useExperimentStore((state) => state.experimentSlug);
-  const setExperimentSlug = useExperimentStore((state) => state.reset);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -46,18 +39,16 @@ export default function ExperimentPage({ params }: ExperimentPageProps) {
   useEffect(() => {
     if (!isValidExperimentSlug(slug)) return;
     if (slug !== storeSlug && phase === "consent") {
-      // Fresh start on a different experiment — adopt the new slug and reset.
       useExperimentStore.setState({ experimentSlug: slug });
     }
   }, [slug, storeSlug, phase]);
 
-  if (!isValidExperimentSlug(slug)) {
-    return <InvalidSlug />;
-  }
-
   if (!hydrated) return null;
 
-  // If the user is mid-run on a different experiment, send them back to that one.
+  if (!isValidExperimentSlug(slug)) {
+    return <InvalidSlug slug={slug} />;
+  }
+
   if (slug !== storeSlug && phase !== "consent") {
     return (
       <section className="flex flex-col gap-2" data-testid="slug-mismatch">
@@ -76,10 +67,25 @@ export default function ExperimentPage({ params }: ExperimentPageProps) {
     );
   }
 
+  if (phase === "consent") {
+    return (
+      <section className="flex flex-col gap-2" data-testid="phase-consent-redirect">
+        <p className="text-sm text-slate-700">
+          You have not given consent yet. Redirecting to the consent page…
+        </p>
+        <button
+          type="button"
+          onClick={() => router.replace(`/experiment/consent?next=${slug}`)}
+          className="self-start rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          Go to consent
+        </button>
+      </section>
+    );
+  }
+
   const path = `/experiment/${slug}`;
   switch (phase) {
-    case "consent":
-      return <ConsentScreen onAccept={() => router.push(path)} />;
     case "instructions":
       return <InstructionsScreen onBegin={() => router.push(path)} />;
     case "practice":
@@ -91,8 +97,8 @@ export default function ExperimentPage({ params }: ExperimentPageProps) {
     case "debrief":
       return (
         <DebriefScreen
-          onNewRun={() => router.push(path)}
-          onFinish={() => router.push(path)}
+          onNewRun={() => router.replace(`/experiment/consent?next=${slug}`)}
+          onFinish={() => router.replace(`/experiment/consent?next=${slug}`)}
         />
       );
     default:
