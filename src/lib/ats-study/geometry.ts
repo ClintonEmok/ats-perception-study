@@ -41,11 +41,13 @@ export function eventRugPoints(
   const rugHeight = size.height - bandHeight;
   const half = Math.max(1, rugHeight / 2);
   const sorted = [...events].sort((a, b) => a - b);
-  return sorted.map((eventTime) => ({
-    x: mapTimeToX(eventTime, domain, size.width),
-    y: bandHeight + half,
-    eventTime,
-  }));
+  return sorted
+    .map((eventTime) => ({
+      x: mapTimeToX(eventTime, domain, size.width),
+      y: bandHeight + half,
+      eventTime,
+    }))
+    .filter((point) => Number.isFinite(point.x));
 }
 
 export function bandsFromIntervals(
@@ -54,17 +56,19 @@ export function bandsFromIntervals(
   size: Size,
   bandHeight: number,
 ): BandRect[] {
-  return intervals.map((interval) => {
-    const x0 = mapTimeToX(interval.start, domain, size.width);
-    const x1 = mapTimeToX(interval.end, domain, size.width);
-    const width = Math.max(1, x1 - x0);
-    return {
-      index: interval.index,
-      x: x0,
-      y: 0,
-      width,
-      height: bandHeight,
-      weight: interval.weight,
-    };
-  });
+  return intervals
+    .map((interval) => {
+      const x0 = mapTimeToX(interval.start, domain, size.width);
+      const x1 = mapTimeToX(interval.end, domain, size.width);
+      const width = Math.max(1, x1 - x0);
+      return {
+        index: interval.index,
+        x: x0,
+        y: 0,
+        width,
+        height: bandHeight,
+        weight: interval.weight,
+      };
+    })
+    .filter((band) => Number.isFinite(band.x) && Number.isFinite(band.width) && band.width > 0);
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { BASE_DATASETS, getAtsVariants, getUniformVariants } from "./datasets";
+import { BASE_DATASETS, getAtsVariants, getUniformVariants, getVariantByDatasetId } from "./datasets";
 import { buildStimulusLayout } from "./stimulus";
+import { requireExperiment } from "./experiments";
 
 describe("buildStimulusLayout", () => {
   it("produces a layout that contains every event as a rug point", () => {
@@ -44,4 +45,67 @@ describe("buildStimulusLayout", () => {
       expect(layoutA.rug.length).toBe(base.events.length);
     }
   });
+
+  it("emits only finite band and rug coordinates", () => {
+    const all = [...getUniformVariants(), ...getAtsVariants()];
+    for (const v of all) {
+      const layout = buildStimulusLayout(v);
+      for (const band of layout.bands) {
+        expect(Number.isFinite(band.x)).toBe(true);
+        expect(Number.isFinite(band.y)).toBe(true);
+        expect(Number.isFinite(band.width)).toBe(true);
+        expect(Number.isFinite(band.height)).toBe(true);
+      }
+      for (const point of layout.rug) {
+        expect(Number.isFinite(point.x)).toBe(true);
+        expect(Number.isFinite(point.y)).toBe(true);
+      }
+    }
+  });
+
+  it("emits only finite coordinates for the registered practice trials", () => {
+    const cfg = requireExperiment("ats-perception-v4");
+    for (const p of cfg.practiceTrials) {
+      const datasetId = `${p.baseDatasetId}--${p.condition}`;
+      const v = getVariantByDatasetId(datasetId);
+      const layout = buildStimulusLayout(v);
+      expect(layout.bands.length).toBeGreaterThan(0);
+      for (const band of layout.bands) {
+        expect(Number.isFinite(band.x)).toBe(true);
+        expect(Number.isFinite(band.width)).toBe(true);
+      }
+    }
+  });
+
+  it("handles an empty events array without producing NaN bands", () => {
+    const emptyVariant = {
+      datasetId: "empty--uniform",
+      baseDatasetId: "empty",
+      condition: "uniform" as const,
+      events: [] as number[],
+      domain: [0, 1000] as [number, number],
+      pattern: "uniform" as const,
+    };
+    const layout = buildStimulusLayout(emptyVariant);
+    expect(layout.bands).toEqual([]);
+    expect(layout.rug).toEqual([]);
+    expect(layout.intervalCount).toBe(0);
+  });
+
+  it("handles a degenerate single-event dataset without producing NaN bands", () => {
+    const tinyVariant = {
+      datasetId: "tiny--uniform",
+      baseDatasetId: "tiny",
+      condition: "uniform" as const,
+      events: [500] as number[],
+      domain: [0, 1000] as [number, number],
+      pattern: "uniform" as const,
+    };
+    const layout = buildStimulusLayout(tinyVariant);
+    for (const band of layout.bands) {
+      expect(Number.isFinite(band.x)).toBe(true);
+      expect(Number.isFinite(band.width)).toBe(true);
+    }
+  });
 });
+
