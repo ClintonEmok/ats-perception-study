@@ -154,17 +154,18 @@ export function PostStudyQuestionnaire({ onSubmit }: PostStudyQuestionnaireProps
 
 export interface DebriefPanelProps {
   onDownload: () => void;
+  onStartNewRun: () => void;
   participantName: string;
 }
 
-export function DebriefPanel({ onDownload, participantName }: DebriefPanelProps) {
+export function DebriefPanel({ onDownload, onStartNewRun, participantName }: DebriefPanelProps) {
   const displayName = participantName.trim();
   return (
     <section className="flex flex-col gap-3" data-phase="debrief">
       <h2 className="text-lg font-semibold">Thank you{displayName ? `, ${displayName}` : ""}</h2>
       <p className="text-sm text-slate-700">
         Your responses were recorded{displayName ? ` under the name "${displayName}"` : " anonymously"}. You can
-        download a copy of your data before you close this tab.
+        download a copy of your data before you close this tab, or start a new run with a different name.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -174,6 +175,14 @@ export function DebriefPanel({ onDownload, participantName }: DebriefPanelProps)
           data-testid="download-responses"
         >
           Download my responses
+        </button>
+        <button
+          type="button"
+          onClick={onStartNewRun}
+          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+          data-testid="start-new-run"
+        >
+          Start a new run
         </button>
         <span className="text-xs text-slate-500">JSON file with all your trial-level data.</span>
       </div>

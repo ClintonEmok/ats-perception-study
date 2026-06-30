@@ -110,6 +110,7 @@ function PhaseView({ feedback, setFeedback }: PhaseViewProps) {
       setQuestionnaireAnswer: state.setQuestionnaireAnswer,
       submitQuestionnaire: state.submitQuestionnaire,
       finishSession: state.finishSession,
+      reset: state.reset,
     })),
   );
 
@@ -250,6 +251,7 @@ function PhaseView({ feedback, setFeedback }: PhaseViewProps) {
     <div className="flex flex-col gap-3">
       <DebriefPanel
         onDownload={downloadSessionResponses}
+        onStartNewRun={view.reset}
         participantName={view.participantName}
       />
       <button

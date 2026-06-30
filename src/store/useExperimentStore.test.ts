@@ -161,4 +161,22 @@ describe("useExperimentStore", () => {
       expect.objectContaining({ participantName: null }),
     );
   });
+
+  it("reset() clears session state but keeps convexWrites for a new run", async () => {
+    const writes = makeWrites();
+    await useExperimentStore.getState().startSession(0, writes);
+    useExperimentStore.getState().acceptConsent();
+    useExperimentStore.getState().setParticipantName("Alex");
+    expect(useExperimentStore.getState().sessionId).toBeTruthy();
+    expect(useExperimentStore.getState().participantName).toBe("Alex");
+    expect(useExperimentStore.getState().consentAccepted).toBe(true);
+    useExperimentStore.getState().reset();
+    expect(useExperimentStore.getState().sessionId).toBeNull();
+    expect(useExperimentStore.getState().participantName).toBe("");
+    expect(useExperimentStore.getState().consentAccepted).toBe(false);
+    expect(useExperimentStore.getState().phase).toBe("consent");
+    expect(useExperimentStore.getState().responses).toEqual([]);
+    expect(useExperimentStore.getState().questionnaire).toEqual({ preference: null, freeText: "" });
+    expect(useExperimentStore.getState().convexWrites).toBe(writes);
+  });
 });
