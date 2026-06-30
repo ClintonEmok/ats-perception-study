@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { buildStimulusLayout, type StimulusLayout } from "@/lib/ats-study/stimulus";
 import type { RenderedVariant } from "@/lib/ats-study/datasets";
 
@@ -12,12 +12,44 @@ export interface TimelineStimulusProps {
   ariaLabel?: string;
 }
 
+function isFiniteBand(band: { x: number; y: number; width: number; height: number }): boolean {
+  return (
+    Number.isFinite(band.x) &&
+    Number.isFinite(band.y) &&
+    Number.isFinite(band.width) &&
+    Number.isFinite(band.height) &&
+    band.width > 0 &&
+    band.height > 0
+  );
+}
+
 export function TimelineStimulus({ variant, width, height, bandHeight, ariaLabel }: TimelineStimulusProps) {
   const layout: StimulusLayout = useMemo(
     () => buildStimulusLayout(variant, { width, height, bandHeight }),
     [variant, width, height, bandHeight],
   );
+
+  const lastWarnedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const bad = layout.bands.find((b) => !isFiniteBand(b));
+    if (!bad) return;
+    const key = `${variant.datasetId}#${bad.index}`;
+    if (lastWarnedRef.current === key) return;
+    lastWarnedRef.current = key;
+    if (typeof console !== "undefined") {
+      console.warn("[TimelineStimulus] filtered non-finite band", {
+        datasetId: variant.datasetId,
+        band: bad,
+        layoutSize: { width: layout.width, height: layout.height },
+        variantEvents: variant.events.length,
+      });
+    }
+  }, [layout.bands, variant.datasetId, variant.events.length, layout.width, layout.height]);
+
   const label = ariaLabel ?? `Timeline stimulus: ${variant.condition} (${variant.pattern})`;
+  const safeBands = layout.bands.filter(isFiniteBand);
+  const safeRug = layout.rug.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+
   return (
     <svg
       role="img"
@@ -31,7 +63,7 @@ export function TimelineStimulus({ variant, width, height, bandHeight, ariaLabel
       style={{ display: "block", maxWidth: "100%" }}
     >
       <g aria-hidden="true">
-        {layout.bands.map((band) => (
+        {safeBands.map((band) => (
           <rect
             key={`band-${band.index}`}
             x={band.x}
@@ -47,7 +79,7 @@ export function TimelineStimulus({ variant, width, height, bandHeight, ariaLabel
         ))}
       </g>
       <g aria-hidden="true">
-        {layout.rug.map((point, idx) => (
+        {safeRug.map((point, idx) => (
           <line
             key={`rug-${idx}-${point.eventTime}`}
             x1={point.x}
