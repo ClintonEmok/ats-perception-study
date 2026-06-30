@@ -12,7 +12,12 @@ export interface TimelineProps {
   ariaLabel?: string;
 }
 
-const MARKER = "TimelineChart-v4-2026-06-30";
+const MARKER = "TimelineChart-v5-2026-06-30-NEW";
+
+if (typeof window !== "undefined") {
+  // eslint-disable-next-line no-console
+  console.info(`[${MARKER}] Timeline module loaded`);
+}
 
 function safe(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
