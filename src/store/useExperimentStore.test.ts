@@ -21,6 +21,23 @@ const makeWrites = (): ConvexWrites => ({
   submitQuestionnaire: vi.fn().mockResolvedValue(undefined),
 });
 
+const makeWritesWithNameCheck = (): ConvexWrites & {
+  startSessionMock: ReturnType<typeof vi.fn>;
+  submitQuestionnaireMock: ReturnType<typeof vi.fn>;
+} => {
+  const startSessionMock = vi.fn().mockResolvedValue(undefined);
+  const submitQuestionnaireMock = vi.fn().mockResolvedValue(undefined);
+  return {
+    startSession: startSessionMock,
+    completeSession: vi.fn().mockResolvedValue(undefined),
+    startTrial: vi.fn().mockResolvedValue(undefined),
+    completeTrial: vi.fn().mockResolvedValue(undefined),
+    submitQuestionnaire: submitQuestionnaireMock,
+    startSessionMock,
+    submitQuestionnaireMock,
+  };
+};
+
 const reset = () => useExperimentStore.getState().reset();
 
 describe("useExperimentStore", () => {
@@ -120,5 +137,28 @@ describe("useExperimentStore", () => {
     await useExperimentStore.getState().submitQuestionnaire();
     expect(writes.submitQuestionnaire).toHaveBeenCalled();
     expect(useExperimentStore.getState().phase).toBe("debrief");
+  });
+
+  it("passes the participant name to startSession and submitQuestionnaire", async () => {
+    const writes = makeWritesWithNameCheck();
+    useExperimentStore.getState().setParticipantName("Alex");
+    await useExperimentStore.getState().startSession(0, writes);
+    expect(writes.startSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ participantName: "Alex" }),
+    );
+    useExperimentStore.getState().setQuestionnaireAnswer("preference", "ats");
+    useExperimentStore.getState().setQuestionnaireAnswer("freeText", "ATS feels calmer.");
+    await useExperimentStore.getState().submitQuestionnaire();
+    expect(writes.submitQuestionnaireMock).toHaveBeenCalledWith(
+      expect.objectContaining({ participantName: "Alex" }),
+    );
+  });
+
+  it("sends null participant name when none is provided", async () => {
+    const writes = makeWritesWithNameCheck();
+    await useExperimentStore.getState().startSession(0, writes);
+    expect(writes.startSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ participantName: null }),
+    );
   });
 });

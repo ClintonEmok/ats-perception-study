@@ -8,7 +8,14 @@ import {
 
 const input: ExportInput = {
   sessions: [
-    { sessionId: "s1", participantIndex: 0, conditionOrder: ["uniform", "ats"], startedAt: 1000, finishedAt: 2000 },
+    {
+      sessionId: "s1",
+      participantIndex: 0,
+      participantName: "Alex",
+      conditionOrder: ["uniform", "ats"],
+      startedAt: 1000,
+      finishedAt: 2000,
+    },
   ],
   trials: [
     {
@@ -45,6 +52,7 @@ const input: ExportInput = {
       sessionId: "s1",
       preference: "ats",
       freeText: 'I found ATS easier, "less crowded".',
+      participantName: "Alex",
       submittedAt: 1500,
     },
   ],
@@ -53,7 +61,9 @@ const input: ExportInput = {
 describe("export", () => {
   it("emits a CSV with header rows and proper escaping", () => {
     const csv = exportSessionDataAsCsv(input);
-    expect(csv.sessionsCsv.split("\n")[0]).toBe("sessionId,participantIndex,conditionOrder,startedAt,finishedAt");
+    expect(csv.sessionsCsv.split("\n")[0]).toBe(
+      "sessionId,participantIndex,participantName,conditionOrder,startedAt,finishedAt",
+    );
     expect(csv.trialsCsv).toContain("trialIndex,taskType,condition,datasetId");
     // free text contains a comma + double-quote — must be escaped.
     expect(csv.questionnairesCsv).toContain('"I found ATS easier, ""less crowded""."');

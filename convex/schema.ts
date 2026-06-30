@@ -20,6 +20,7 @@ const taskType = v.union(
 export default defineSchema({
   studySessions: defineTable({
     participantId: v.string(),
+    participantName: v.optional(v.string()),
     conditionOrder: v.array(condition),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
@@ -29,7 +30,9 @@ export default defineSchema({
       v.literal("abandoned"),
     ),
     userAgent: v.optional(v.string()),
-  }).index("by_participant", ["participantId"]),
+  })
+    .index("by_participant", ["participantId"])
+    .index("by_name", ["participantName"]),
 
   studyTrials: defineTable({
     sessionId: v.id("studySessions"),
@@ -61,6 +64,7 @@ export default defineSchema({
     sessionId: v.id("studySessions"),
     preference: v.union(v.literal("uniform"), v.literal("ats"), v.literal("no_preference")),
     freeText: v.string(),
+    participantName: v.optional(v.string()),
     submittedAt: v.number(),
   }).index("by_session", ["sessionId"]),
 });

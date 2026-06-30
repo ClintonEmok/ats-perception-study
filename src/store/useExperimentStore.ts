@@ -41,16 +41,17 @@ export interface QuestionnaireAnswers {
 }
 
 export interface ConvexWrites {
-  startSession: (args: { sessionId: string; conditionOrder: ConditionOrder; startedAt: number }) => Promise<unknown>;
+  startSession: (args: { sessionId: string; participantName: string | null; conditionOrder: ConditionOrder; startedAt: number }) => Promise<unknown>;
   completeSession: (args: { sessionId: string; finishedAt: number }) => Promise<unknown>;
   startTrial: (args: { sessionId: string; trialIndex: number; taskType: TaskType; condition: Condition; datasetId: string; isPractice: boolean; onsetAt: number }) => Promise<unknown>;
   completeTrial: (args: { sessionId: string; trialIndex: number; correct: boolean; chosen: string; responseTimeMs: number; confidence: number; recordedAt: number }) => Promise<unknown>;
-  submitQuestionnaire: (args: { sessionId: string; preference: QuestionnaireAnswers["preference"]; freeText: string; submittedAt: number }) => Promise<unknown>;
+  submitQuestionnaire: (args: { sessionId: string; preference: QuestionnaireAnswers["preference"]; freeText: string; participantName: string | null; submittedAt: number }) => Promise<unknown>;
 }
 
 export interface ExperimentState {
   sessionId: string | null;
   participantIndex: number;
+  participantName: string;
   phase: ProtocolPhase;
   blockACondition: Condition | null;
   blockBCondition: Condition | null;
@@ -70,6 +71,7 @@ export interface ExperimentState {
 
 export interface ExperimentActions {
   setConvexWrites: (writes: ConvexWrites) => void;
+  setParticipantName: (name: string) => void;
   acceptConsent: () => void;
   beginInstructions: () => void;
   completeInstructions: () => void;
@@ -94,6 +96,7 @@ export type ExperimentStore = ExperimentState & ExperimentActions;
 const initialState: ExperimentState = {
   sessionId: null,
   participantIndex: 0,
+  participantName: "",
   phase: "consent",
   blockACondition: null,
   blockBCondition: null,
@@ -119,6 +122,7 @@ export const useExperimentStore = create<ExperimentStore>()(
     (set, get) => ({
       ...initialState,
       setConvexWrites: (writes) => set({ convexWrites: writes }),
+      setParticipantName: (name) => set({ participantName: name }),
       acceptConsent: () => set({ consentAccepted: true }),
       beginInstructions: () => set({ phase: "instructions" }),
       completeInstructions: () => set({ phase: "practice" }),
@@ -129,6 +133,7 @@ export const useExperimentStore = create<ExperimentStore>()(
             : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const order = assignConditionOrder(participantIndex);
         const startedAt = Date.now();
+        const name = get().participantName.trim();
         set({
           sessionId,
           participantIndex,
@@ -144,7 +149,12 @@ export const useExperimentStore = create<ExperimentStore>()(
           finishedAt: null,
         });
         try {
-          await writes.startSession({ sessionId, conditionOrder: order, startedAt });
+          await writes.startSession({
+            sessionId,
+            participantName: name.length > 0 ? name : null,
+            conditionOrder: order,
+            startedAt,
+          });
         } catch (err) {
           console.warn("startSession convex write failed", err);
         }
@@ -254,11 +264,13 @@ export const useExperimentStore = create<ExperimentStore>()(
           set({ phase: "debrief" });
           return;
         }
+        const name = state.participantName.trim();
         try {
           await state.convexWrites.submitQuestionnaire({
             sessionId: state.sessionId,
             preference: state.questionnaire.preference,
             freeText: state.questionnaire.freeText,
+            participantName: name.length > 0 ? name : null,
             submittedAt: Date.now(),
           });
         } catch (err) {
@@ -288,6 +300,7 @@ export const useExperimentStore = create<ExperimentStore>()(
       partialize: (state) => ({
         sessionId: state.sessionId,
         participantIndex: state.participantIndex,
+        participantName: state.participantName,
         phase: state.phase,
         blockACondition: state.blockACondition,
         blockBCondition: state.blockBCondition,

@@ -32,6 +32,7 @@ const preference = v.union(
 
 type StartSessionArgs = {
   participantId: string;
+  participantName?: string;
   conditionOrder: ("uniform" | "ats")[];
   userAgent?: string;
 };
@@ -62,11 +63,12 @@ type RecordTrialResponseArgs = {
 type TrialIdArgs = { trialId: Id<"studyTrials"> };
 type AbandonTrialArgs = { trialId: Id<"studyTrials">; status: "started" | "responded" | "completed" | "abandoned" | "timeout" };
 type SessionIdArgs = { sessionId: Id<"studySessions"> };
-type SubmitQuestionnaireArgs = { sessionId: Id<"studySessions">; preference: "uniform" | "ats" | "no_preference"; freeText: string };
+type SubmitQuestionnaireArgs = { sessionId: Id<"studySessions">; preference: "uniform" | "ats" | "no_preference"; freeText: string; participantName?: string };
 
 export const startSession = mutation({
   args: {
     participantId: v.string(),
+    participantName: v.optional(v.string()),
     conditionOrder: v.array(condition),
     userAgent: v.optional(v.string()),
   },
@@ -75,6 +77,7 @@ export const startSession = mutation({
     const args = rawArgs as unknown as StartSessionArgs;
     const doc: {
       participantId: string;
+      participantName?: string;
       conditionOrder: ("uniform" | "ats")[];
       startedAt: number;
       status: "active" | "completed" | "abandoned";
@@ -85,6 +88,9 @@ export const startSession = mutation({
       startedAt: Date.now(),
       status: "active",
     };
+    if (args.participantName !== undefined) {
+      doc.participantName = args.participantName;
+    }
     if (args.userAgent !== undefined) {
       doc.userAgent = args.userAgent;
     }
@@ -212,16 +218,27 @@ export const submitQuestionnaire = mutation({
     sessionId: v.id("studySessions"),
     preference,
     freeText: v.string(),
+    participantName: v.optional(v.string()),
   },
   returns: v.id("studyQuestionnaires"),
   handler: async (ctx: MutationCtx, rawArgs): Promise<Id<"studyQuestionnaires">> => {
     const args = rawArgs as unknown as SubmitQuestionnaireArgs;
-    return (await ctx.db.insert("studyQuestionnaires", {
+    const doc: {
+      sessionId: Id<"studySessions">;
+      preference: "uniform" | "ats" | "no_preference";
+      freeText: string;
+      participantName?: string;
+      submittedAt: number;
+    } = {
       sessionId: args.sessionId,
       preference: args.preference,
       freeText: args.freeText,
       submittedAt: Date.now(),
-    })) as Id<"studyQuestionnaires">;
+    };
+    if (args.participantName !== undefined) {
+      doc.participantName = args.participantName;
+    }
+    return (await ctx.db.insert("studyQuestionnaires", doc)) as Id<"studyQuestionnaires">;
   },
 });
 

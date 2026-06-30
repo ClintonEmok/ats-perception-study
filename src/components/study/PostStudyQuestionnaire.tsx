@@ -154,15 +154,17 @@ export function PostStudyQuestionnaire({ onSubmit }: PostStudyQuestionnaireProps
 
 export interface DebriefPanelProps {
   onDownload: () => void;
+  participantName: string;
 }
 
-export function DebriefPanel({ onDownload }: DebriefPanelProps) {
+export function DebriefPanel({ onDownload, participantName }: DebriefPanelProps) {
+  const displayName = participantName.trim();
   return (
     <section className="flex flex-col gap-3" data-phase="debrief">
-      <h2 className="text-lg font-semibold">Thank you</h2>
+      <h2 className="text-lg font-semibold">Thank you{displayName ? `, ${displayName}` : ""}</h2>
       <p className="text-sm text-slate-700">
-        Your responses were recorded anonymously. You can download a copy of your data before you close
-        this tab.
+        Your responses were recorded{displayName ? ` under the name "${displayName}"` : " anonymously"}. You can
+        download a copy of your data before you close this tab.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -179,18 +181,22 @@ export function DebriefPanel({ onDownload }: DebriefPanelProps) {
   );
 }
 
-export function buildDownloadFileName(sessionId: string | null): string {
-  const safe = (sessionId ?? "anonymous").replace(/[^a-zA-Z0-9-_]/g, "_");
-  return `ats-study-${safe}.json`;
+export function buildDownloadFileName(sessionId: string | null, participantName?: string): string {
+  const name = (participantName ?? "").trim();
+  const idPart = (sessionId ?? "anonymous").replace(/[^a-zA-Z0-9-_]/g, "_");
+  const namePart = name.length > 0 ? `${name.replace(/[^a-zA-Z0-9-_]/g, "_")}-` : "";
+  return `ats-study-${namePart}${idPart}.json`;
 }
 
 export function downloadSessionResponses(): void {
   const state = useExperimentStore.getState();
   const sessionId = state.sessionId ?? "anonymous";
   const submittedAt = Date.now();
+  const participantName = state.participantName.trim();
   const sessions: Array<{
     sessionId: string;
     participantIndex: number;
+    participantName: string | null;
     conditionOrder: ReadonlyArray<"uniform" | "ats">;
     startedAt: number;
     finishedAt: number | null;
@@ -198,6 +204,7 @@ export function downloadSessionResponses(): void {
     {
       sessionId,
       participantIndex: state.participantIndex,
+      participantName: participantName.length > 0 ? participantName : null,
       conditionOrder: [state.blockACondition, state.blockBCondition].filter(
         (c): c is "uniform" | "ats" => c !== null,
       ),
@@ -223,12 +230,14 @@ export function downloadSessionResponses(): void {
     sessionId: string;
     preference: ExportableQuestionnaire["preference"];
     freeText: string;
+    participantName: string | null;
     submittedAt: number;
   }> = [
     {
       sessionId,
       preference: state.questionnaire.preference,
       freeText: state.questionnaire.freeText,
+      participantName: participantName.length > 0 ? participantName : null,
       submittedAt,
     },
   ];
@@ -237,7 +246,7 @@ export function downloadSessionResponses(): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = buildDownloadFileName(state.sessionId);
+  anchor.download = buildDownloadFileName(state.sessionId, participantName);
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

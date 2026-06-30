@@ -1,6 +1,7 @@
 export interface ExportableSession {
   sessionId: string;
   participantIndex: number;
+  participantName: string | null;
   conditionOrder: ReadonlyArray<"uniform" | "ats">;
   startedAt: number;
   finishedAt: number | null;
@@ -34,6 +35,7 @@ export interface ExportableQuestionnaire {
     | "Strongly ATS"
     | null;
   freeText: string;
+  participantName: string | null;
   submittedAt: number;
 }
 
