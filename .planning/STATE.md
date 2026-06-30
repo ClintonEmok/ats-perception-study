@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: ATS Perception Study
-status: executing
-last_updated: "2026-06-30T19:30:00Z"
+status: archived
+last_updated: "2026-06-30T19:45:00Z"
 last_activity: 2026-06-30
 progress:
   total_phases: 5
@@ -19,14 +19,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** v4.0 milestone archive
+**Current focus:** Ready for next milestone via `/gsd-new-milestone`
 
 ## Current Position
 
-Phase: 91 (v4.0 Phase 5 of 5 — Questionnaire Iteration)
-Plan: 1
-Status: Complete
-Last activity: 2026-06-30 — Phase 91 committed (`4f6af44`); ready to archive v4.0
+Milestone: v4.0 (ATS Perception Study) — archived 2026-06-30
+Phase: —
+Status: archived
+Last activity: 2026-06-30 — v4.0 archive committed; DEPLOY-04/05 deferred
 
 Progress: [████████████████████] 100%
 
@@ -73,17 +73,16 @@ Progress: [████████████████████] 100%
 
 ### Pending Todos
 
-- Plan + execute Phase 91 (Questionnaire Iteration).
 - Provision the Convex production project (`ats-perception-study-prod`) and set `NEXT_PUBLIC_CONVEX_URL` + `CONVEX_DEPLOY_KEY` in the Vercel environment.
 - Run the 2-3 participant pilot per `docs/PILOT.md`.
-- Run `gsd-complete-milestone` to close v4.0.
+- Start next milestone with `/gsd-new-milestone`.
 
 ### Blockers/Concerns
 
-- None. Phase 91 work is independent of the Convex/Vercel deploy.
+- None for the v4.0 archive. DEPLOY-04/05 remain credential-blocked; they can be picked up in v4.1 or run as a one-off.
 
 ## Session Continuity
 
 Last session: 2026-06-30
-Stopped at: All 5 v4.0 phases complete; ready to archive.
+Stopped at: v4.0 archived; ready for next milestone.
 Resume file: None

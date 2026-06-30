@@ -8,20 +8,15 @@ This is a Next.js prototype for bursty spatiotemporal crime analysis. It combine
 
 Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
 
-## Current Milestone: v4.0 ATS Perception Study
+## Current Milestone: v4.0 (archived) → ready for next
 
-**Goal:** Deliver a controlled within-subjects web experiment comparing Adaptive Temporal Scaling vs Uniform timeline perception.
+**v4.0 goal (archived):** Deliver a controlled within-subjects web experiment comparing Adaptive Temporal Scaling vs Uniform timeline perception.
 
-**Target features:**
-- SVG timeline stimuli (event rug + allocation bands) rendered client-side
-- 3 task types: Peak Identification, Period Comparison, Pattern Recognition
-- 24 experimental trials + 2 practice, counterbalanced Uniform/ATS conditions
-- Per-trial response recording (accuracy, RT, confidence) via Convex backend
-- Anonymous participant flow with post-study questionnaire
+Next milestone: TBD — start with `/gsd-new-milestone` to question → research → define requirements → roadmap.
 
 ## Current Status
 
-**v3.4 Burstiness-First Adaptive Timeline** shipped 2026-06-30. **v4.0 ATS Perception Study** initiating 2026-06-30 on dedicated `ats-study` branch. The `dashboard-demo` route supports three runtime-switchable adaptive signal sources (burstiness default, density, contextual z) backed by a 168-cell hour×dayOfWeek baseline. Remaining work: evaluation readiness (Phase 80 partial), memory pressure reduction (Phase 81), and POI map integration (Phase 82).
+**v4.0 ATS Perception Study** shipped 2026-06-30 on dedicated `ats-study` branch (public repo at `ClintonEmok/ats-perception-study`). 5 phases, 17/19 requirements satisfied; 2 deployment requirements (DEPLOY-04, DEPLOY-05) are deferred pending Convex + Vercel credentials. The study is a custom React + Zustand + Visx experiment engine with Convex-only persistence, 6 base datasets, counterbalanced condition order, and a full participant flow. Pushed to GitHub as a public repo on the `ats-study` branch.
 
 ## Requirements
 
@@ -122,4 +117,20 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-30 — v4.0 ATS Perception Study milestone initiated*
+*Last updated: 2026-06-30 — v4.0 ATS Perception Study milestone archived*
+
+<details>
+<summary>v4.0 ATS Perception Study (archived 2026-06-30)</summary>
+
+**Goal:** Deliver a controlled within-subjects web experiment comparing Adaptive Temporal Scaling vs Uniform timeline perception.
+
+**Target features:**
+- SVG timeline stimuli (event rug + allocation bands) rendered client-side
+- 3 task types: Peak Identification, Period Comparison, Pattern Recognition
+- 24 experimental trials + 2 practice, counterbalanced Uniform/ATS conditions
+- Per-trial response recording (accuracy, RT, confidence) via Convex backend
+- Anonymous participant flow with post-study questionnaire
+
+**Outcome:** 5 phases shipped, 17/19 requirements satisfied. Code-complete and verified on the ats-study branch. Live Vercel + Convex deployment and the 2-3 participant pilot are blocked on operational credentials. See `.planning/milestones/v4.0-ROADMAP.md` and `.planning/v4.0-MILESTONE-AUDIT.md`.
+
+</details>

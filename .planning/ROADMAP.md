@@ -87,13 +87,4 @@ v4.0 turns the prototype into a self-contained ATS perception study built on the
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 87 → 88 → 89 → 90 → 91
-
-| Phase | Milestone | Status | Requirements | Success Criteria |
-|-------|-----------|--------|--------------|------------------|
-| 87. Infrastructure & Core Logic | v4.0 | Complete | 4 | 4 |
-| 88. Stimulus Rendering & RT Measurement | v4.0 | Complete | 3 | 5 |
-| 89. Experiment Flow & Trial Engine | v4.0 | Complete | 6 | 5 |
-| 90. Deployment / Route Stripping / Pilot | v4.0 | Complete (build + gates; deploy + pilot deferred) | 6 | 3 |
-| 91. Questionnaire Iteration | v4.0 | Complete | 1 | 4 |
+**v4.0 ATS Perception Study** — archived 2026-06-30. See `.planning/milestones/v4.0-ROADMAP.md` for the phase-by-phase breakdown and `.planning/v4.0-MILESTONE-AUDIT.md` for the audit. Next milestone: TBD via `/gsd-new-milestone`.
