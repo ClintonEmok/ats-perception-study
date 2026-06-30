@@ -177,7 +177,7 @@ sequenceDiagram
 
 | Route | Page File | Visualizations |
 |-------|-----------|---------------|
-| `/dashboard` | `src/app/dashboard/page.tsx` | 3D Cube (MainScene), Map, Dual Timeline, Adaptive Controls |
+| `/dashboard-demo` | `src/app/dashboard-demo/page.tsx` | Map / 3D / Compare shell, demo timeline, workflow rail, study presets |
 | `/timeline-test` | - | Standalone timeline testing |
 | `/timeline-test-3d` | - | 3D timeline visualization |
 | `/timeslicing` | - | Time slicing controls |

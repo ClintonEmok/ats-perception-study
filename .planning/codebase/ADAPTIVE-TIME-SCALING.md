@@ -50,7 +50,7 @@ Two binning strategies, controlled by `binningMode`:
 | **densityInput** | `countMap[i]` (raw count) | `countMap[i] / binWidth[i]` (events/sec) |
 | **Fallback** | Direct histogram | Boundary array must be strictly monotonic |
 
-- `uniform-time` is used by `/timeslicing` and `/dashboard`.
+- `uniform-time` is used by `/timeslicing`, `/stats` fallback coverage, and dashboard-demo timeline workflows that preserve the same normalized brush-range contract.
 - `uniform-events` is used by `/timeslicing-algos`.
 
 The binning mode is resolved per-route in `src/lib/adaptive/route-binning-mode.ts`.

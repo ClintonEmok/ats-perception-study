@@ -131,18 +131,9 @@ Map click → handleClick() in MapVisualization
 - Map shows a marker via `MapSelectionMarker` (lat/lon from resolved point)
 - Cube could highlight the point but this is via the index lookup mechanism, not direct coordinate sync
 
-## 6. Dashboard Page Layout (`src/app/dashboard/page.tsx`)
+## 6. Dashboard-Demo Page Layout (`src/app/dashboard-demo/page.tsx`)
 
-```typescript
-// Layout: DashboardLayout with resizable panels
-<DashboardLayout
-  leftPanel={<MapVisualization />}        // Left: Map
-  topRightPanel={<CubeVisualization />}    // Top-right: 3D Cube
-  bottomRightPanel={<TimelinePanel />}     // Bottom-right: Timeline
-/>
-```
-
-**DashboardDemo alternative** (`src/components/dashboard-demo/DashboardDemoShell.tsx`):
+**Final dashboard shell** (`src/components/dashboard-demo/DashboardDemoShell.tsx`):
 - Uses tab switching between map/3d (only one visible at a time)
 - No longer uses `CubeVisualization` with store overrides
 - Directly renders `DemoMapVisualization` or `Demo3dSpatialView`
@@ -155,7 +146,7 @@ Map click → handleClick() in MapVisualization
 
 | Gap | Description |
 |-----|-------------|
-| **No slice visualization in dashboard** | Main dashboard (`page.tsx`) uses `DashboardLayout` with `DashboardHeader` from `@/components/dashboard/DashboardHeader` — includes `ContextualSlicePanel` but no dedicated slice management UI |
+| **No shared legacy cube shell** | The final dashboard now routes all slice authoring and inspection through `DashboardDemoShell`, so legacy `DashboardLayout`/`ContextualSlicePanel` flows no longer exist as live surfaces |
 | **Limited slice interaction** | Slices are created via double-click hitbox, but no UI for time-based slice creation from timeline |
 
 ### Linked 2D + 3D Interaction

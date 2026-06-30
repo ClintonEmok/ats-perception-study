@@ -463,7 +463,7 @@ worker.onmessage = (e) => {
 ```
 
 ### 8.5 STKDE API Call Pattern
-**File:** `src/app/dashboard-v2/hooks/useDashboardStkde.ts` (lines 200-281)
+**File:** `src/components/stkde/lib/useDashboardStkde.ts` (lines 200-281)
 
 ```typescript
 const runStkde = useCallback(async () => {

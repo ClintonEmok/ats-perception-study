@@ -50,9 +50,7 @@ src/
 │   ├── page.tsx            # Landing page
 │   ├── globals.css
 │   ├── favicon.ico
-│   ├── dashboard/          # /dashboard — main visualization
-│   ├── dashboard-demo/     # /dashboard-demo — eval-study demo shell
-│   ├── dashboard-v2/       # /dashboard-v2 — alternate dashboard
+│   ├── dashboard-demo/     # /dashboard-demo — final synchronized dashboard shell
 │   ├── timeline-test/      # /timeline-test — dual-timeline testing
 │   ├── timeline-test-3d/   # /timeline-test-3d — 3D timeline view
 │   ├── timeslicing/        # /timeslicing — binning controls
@@ -223,8 +221,7 @@ src/
 - Contains: `page.tsx`, `layout.tsx`, route-local folders (`components/`, `hooks/`, `lib/`), and `api/` route handlers.
 - Key files:
   - `src/app/layout.tsx` — root layout
-  - `src/app/dashboard/page.tsx` — main viz shell
-  - `src/app/dashboard-demo/page.tsx` — eval-study demo
+  - `src/app/dashboard-demo/page.tsx` — final dashboard shell
   - `src/app/api/crime/stream/route.ts` — Arrow IPC stream
   - `src/app/api/crimes/range/route.ts` — paginated raw rows
   - `src/app/api/synthetic/bursty/route.ts` — synthetic generator
@@ -292,8 +289,7 @@ src/
 **Entry points:**
 - `src/app/layout.tsx` — root layout (theme, query, toaster, onboarding)
 - `src/app/page.tsx` — landing
-- `src/app/dashboard/page.tsx` — main dashboard
-- `src/app/dashboard-demo/page.tsx` — evaluation demo
+- `src/app/dashboard-demo/page.tsx` — final dashboard route
 - `src/app/timeline-test/page.tsx` — dual-timeline test
 - `src/app/stkde/page.tsx` — STKDE view
 - `src/app/timeslicing/page.tsx` — time-slicing controls

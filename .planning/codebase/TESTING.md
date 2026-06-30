@@ -471,7 +471,6 @@ The `pendingResolve` / `pendingReject` pattern (from `useCrimeData.test.ts`) is 
 
 `*.shell.test.tsx` and `*.tick-rollout.test.ts` style tests read the source file once and assert against a set of positive/negative regex patterns. The intent is to catch wiring regressions in refactors (e.g. "Phase 13 must keep the `selectionStory` references; it must not include the old `WorkflowSkeleton`"). See:
 
-- `src/app/dashboard/page.shell.test.tsx`
 - `src/app/dashboard-demo/page.shell.test.tsx`
 - `src/app/stkde/page.stkde.test.ts`
 - `src/app/stkde-3d/page.stkde.test.ts`
@@ -492,7 +491,6 @@ The `pendingResolve` / `pendingReject` pattern (from `useCrimeData.test.ts`) is 
 - `src/components/viz/cube-store-overrides.phase1.test.ts`
 - `src/components/viz/spatialConstraintGeometry.test.ts`
 - `src/components/dashboard-demo/DashboardHeader.flow-consolidation.test.tsx`
-- `src/app/dashboard-v2/page.flow-consolidation.test.tsx`
 
 The pattern is `expect(source).toMatch(/Needle/)` and `expect(source).not.toMatch(/Forbidden/)`. These tests are intentionally cheap — they don't need a renderer, a fetch mock, or a DuckDB stub.
 
@@ -615,7 +613,7 @@ Approximate counts (one `it`/`test` per case; the `*.shell.test.tsx` files often
 | **Worker contract** | `src/workers/adaptiveTime.worker.test.ts`, `src/store/useAdaptiveStore.test.ts` | `MockWorker` class + `Object.defineProperty(globalThis, 'Worker', ...)` |
 | **API route** | `src/app/api/**/route.test.ts` | `vi.mock('@/lib/db', ...)` then dynamic `await import('./route')` |
 | **File contract** | `src/components/**/*.phase*.test.ts`, `src/app/**/page.shell.test.tsx`, `DualTimeline.tick-rollout.test.ts` | `readFileSync` + positive/negative `toMatch` |
-| **Component render** | `src/components/timeline/DualTimeline.detailBins.test.ts`, `src/components/timeline/DualTimeline.tick-rollout.test.ts` (data flow), `src/app/dashboard/page.shell.test.tsx` | Lightweight render + assertion; React Test Renderer for most `*.tsx` tests |
+| **Component render** | `src/components/timeline/DualTimeline.detailBins.test.ts`, `src/components/timeline/DualTimeline.tick-rollout.test.ts` (data flow), `src/app/dashboard-demo/page.shell.test.tsx` | Lightweight render + assertion; React Test Renderer for most `*.tsx` tests |
 | **Python (stdlib)** | `scripts/synthetic/test_generate_bursty.py` | `unittest.TestCase` subclasses, `tempfile.TemporaryDirectory` for file output |
 
 ## Common Patterns and Anti-Patterns

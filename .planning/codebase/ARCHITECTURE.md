@@ -170,15 +170,10 @@
 - Triggers: `/` route
 - Responsibilities: Landing page that links to the various dashboards and algorithm views.
 
-**`src/app/dashboard/page.tsx`:**
-- Location: `src/app/dashboard/page.tsx`
-- Triggers: `/dashboard` route
-- Responsibilities: Main visualization shell — `MapVisualization` (left), `CubeVisualization` (top-right), `TimelinePanel` (bottom). Wrapped in `DashboardLayout` (resizable panels from `react-resizable-panels`). Includes `DashboardHeader`, `StudyControls`, and `ContextualSlicePanel`.
-
 **`src/app/dashboard-demo/page.tsx`:**
 - Location: `src/app/dashboard-demo/page.tsx`
 - Triggers: `/dashboard-demo` route
-- Responsibilities: Demo shell for evaluation studies with rail tabs and three viewports (Map / 3D / Compare). Uses `DashboardDemoShell` (`src/components/dashboard-demo/DashboardDemoShell.tsx`).
+- Responsibilities: Primary dashboard shell with rail tabs and three viewports (Map / 3D / Compare). Uses `DashboardDemoShell` (`src/components/dashboard-demo/DashboardDemoShell.tsx`).
 
 **`src/app/timeline-test/page.tsx`:**
 - Location: `src/app/timeline-test/page.tsx`

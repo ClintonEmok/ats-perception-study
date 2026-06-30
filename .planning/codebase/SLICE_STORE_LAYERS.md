@@ -11,7 +11,7 @@ The slice-related state is distributed across **30+ Zustand stores**, organized 
 ```
 ┌──────────────────────────────────────────────────┐
 │              Dashboard Demo Stores               │
-│  (parallel implementations for demo/dashboard)   │
+│  (parallel implementations for final dashboard and legacy shared flows) │
 ├──────────────────────────────────────────────────┤
 │           Coordination & Sync Stores             │
 │  (cross-view coordination, selection sync)        │

@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-The dashboard demo has its own parallel set of stores under `src/store/useDashboardDemo*`. These stores replicate, extend, or specialize the behavior of the main application stores for the `/dashboard` route.
+The final dashboard route has its own parallel set of stores under `src/store/useDashboardDemo*`. These stores replicate, extend, or specialize the behavior of the legacy shared stores while powering `/dashboard-demo` as the canonical workspace.
 
 ### Store Inventory:
 

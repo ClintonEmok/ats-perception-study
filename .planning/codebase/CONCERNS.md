@@ -223,7 +223,7 @@
 ### Pre-existing test failures (~6 unrelated, as of last run)
 
 - What's not tested: As of the most recent test run noted in the project context (528 pass / 6 pre-existing unrelated failures), 6 tests fail. They are unrelated to the synthetic generator and duckdb mock paths. Likely candidates are the adaptive store contract tests and the timeslicing mode tests that depend on `jsdom` and `react-test-renderer` 19.x — both have known compat issues with React 19.2.7.
-- Files: `src/store/useAdaptiveStore.contract.test.ts`, `src/store/useDashboardDemoTimeslicingModeStore.persist.test.ts`, and the `page.shell.test.tsx` / `page.stkde.test.ts` files in `src/app/dashboard-v2/`
+- Files: `src/store/useAdaptiveStore.contract.test.ts`, `src/store/useDashboardDemoTimeslicingModeStore.persist.test.ts`, and the remaining shell-style tests around `src/app/dashboard-demo/page.shell.test.tsx` / STKDE route coverage
 - Risk: A regression in those modules would land without test signal. The 6 failing tests are noise that masks real new failures.
 - Priority: Medium. Recommend either fixing the 6 or marking them as `.skip` with a comment so the test count is honest.
 
