@@ -3,38 +3,37 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: ATS Perception Study
 status: executing
-last_updated: "2026-06-30T15:02:00Z"
+last_updated: "2026-06-30T15:05:00Z"
 last_activity: 2026-06-30
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 25
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
-
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Phase 88 — Stimulus Rendering & RT Measurement
+**Current focus:** Phase 89 — Experiment Flow & Trial Engine
 
 ## Current Position
 
-Phase: 88 (v4.0 Phase 2 of 4 — Stimulus Rendering & RT Measurement)
+Phase: 89 (v4.0 Phase 3 of 4 — Experiment Flow & Trial Engine)
 Plan: —
 Status: Ready to plan
-Last activity: 2026-06-30 — Phase 87 committed (`9c165b0`)
+Last activity: 2026-06-30 — Phase 88 committed (`08e9f61`)
 
-Progress: [█████░░░░░] 25%
+Progress: [██████████░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: —
 - Total execution time: —
 
@@ -43,12 +42,12 @@ Progress: [█████░░░░░] 25%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 87 Infrastructure & Core Logic | 1 | done | — |
-| 88 Stimulus Rendering & RT Measurement | TBD | — | — |
+| 88 Stimulus Rendering & RT Measurement | 1 | done | — |
 | 89 Experiment Flow & Trial Engine | TBD | — | — |
 | 90 Deployment / Route Stripping / Pilot | TBD | — | — |
 
 **Recent Trend:**
-- Last 1 plan: 87 (Convex schema, counterbalancing, ATS mapping, base datasets).
+- Last 2 plans: 87 (Convex schema, counterbalancing, ATS mapping, base datasets), 88 (SVG stimulus, performance.now timing).
 - Trend: on plan.
 
 ## Accumulated Context
@@ -62,6 +61,8 @@ Progress: [█████░░░░░] 25%
 - Practice trials plus post-study preference/free-text questionnaire are in scope.
 - Phase 87: Convex hand-written `_generated/server.ts` stub keeps imports stable without `npx convex dev`; replace when the Convex project is provisioned.
 - Phase 87: ATS interval mapper applies min/max-width bounds after the final span rescale, not before, so dense-region emphasis survives normalisation.
+- Phase 88: Timing source requires an explicit `performance` argument in tests; the `useStimulusTiming` hook owns Page Visibility wiring for the participant UI.
+- Phase 88: `TimelineStimulus` is a pure SVG component (no canvas) so it survives Playwright screenshot comparisons and keeps the bundle small.
 
 ### Pending Todos
 
@@ -75,6 +76,5 @@ Progress: [█████░░░░░] 25%
 ## Session Continuity
 
 Last session: 2026-06-30
-Stopped at: Phase 87 complete; Phase 88 next.
+Stopped at: Phase 88 complete; Phase 89 next.
 Resume file: None
-
