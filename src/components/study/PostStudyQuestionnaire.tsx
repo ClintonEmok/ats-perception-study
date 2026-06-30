@@ -9,6 +9,7 @@ import {
   isPreference,
   validateFreeText,
 } from "@/lib/ats-study/questionnaire";
+import { assignConditionOrder } from "@/lib/ats-study/assignment";
 import { exportSessionData, type ExportableQuestionnaire } from "@/lib/ats-study/export";
 import { useExperimentStore } from "@/store/useExperimentStore";
 
@@ -204,6 +205,7 @@ export function downloadSessionResponses(): void {
   const participantName = state.participantName.trim();
   const sessions: Array<{
     sessionId: string;
+    experimentSlug: string;
     participantIndex: number;
     participantName: string | null;
     conditionOrder: ReadonlyArray<"uniform" | "ats">;
@@ -212,17 +214,17 @@ export function downloadSessionResponses(): void {
   }> = [
     {
       sessionId,
+      experimentSlug: state.experimentSlug,
       participantIndex: state.participantIndex,
       participantName: participantName.length > 0 ? participantName : null,
-      conditionOrder: [state.blockACondition, state.blockBCondition].filter(
-        (c): c is "uniform" | "ats" => c !== null,
-      ),
+      conditionOrder: assignConditionOrder(state.participantIndex),
       startedAt: state.startedAt ?? submittedAt,
       finishedAt: state.finishedAt ?? submittedAt,
     },
   ];
   const trials = state.responses.map((r) => ({
     sessionId,
+    experimentSlug: state.experimentSlug,
     trialIndex: r.trialIndex,
     taskType: r.taskType,
     condition: r.condition,

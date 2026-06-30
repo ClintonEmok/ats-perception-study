@@ -10,6 +10,7 @@ const input: ExportInput = {
   sessions: [
     {
       sessionId: "s1",
+      experimentSlug: "ats-perception-v4",
       participantIndex: 0,
       participantName: "Alex",
       conditionOrder: ["uniform", "ats"],
@@ -20,10 +21,11 @@ const input: ExportInput = {
   trials: [
     {
       sessionId: "s1",
+      experimentSlug: "ats-perception-v4",
       trialIndex: 0,
       taskType: "peak",
       condition: "uniform",
-      datasetId: "uniform-uniform--uniform",
+      datasetId: "ds-01-uniform-200--uniform",
       isPractice: false,
       chosen: "A",
       correct: "A",
@@ -34,10 +36,11 @@ const input: ExportInput = {
     },
     {
       sessionId: "s1",
+      experimentSlug: "ats-perception-v4",
       trialIndex: 1,
       taskType: "peak",
       condition: "ats",
-      datasetId: "single-burst-single-burst--ats",
+      datasetId: "ds-02-single-burst-220--ats",
       isPractice: false,
       chosen: "B",
       correct: "A",
@@ -62,7 +65,7 @@ describe("export", () => {
   it("emits a CSV with header rows and proper escaping", () => {
     const csv = exportSessionDataAsCsv(input);
     expect(csv.sessionsCsv.split("\n")[0]).toBe(
-      "sessionId,participantIndex,participantName,conditionOrder,startedAt,finishedAt",
+      "sessionId,experimentSlug,participantIndex,participantName,conditionOrder,startedAt,finishedAt",
     );
     expect(csv.trialsCsv).toContain("trialIndex,taskType,condition,datasetId");
     // free text contains a comma + double-quote — must be escaped.

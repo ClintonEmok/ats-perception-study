@@ -1,5 +1,6 @@
 export interface ExportableSession {
   sessionId: string;
+  experimentSlug: string;
   participantIndex: number;
   participantName: string | null;
   conditionOrder: ReadonlyArray<"uniform" | "ats">;
@@ -9,6 +10,7 @@ export interface ExportableSession {
 
 export interface ExportableTrial {
   sessionId: string;
+  experimentSlug: string;
   trialIndex: number;
   taskType: "peak" | "comparison" | "pattern";
   condition: "uniform" | "ats";

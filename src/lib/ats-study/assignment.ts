@@ -33,15 +33,6 @@ export function conditionForTrial(participantIndex: number, trialIndex: number):
   return order[trialIndex]!;
 }
 
-export function conditionForTrialInBlock(
-  participantIndex: number,
-  block: "a" | "b",
-  blockCursor: number,
-): Condition {
-  const trialIndex = block === "a" ? blockCursor : TRIALS_PER_CONDITION + blockCursor;
-  return conditionForTrial(participantIndex, trialIndex);
-}
-
 export function balanceReport(): {
   uniformCount: number;
   atsCount: number;

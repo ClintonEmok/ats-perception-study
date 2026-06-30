@@ -17,13 +17,12 @@ describe("protocol constants", () => {
     expect(FIXATION_MS).toBe(500);
   });
 
-  it("exposes 7 ordered phases", () => {
+  it("exposes 6 ordered phases", () => {
     expect(PROTOCOL_PHASES).toEqual([
       "consent",
       "instructions",
       "practice",
-      "block-a",
-      "block-b",
+      "trial",
       "questionnaire",
       "debrief",
     ]);

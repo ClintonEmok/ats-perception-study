@@ -2,23 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useExperimentStore } from "@/store/useExperimentStore";
+import {
+  useExperimentStore,
+  getCurrentPracticeSpec,
+} from "@/store/useExperimentStore";
 import { TrialRunner } from "@/components/study/TrialRunner";
 import { PracticeFeedback } from "@/components/study/PracticeFeedback";
-import { buildPracticeTrials, TASK_LABELS } from "@/lib/ats-study/protocol";
+import { TASK_LABELS } from "@/lib/ats-study/protocol";
 import { getVariantByDatasetId } from "@/lib/ats-study/datasets";
 import { pickCorrectAnswer } from "@/lib/ats-study/correctAnswers";
-
-const PRACTICE_TRIALS = buildPracticeTrials();
-const PRACTICE_DATASET_IDS = [
-  "uniform-uniform--uniform",
-  "single-burst-single-burst--ats",
-];
-
-function pickPracticeVariant(taskIndex: number) {
-  const id = PRACTICE_DATASET_IDS[taskIndex] ?? PRACTICE_DATASET_IDS[0]!;
-  return getVariantByDatasetId(id) ?? null;
-}
+import { requireExperiment } from "@/lib/ats-study/experiments";
 
 export interface PracticeScreenProps {
   onFinish: () => void;
@@ -27,6 +20,7 @@ export interface PracticeScreenProps {
 export function PracticeScreen({ onFinish }: PracticeScreenProps) {
   const view = useExperimentStore(
     useShallow((state) => ({
+      experimentSlug: state.experimentSlug,
       practiceCursor: state.practiceCursor,
       recordPracticeOnset: state.recordPracticeOnset,
       recordPracticeResponse: state.recordPracticeResponse,
@@ -40,30 +34,40 @@ export function PracticeScreen({ onFinish }: PracticeScreenProps) {
     correctAnswer: string;
   } | null>(null);
 
-  const trial = PRACTICE_TRIALS[view.practiceCursor];
-  const variant = trial ? pickPracticeVariant(view.practiceCursor) : null;
+  const config = requireExperiment(view.experimentSlug);
+  const practice = config.practiceTrials[view.practiceCursor] ?? null;
+  const totalPractice = config.practiceTrials.length;
 
   useEffect(() => {
     setFeedback(null);
   }, [view.practiceCursor]);
 
-  if (!trial || !variant) return null;
-  const correct = pickCorrectAnswer({ variant, taskType: trial.taskType });
+  if (!practice) return null;
+  const datasetId = `${practice.baseDatasetId}--${practice.condition}`;
+  const variant = getVariantByDatasetId(datasetId);
+  const correct = pickCorrectAnswer({ variant, taskType: practice.taskType });
 
   if (feedback) {
     return (
-      <section className="flex flex-col gap-4" data-phase="practice" data-testid="practice-screen">
+      <section
+        className="flex flex-col gap-4"
+        data-phase="practice"
+        data-testid="practice-screen"
+        data-experiment-slug={view.experimentSlug}
+      >
         <h2 className="text-lg font-semibold">
-          Practice trial {view.practiceCursor + 1} of {PRACTICE_TRIALS.length}
+          Practice trial {view.practiceCursor + 1} of {totalPractice}
         </h2>
-        <p className="text-xs uppercase tracking-wide text-slate-500">{TASK_LABELS[trial.taskType]}</p>
+        <p className="text-xs uppercase tracking-wide text-slate-500">
+          {TASK_LABELS[practice.taskType]} ({practice.condition})
+        </p>
         <PracticeFeedback
           correct={feedback.correct}
           chosen={feedback.chosen}
           correctAnswer={feedback.correctAnswer}
           onContinue={() => {
             setFeedback(null);
-            const wasLast = view.practiceCursor + 1 >= PRACTICE_TRIALS.length;
+            const wasLast = view.practiceCursor + 1 >= totalPractice;
             view.advancePractice();
             if (wasLast) onFinish();
           }}
@@ -73,21 +77,28 @@ export function PracticeScreen({ onFinish }: PracticeScreenProps) {
   }
 
   return (
-    <section className="flex flex-col gap-4" data-phase="practice" data-testid="practice-screen">
+    <section
+      className="flex flex-col gap-4"
+      data-phase="practice"
+      data-testid="practice-screen"
+      data-experiment-slug={view.experimentSlug}
+    >
       <h2 className="text-lg font-semibold">
-        Practice trial {view.practiceCursor + 1} of {PRACTICE_TRIALS.length}
+        Practice trial {view.practiceCursor + 1} of {totalPractice}
       </h2>
-      <p className="text-xs uppercase tracking-wide text-slate-500">{TASK_LABELS[trial.taskType]}</p>
+      <p className="text-xs uppercase tracking-wide text-slate-500">
+        {TASK_LABELS[practice.taskType]} ({practice.condition})
+      </p>
       <TrialRunner
         variant={variant}
-        taskType={trial.taskType}
+        taskType={practice.taskType}
         correctAnswer={correct}
         onResponse={({ chosen }) => {
           const ok = chosen === correct;
           view.recordPracticeResponse({ chosen, correct, responseTimeMs: 0, confidence: 3 });
           setFeedback({ correct: ok, chosen, correctAnswer: correct });
         }}
-        onOnset={({ datasetId }) => view.recordPracticeOnset(datasetId)}
+        onOnset={({ datasetId: onsetDatasetId }) => view.recordPracticeOnset(onsetDatasetId)}
       />
     </section>
   );

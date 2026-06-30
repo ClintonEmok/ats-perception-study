@@ -42,8 +42,7 @@ export const PROTOCOL_PHASES = [
   "consent",
   "instructions",
   "practice",
-  "block-a",
-  "block-b",
+  "trial",
   "questionnaire",
   "debrief",
 ] as const;

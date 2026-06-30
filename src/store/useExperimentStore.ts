@@ -2,14 +2,15 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { buildExperimentalTrialOrder, buildPracticeTrials, type ProtocolPhase, type TaskType } from "@/lib/ats-study/protocol";
+import { requireExperiment, type ExperimentConfig, type ExperimentPracticeSpec, type ExperimentTrialSpec } from "@/lib/ats-study/experiments";
 import {
   assignConditionOrder,
   conditionForTrial,
   type ConditionOrder,
 } from "@/lib/ats-study/assignment";
 import { scoreTrial } from "@/lib/ats-study/scoring";
-import type { Condition } from "@/lib/ats-study/protocol";
+import type { Condition, ProtocolPhase, TaskType } from "@/lib/ats-study/protocol";
+import { ATS_PERCEPTION_SLUG } from "@/lib/ats-study/experiments";
 
 export interface TrialResponse {
   trialIndex: number;
@@ -41,25 +42,52 @@ export interface QuestionnaireAnswers {
 }
 
 export interface ConvexWrites {
-  startSession: (args: { sessionId: string; participantName: string | null; conditionOrder: ConditionOrder; startedAt: number }) => Promise<unknown>;
+  startSession: (args: {
+    sessionId: string;
+    participantName: string | null;
+    conditionOrder: ConditionOrder;
+    startedAt: number;
+  }) => Promise<unknown>;
   completeSession: (args: { sessionId: string; finishedAt: number }) => Promise<unknown>;
-  startTrial: (args: { sessionId: string; trialIndex: number; taskType: TaskType; condition: Condition; datasetId: string; isPractice: boolean; onsetAt: number }) => Promise<unknown>;
-  completeTrial: (args: { sessionId: string; trialIndex: number; correct: boolean; chosen: string; responseTimeMs: number; confidence: number; recordedAt: number }) => Promise<unknown>;
-  submitQuestionnaire: (args: { sessionId: string; preference: QuestionnaireAnswers["preference"]; freeText: string; participantName: string | null; submittedAt: number }) => Promise<unknown>;
+  startTrial: (args: {
+    sessionId: string;
+    experimentSlug: string;
+    trialIndex: number;
+    taskType: TaskType;
+    condition: Condition;
+    datasetId: string;
+    isPractice: boolean;
+    onsetAt: number;
+  }) => Promise<unknown>;
+  completeTrial: (args: {
+    sessionId: string;
+    trialIndex: number;
+    correct: boolean;
+    chosen: string;
+    responseTimeMs: number;
+    confidence: number;
+    recordedAt: number;
+  }) => Promise<unknown>;
+  submitQuestionnaire: (args: {
+    sessionId: string;
+    preference: QuestionnaireAnswers["preference"];
+    freeText: string;
+    participantName: string | null;
+    submittedAt: number;
+  }) => Promise<unknown>;
 }
 
 export interface ExperimentState {
   sessionId: string | null;
   participantIndex: number;
   participantName: string;
+  experimentSlug: string;
   phase: ProtocolPhase;
-  blockACondition: Condition | null;
-  blockBCondition: Condition | null;
   currentTrialIndex: number;
   currentDatasetId: string | null;
   currentOnsetAt: number | null;
   practiceCursor: number;
-  blockCursor: number;
+  trialCursor: number;
   responses: TrialResponse[];
   questionnaire: QuestionnaireAnswers;
   convexWrites: ConvexWrites | null;
@@ -80,11 +108,11 @@ export interface ExperimentActions {
   recordPracticeOnset: (datasetId: string) => void;
   recordPracticeResponse: (args: { chosen: string; correct: string; responseTimeMs: number; confidence: number }) => void;
   advancePractice: () => void;
-  startBlock: (block: "a" | "b") => void;
+  startTrials: () => void;
   recordTrialOnset: (trialIndex: number, datasetId: string) => void;
   recordTrialResponse: (args: { trialIndex: number; chosen: string; correct: string; responseTimeMs: number; confidence: number }) => Promise<void>;
   advanceTrial: () => void;
-  finishBlocks: () => void;
+  finishTrials: () => void;
   setQuestionnaireAnswer: <K extends keyof QuestionnaireAnswers>(key: K, value: QuestionnaireAnswers[K]) => void;
   submitQuestionnaire: () => Promise<void>;
   finishSession: () => Promise<void>;
@@ -97,14 +125,13 @@ const initialState: ExperimentState = {
   sessionId: null,
   participantIndex: 0,
   participantName: "",
+  experimentSlug: ATS_PERCEPTION_SLUG,
   phase: "consent",
-  blockACondition: null,
-  blockBCondition: null,
   currentTrialIndex: 0,
   currentDatasetId: null,
   currentOnsetAt: null,
   practiceCursor: 0,
-  blockCursor: 0,
+  trialCursor: 0,
   responses: [],
   questionnaire: { preference: null, freeText: "" },
   convexWrites: null,
@@ -114,8 +141,23 @@ const initialState: ExperimentState = {
   finishedAt: null,
 };
 
-const practiceTrials = buildPracticeTrials();
-const experimentalOrder = buildExperimentalTrialOrder();
+export function getActiveExperiment(state: { experimentSlug: string }): ExperimentConfig {
+  return requireExperiment(state.experimentSlug);
+}
+
+export function getCurrentPracticeSpec(state: { experimentSlug: string; practiceCursor: number }): ExperimentPracticeSpec | null {
+  const config = getActiveExperiment(state);
+  return config.practiceTrials[state.practiceCursor] ?? null;
+}
+
+export function getCurrentTrialSpec(state: { experimentSlug: string; trialCursor: number }): ExperimentTrialSpec | null {
+  const config = getActiveExperiment(state);
+  return config.experimentalTrials[state.trialCursor] ?? null;
+}
+
+export function getCurrentCondition(state: { participantIndex: number; trialCursor: number }): Condition {
+  return conditionForTrial(state.participantIndex, state.trialCursor);
+}
 
 export const useExperimentStore = create<ExperimentStore>()(
   persist(
@@ -138,11 +180,9 @@ export const useExperimentStore = create<ExperimentStore>()(
           sessionId,
           participantIndex,
           convexWrites: writes,
-          blockACondition: order[0] ?? null,
-          blockBCondition: order[1] ?? null,
           currentTrialIndex: 0,
           practiceCursor: 0,
-          blockCursor: 0,
+          trialCursor: 0,
           responses: [],
           questionnaire: { preference: null, freeText: "" },
           startedAt,
@@ -164,14 +204,13 @@ export const useExperimentStore = create<ExperimentStore>()(
         set({ currentDatasetId: datasetId, currentOnsetAt: performance.now() }),
       recordPracticeResponse: ({ chosen, correct, responseTimeMs, confidence }) => {
         const state = get();
-        const trial = practiceTrials[state.practiceCursor];
-        if (!trial) return;
-        const condition = state.practiceCursor % 2 === 0 ? "uniform" : "ats";
+        const practice = getCurrentPracticeSpec(state);
+        if (!practice) return;
         const response: TrialResponse = {
-          trialIndex: trial.trialIndex,
-          taskType: trial.taskType,
-          condition,
-          datasetId: state.currentDatasetId ?? `${trial.taskType}-practice`,
+          trialIndex: state.practiceCursor,
+          taskType: practice.taskType,
+          condition: practice.condition,
+          datasetId: state.currentDatasetId ?? `${practice.baseDatasetId}--${practice.condition}`,
           chosen,
           correct,
           responseTimeMs,
@@ -186,39 +225,31 @@ export const useExperimentStore = create<ExperimentStore>()(
       },
       advancePractice: () => {
         const state = get();
+        const config = getActiveExperiment(state);
         const next = state.practiceCursor + 1;
-        if (next >= practiceTrials.length) {
-          set({ practiceCursor: 0, blockCursor: 0, phase: "block-a" });
+        if (next >= config.practiceTrials.length) {
+          set({ practiceCursor: 0, trialCursor: 0, phase: "trial" });
         } else {
           set({ practiceCursor: next });
         }
       },
-      startBlock: (block) => set({ phase: block === "a" ? "block-a" : "block-b", blockCursor: 0 }),
-      recordTrialOnset: (trialIndex, datasetId) => {
-        const state = get();
-        const halfLength = experimentalOrder.length / 2;
-        const absoluteIndex = state.phase === "block-b" ? halfLength + trialIndex : trialIndex;
-        set({
-          currentTrialIndex: absoluteIndex,
-          currentDatasetId: datasetId,
-          currentOnsetAt: performance.now(),
-        });
-      },
+      startTrials: () => set({ phase: "trial", trialCursor: 0 }),
+      recordTrialOnset: (trialIndex, datasetId) =>
+        set({ currentTrialIndex: trialIndex, currentDatasetId: datasetId, currentOnsetAt: performance.now() }),
       recordTrialResponse: async ({ trialIndex, chosen, correct, responseTimeMs, confidence }) => {
         const state = get();
-        const halfLength = experimentalOrder.length / 2;
-        const absoluteIndex =
-          state.phase === "block-a" ? trialIndex : halfLength + trialIndex;
-        const spec = experimentalOrder[absoluteIndex];
+        const config = getActiveExperiment(state);
+        const spec = config.experimentalTrials[trialIndex];
         if (!spec) return;
-        const condition = conditionForTrial(state.participantIndex, absoluteIndex);
+        const condition = conditionForTrial(state.participantIndex, trialIndex);
         const isCorrect = scoreTrial(spec.taskType, { chosen, correct });
         const recordedAt = Date.now();
+        const datasetId = state.currentDatasetId ?? `${spec.baseDatasetId}--${condition}`;
         const response: TrialResponse = {
-          trialIndex: absoluteIndex,
+          trialIndex,
           taskType: spec.taskType,
           condition,
-          datasetId: state.currentDatasetId ?? `trial-${absoluteIndex}`,
+          datasetId,
           chosen,
           correct,
           responseTimeMs,
@@ -231,7 +262,7 @@ export const useExperimentStore = create<ExperimentStore>()(
           try {
             await state.convexWrites.completeTrial({
               sessionId: state.sessionId,
-              trialIndex: absoluteIndex,
+              trialIndex,
               correct: isCorrect,
               chosen,
               responseTimeMs,
@@ -245,17 +276,15 @@ export const useExperimentStore = create<ExperimentStore>()(
       },
       advanceTrial: () => {
         const state = get();
-        const next = state.blockCursor + 1;
-        const halfLength = experimentalOrder.length / 2;
-        if (state.phase === "block-a" && next >= halfLength) {
-          set({ blockCursor: 0, phase: "block-b" });
-        } else if (state.phase === "block-b" && next >= halfLength) {
-          set({ blockCursor: 0, phase: "questionnaire" });
+        const config = getActiveExperiment(state);
+        const next = state.trialCursor + 1;
+        if (next >= config.experimentalTrials.length) {
+          set({ trialCursor: 0, phase: "questionnaire" });
         } else {
-          set({ blockCursor: next });
+          set({ trialCursor: next });
         }
       },
-      finishBlocks: () => set({ phase: "questionnaire" }),
+      finishTrials: () => set({ phase: "questionnaire" }),
       setQuestionnaireAnswer: (key, value) =>
         set({ questionnaire: { ...get().questionnaire, [key]: value } }),
       submitQuestionnaire: async () => {
@@ -301,14 +330,13 @@ export const useExperimentStore = create<ExperimentStore>()(
         sessionId: state.sessionId,
         participantIndex: state.participantIndex,
         participantName: state.participantName,
+        experimentSlug: state.experimentSlug,
         phase: state.phase,
-        blockACondition: state.blockACondition,
-        blockBCondition: state.blockBCondition,
         currentTrialIndex: state.currentTrialIndex,
         currentDatasetId: state.currentDatasetId,
         currentOnsetAt: state.currentOnsetAt,
         practiceCursor: state.practiceCursor,
-        blockCursor: state.blockCursor,
+        trialCursor: state.trialCursor,
         responses: state.responses,
         questionnaire: state.questionnaire,
         consentAccepted: state.consentAccepted,
