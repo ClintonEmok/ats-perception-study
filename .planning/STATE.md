@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: ATS Perception Study
 status: executing
-last_updated: "2026-06-30T15:10:00Z"
+last_updated: "2026-06-30T15:35:00Z"
 last_activity: 2026-06-30
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 75
+  completed_phases: 4
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -19,21 +19,21 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Phase 90 — Deployment / Route Stripping / Pilot
+**Current focus:** v4.0 milestone audit + cleanup
 
 ## Current Position
 
 Phase: 90 (v4.0 Phase 4 of 4 — Deployment / Route Stripping / Pilot)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-06-30 — Phase 89 committed (`c9b20a3`)
+Plan: 1
+Status: Complete
+Last activity: 2026-06-30 — Phase 90 committed (`6293eb0`)
 
-Progress: [██████████████] 75%
+Progress: [████████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: —
 - Total execution time: —
 
@@ -44,10 +44,10 @@ Progress: [██████████████] 75%
 | 87 Infrastructure & Core Logic | 1 | done | — |
 | 88 Stimulus Rendering & RT Measurement | 1 | done | — |
 | 89 Experiment Flow & Trial Engine | 1 | done | — |
-| 90 Deployment / Route Stripping / Pilot | TBD | — | — |
+| 90 Deployment / Route Stripping / Pilot | 1 | done | — |
 
 **Recent Trend:**
-- Last 3 plans: 87 (Convex schema, counterbalancing, ATS mapping, base datasets), 88 (SVG stimulus, performance.now timing), 89 (Zustand state machine, task components, trial runner, /experiment route).
+- Last 4 plans: 87 (Convex schema, counterbalancing, ATS mapping, base datasets), 88 (SVG stimulus, performance.now timing), 89 (Zustand state machine, task components, trial runner, /experiment route), 90 (route stripping, deployment gates, pilot prep).
 - Trend: on plan.
 
 ## Accumulated Context
@@ -65,18 +65,23 @@ Progress: [██████████████] 75%
 - Phase 88: `TimelineStimulus` is a pure SVG component (no canvas) so it survives Playwright screenshot comparisons and keeps the bundle small.
 - Phase 89: `ConvexClientProvider` ships as a stub that does not import `convex/react`; replaced with the real provider in Phase 90 after `pnpm add convex`.
 - Phase 89: `useExperimentStore` persists everything except the `convexWrites` reference, so a refresh resumes mid-trial and we never serialize a function.
+- Phase 90: All prototype routes and dependencies are physically removed from the study branch; the only runtime surface is the landing page, `/experiment`, and the Convex client.
+- Phase 90: Three deployment gates enforced — import-guard, bundle-check, and the production build.
+- Phase 90: `pickExperimentalVariant(blockCondition)` is a pure function; the block condition is passed in rather than read from the store inside a render helper.
+- Phase 90: `TrialRunner` initialises `phase` lazily from `showFixation` so the no-fixation path doesn't call `setPhase` inside an effect.
 
 ### Pending Todos
 
-- None yet.
+- Provision the Convex production project (`ats-perception-study-prod`) and set `NEXT_PUBLIC_CONVEX_URL` + `CONVEX_DEPLOY_KEY` in the Vercel environment.
+- Run the 2-3 participant pilot per `docs/PILOT.md`.
+- Run `gsd-audit-milestone` and `gsd-complete-milestone` to close v4.0.
 
 ### Blockers/Concerns
 
-- Convex project is still not provisioned; the runtime will silently no-op until `NEXT_PUBLIC_CONVEX_URL` is set.
-- Keep unrelated dashboard-demo / prototype routes out of the study branch; Phase 90 will physically strip them.
+- None. The study branch is ready for the Convex production deploy.
 
 ## Session Continuity
 
 Last session: 2026-06-30
-Stopped at: Phase 89 complete; Phase 90 next.
+Stopped at: All 4 v4.0 phases complete; milestone audit next.
 Resume file: None

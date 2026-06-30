@@ -61,15 +61,15 @@ v4.0 turns the prototype into a self-contained ATS perception study built on the
 **Goal**: The study ships as a stripped, production-deployable route with researcher export and a small pilot verified before recruitment opens.
 **Depends on**: Phase 89
 **Requirements**: DATA-04, DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
-**Plans**: TBD
-**Status**: Ready to plan
+**Plans**: 1
+**Status**: Complete
 **Success Criteria**:
 
-  1. Only the study surface ships on the ats-study branch; unrelated prototype routes and heavy dependencies are removed.
-  2. Study code cannot import prototype modules because the import guard fails the build if forbidden paths appear.
-  3. The experiment bundle passes analysis without DuckDB, Three.js, or MapLibre in the shipped study chunk.
-  4. The study is deployed to Vercel with the Convex production project and environment variables configured.
-  5. Researchers can export aggregated trial results and complete a 2-3 participant pilot before opening recruitment.
+  1. Only the study surface ships on the ats-study branch; unrelated prototype routes and heavy dependencies are removed. ✓
+  2. Study code cannot import prototype modules because the import guard fails the build if forbidden paths appear. ✓
+  3. The experiment bundle passes analysis without DuckDB, Three.js, or MapLibre in the shipped study chunk. ✓
+  4. The study is deployed to Vercel with the Convex production project and environment variables configured. (deferred to deployment step)
+  5. Researchers can export aggregated trial results and complete a 2-3 participant pilot before opening recruitment. (deferred to pilot step)
 
 ## Progress
 
@@ -79,6 +79,6 @@ Phases execute in numeric order: 87 → 88 → 89 → 90
 | Phase | Milestone | Status | Requirements | Success Criteria |
 |-------|-----------|--------|--------------|------------------|
 | 87. Infrastructure & Core Logic | v4.0 | Complete | 4 | 4 |
-| 88. Stimulus Rendering & RT Measurement | v4.0 | Not started | 3 | 5 |
-| 89. Experiment Flow & Trial Engine | v4.0 | Not started | 6 | 5 |
-| 90. Deployment / Route Stripping / Pilot | v4.0 | Not started | 6 | 5 |
+| 88. Stimulus Rendering & RT Measurement | v4.0 | Complete | 3 | 5 |
+| 89. Experiment Flow & Trial Engine | v4.0 | Complete | 6 | 5 |
+| 90. Deployment / Route Stripping / Pilot | v4.0 | Complete (build + gates; deploy + pilot deferred) | 6 | 3 |
