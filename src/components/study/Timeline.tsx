@@ -58,8 +58,19 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
       data-condition={layout.condition}
       data-pattern={layout.pattern}
       data-intervals={layout.intervalCount}
+      data-band-count={validBands.length}
+      data-rug-count={validRug.length}
       data-timeline-marker={MARKER}
-      style={{ display: "block", maxWidth: "100%" }}
+      preserveAspectRatio="xMidYMid meet"
+      style={{
+        display: "block",
+        width: "100%",
+        height: "auto",
+        maxWidth: `${w}px`,
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        borderRadius: "4px",
+      }}
     >
       <g aria-hidden="true">
         {validBands.map((band) => (
@@ -69,8 +80,8 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
             y={safe(band.y, 0)}
             width={safe(band.width, 1)}
             height={safe(band.height, 1)}
-            fill="var(--study-band, #cbd5e1)"
-            stroke="var(--study-band-stroke, #94a3b8)"
+            fill="#cbd5e1"
+            stroke="#475569"
             strokeWidth={1}
             shapeRendering="crispEdges"
             vectorEffect="non-scaling-stroke"
@@ -88,7 +99,7 @@ export function Timeline({ variant, width, height, bandHeight, ariaLabel }: Time
               x2={px}
               y1={safe(py - 6, 0)}
               y2={safe(py + 6, h)}
-              stroke="var(--study-rug, #0f172a)"
+              stroke="#0f172a"
               strokeWidth={1}
               shapeRendering="crispEdges"
               vectorEffect="non-scaling-stroke"
