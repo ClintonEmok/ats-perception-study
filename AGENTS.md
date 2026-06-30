@@ -139,7 +139,7 @@ This is a Next.js prototype for exploring crime patterns with an adaptive space-
 ## Architecture
 
 ## Pattern Overview
-- **Pages/Routes**: Dashboard-centric with multiple specialized views (`/dashboard`, `/timeline-test`, `/timeslicing`, `/stkde`, `/stats`)
+- **Pages/Routes**: Dashboard-centric with multiple specialized views (`/dashboard-demo`, `/timeline-test`, `/timeslicing`, `/stkde`, `/stats`)
 - **State Management**: Zustand stores with slice-domain pattern for complex state
 - **Business Logic**: Pure functions in `src/lib/` modules
 - **Data Layer**: API routes + DuckDB for analytics, Apache Arrow for streaming
@@ -193,9 +193,9 @@ This is a Next.js prototype for exploring crime patterns with an adaptive space-
 - Location: `src/app/layout.tsx`
 - Triggers: All page routes
 - Responsibilities: Theme provider, query provider, toaster, onboarding tour
-- Location: `src/app/dashboard/page.tsx`
-- Triggers: `/dashboard` route
-- Responsibilities: Main visualization layout with Map, Cube, Timeline panels
+- Location: `src/app/dashboard-demo/page.tsx`
+- Triggers: `/dashboard-demo` route
+- Responsibilities: Main synchronized workspace with map, 3D inspection, compare view, timeline, and workflow rail
 - `src/app/timeline-test/page.tsx` - Timeline testing interface
 - `src/app/timeline-test-3d/page.tsx` - 3D timeline visualization
 - `src/app/timeslicing/page.tsx` - Time slicing controls

@@ -1,26 +1,39 @@
 // Hand-written stub for the Convex server runtime.
-// Replaced by `npx convex dev` codegen in a real Convex project.
-// The shapes here are a minimal subset of the generated API used by convex/study.ts.
+// Replaced by `npx convex dev --configure` codegen in a real Convex project.
+// The shapes here are intentionally permissive so convex/study.ts can compile
+// before a real data model is generated. They cast away the strict GenericDataModel
+// constraint that the real `_generated/server` would expose.
 
-import { query, mutation } from "convex/server";
-import type { GenericQueryCtx, GenericMutationCtx, FunctionReference } from "convex/server";
+import { queryGeneric as realQueryGeneric, mutationGeneric as realMutationGeneric } from "convex/server";
+import type { FunctionReference } from "convex/server";
 
-export const queryGeneric = query as unknown as <Args extends Record<string, unknown> = Record<string, never>, Returns = unknown>(
+type AnyCtx = {
+  db: {
+    query: (...args: unknown[]) => unknown;
+    insert: (...args: unknown[]) => unknown;
+    patch: (...args: unknown[]) => unknown;
+    replace: (...args: unknown[]) => unknown;
+    delete: (...args: unknown[]) => unknown;
+    get: (...args: unknown[]) => unknown;
+  };
+};
+
+export const queryGeneric = realQueryGeneric as unknown as <Args = unknown, Returns = unknown>(
   config: {
     args: Record<string, unknown>;
     returns: unknown;
-    handler: (ctx: GenericQueryCtx<Record<string, unknown>>, args: Args) => Promise<Returns> | Returns;
+    handler: (ctx: AnyCtx, args: Args) => Promise<Returns> | Returns;
   },
 ) => unknown;
 
-export const mutationGeneric = mutation as unknown as <Args extends Record<string, unknown> = Record<string, never>, Returns = unknown>(
+export const mutationGeneric = realMutationGeneric as unknown as <Args = unknown, Returns = unknown>(
   config: {
     args: Record<string, unknown>;
     returns: unknown;
-    handler: (ctx: GenericMutationCtx<Record<string, unknown>>, args: Args) => Promise<Returns> | Returns;
+    handler: (ctx: AnyCtx, args: Args) => Promise<Returns> | Returns;
   },
 ) => unknown;
 
-export type AnyApi = Record<string, Record<string, FunctionReference<"query" | "mutation", "public" | "internal", unknown, unknown>>>;
+export type AnyApi = Record<string, Record<string, FunctionReference<"query" | "mutation", "public" | "internal", Record<string, never>, unknown>>>;
 
 export const anyApi: AnyApi = {};

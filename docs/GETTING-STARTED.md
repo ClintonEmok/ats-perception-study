@@ -124,7 +124,7 @@ pnpm run start
 ├── src/
 │   ├── app/              # Next.js App Router pages and API routes
 │   │   ├── api/          # Backend endpoints (crime, stkde, adaptive, etc.)
-│   │   ├── dashboard/    # Main visualization workspace
+│   │   ├── dashboard-demo/ # Final dashboard workspace
 │   │   ├── timeslicing/  # Time resolution controls
 │   │   ├── stkde/        # Hotspot analysis
 │   │   ├── stats/        # Summary statistics
@@ -153,9 +153,7 @@ pnpm run start
 | Route | Description |
 |-------|-------------|
 | `/` | Landing page with links to demo and STKDE 3D |
-| `/dashboard` | Main synchronized workspace with map, 3D cube, and dual timeline |
-| `/dashboard-demo` | Presentation/demo shell for workflow handoff |
-| `/dashboard-v2` | Updated dashboard with guided workflow rail (generate → review → apply → refine → analyze) |
+| `/dashboard-demo` | Main synchronized workspace with map, 3D inspection, timeline, and workflow rail |
 | `/timeline-test` | 2D timeline sandbox for brush behavior, tick labels, and temporal QA |
 | `/timeline-test-3d` | 3D companion for spatial-temporal alignment experiments |
 | `/timeslicing` | Manual controls for time resolution, bin generation, and slice inspection |

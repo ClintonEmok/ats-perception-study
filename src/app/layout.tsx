@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "sonner";
-import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
-import { ThemeProvider } from "@/components/layout/ThemeProvider";
-import QueryProvider from "@/providers/QueryProvider";
+import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Quiet Tiger",
-  description: "Adaptive space-time cube prototype for crime pattern exploration.",
+  title: "ATS Perception Study",
+  description: "Anonymous within-subjects web experiment comparing Adaptive Temporal Scaling and Uniform timelines.",
 };
 
 export default function RootLayout({
@@ -28,16 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider>
-          <QueryProvider>
-            {children}
-            <Toaster />
-            <OnboardingTour />
-          </QueryProvider>
-        </ThemeProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ConvexClientProvider>{children}</ConvexClientProvider>
       </body>
     </html>
   );

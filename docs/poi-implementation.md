@@ -2,7 +2,7 @@
 
 > Status: **Dashboard demo only.** Visible to evaluators on the
 > `/dashboard-demo` route. Wired into the 2D map viewport; not present in
-> production `/dashboard`, the timeline, or the 3D cube.
+> the timeline or the 3D cube.
 
 ## 1. Purpose
 
@@ -210,10 +210,9 @@ without changing the data model. The card itself is currently
 co-located with the map (left rail, below the map viewport).
 
 `MapVisualization` reads `selectedPoiId` and `setSelectedPoi` defensively
-(`typeof === 'function'`) because the same `MapVisualization` is
-reused on the non-demo `/dashboard` route which uses a different
-coordination store. This is the only place the demo-specific POI state
-leaks into a shared component.
+(`typeof === 'function'`) because the same `MapVisualization` is reused by
+multiple shells with different coordination-store capabilities. This is the
+only place the demo-specific POI state leaks into a shared component.
 
 ### `useDashboardDemoMapLayerStore.visibility.poi`
 
@@ -233,11 +232,9 @@ To keep scope clear during user testing:
   rest of the city."
 - **Not in the 3D view.** POIs are 2D-only. The 3D cube continues to
   show only crime points and KDE hotspots.
-- **Not in the production `/dashboard`.** The 2D `MapVisualization` is
-  shared, but the demo-only `selectedPoiId` slot in the coordination
-  store only exists for `/dashboard-demo`. The route renders
-  gracefully on `/dashboard` (the toggle and breakdown are absent
-  because the parent shell never reads `poiVisible`).
+- **Not in non-demo shells.** The 2D `MapVisualization` is shared, but the
+  demo-only `selectedPoiId` slot in the coordination store only exists for
+  `/dashboard-demo`. Other shells simply omit the toggle and breakdown.
 - **Not exhaustive.** Police is complete; transit/schools/parks are
   representative samples. The user said "47 is enough" — we treat POI
   as supporting context, not a complete geographic catalogue.

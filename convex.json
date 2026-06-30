@@ -1,0 +1,10 @@
+{
+  "$schema": "https://convex.dev/schemas/convex.json",
+  "project": "ats-perception-study",
+  "team": "<your-convex-team-slug>",
+  "prod": "ats-perception-study-prod",
+  "functions": "convex",
+  "node": {
+    "version": "20"
+  }
+}

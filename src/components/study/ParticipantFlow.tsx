@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useExperimentStore } from "@/store/useExperimentStore";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { TrialRunner } from "./TrialRunner";
@@ -17,29 +17,25 @@ const PRACTICE_DATASET_IDS = [
   "single-burst-single-burst--ats",
 ];
 
-const TASK_CORRECT_ANSWERS: Record<TaskType, string[]> = useMemoFallback();
-
-function useMemoFallback(): Record<TaskType, string[]> {
-  return {
-    peak: ["A", "B", "C"],
-    comparison: ["first", "second"],
-    pattern: ["uniform", "single-burst", "multi-burst", "gradual-change"],
-  };
-}
+const TASK_CORRECT_ANSWERS: Record<TaskType, string[]> = {
+  peak: ["A", "B", "C"],
+  comparison: ["first", "second"],
+  pattern: ["uniform", "single-burst", "multi-burst", "gradual-change"],
+};
 
 function pickPracticeVariant(taskIndex: number) {
   const id = PRACTICE_DATASET_IDS[taskIndex] ?? PRACTICE_DATASET_IDS[0]!;
   return getVariantByDatasetId(id) ?? null;
 }
 
-function pickExperimentalVariant(trialIndex: number) {
+function pickExperimentalVariant(trialIndex: number, blockACondition: "uniform" | "ats" | null) {
   const spec = EXPERIMENTAL_ORDER[trialIndex];
   if (!spec) return null;
   // Round-robin across base datasets so each trial index maps to a stimulus.
   const baseId = ["uniform-uniform", "single-burst-single-burst", "multi-burst-multi-burst-1", "multi-burst-multi-burst-2", "gradual-change-gradual-change", "single-burst-heavy-single-burst-heavy"][
     trialIndex % 6
   ]!;
-  const condition = useExperimentStore.getState().blockACondition === "ats" && trialIndex < 12 ? "uniform" : "ats";
+  const condition = blockACondition === "ats" && trialIndex < 12 ? "uniform" : "ats";
   return getVariantByDatasetId(`${baseId}--${condition}`);
 }
 
@@ -153,7 +149,7 @@ function renderPhase({
   if (store.phase === "block-a" || store.phase === "block-b") {
     const trial = EXPERIMENTAL_ORDER[store.blockCursor];
     if (!trial) return null;
-    const variant = pickExperimentalVariant(store.blockCursor);
+    const variant = pickExperimentalVariant(store.blockCursor, store.blockACondition);
     if (!variant) return null;
     const correct = TASK_CORRECT_ANSWERS[trial.taskType][0] ?? "A";
     return (

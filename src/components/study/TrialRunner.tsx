@@ -20,16 +20,13 @@ export interface TrialRunnerProps {
 
 export function TrialRunner({ variant, taskType, correctAnswer, showFixation = true, onResponse, onOnset }: TrialRunnerProps) {
   const timing = useStimulusTiming();
-  const [phase, setPhase] = useState<"fixation" | "stimulus" | "responded">("fixation");
+  const [phase, setPhase] = useState<"fixation" | "stimulus" | "responded">(showFixation ? "fixation" : "stimulus");
   const [confidence, setConfidence] = useState<number>(3);
   const onsetFiredRef = useRef(false);
   const respondedRef = useRef(false);
 
   useEffect(() => {
-    if (!showFixation) {
-      setPhase("stimulus");
-      return undefined;
-    }
+    if (!showFixation) return undefined;
     const t = window.setTimeout(() => setPhase("stimulus"), FIXATION_MS);
     return () => window.clearTimeout(t);
   }, [showFixation]);

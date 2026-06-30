@@ -2,46 +2,18 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050507] text-[#f5f5f7] [font-family:SF_Pro_Display,SF_Pro_Text,-apple-system,BlinkMacSystemFont,Segoe_UI,sans-serif]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-12%,rgba(58,76,120,0.42),rgba(12,13,17,0.94)_36%,rgba(5,5,7,1)_72%)]" />
-
-      <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 pb-14 pt-8 sm:px-10 lg:px-14">
-        <header className="flex items-center justify-between">
-          <p className="text-sm font-medium tracking-tight text-[#f5f5f7]">
-            Quiet Tiger
-          </p>
-          <span className="rounded-full border border-[#3a3a3c] bg-black/40 px-3 py-1 text-xs font-medium text-[#d2d2d7] backdrop-blur-sm">
-            Version 1.1
-          </span>
-        </header>
-
-        <div className="mx-auto mt-20 flex w-full max-w-4xl flex-1 flex-col items-center justify-center text-center sm:mt-16">
-          <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.03em] text-[#f5f5f7] sm:text-6xl lg:text-7xl">
-            Adaptive Time Scaling for Bursty Data
-          </h1>
-
-            <div className="mt-11 flex w-full max-w-xl flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
-            <Link
-              href="/demo/non-uniform-time-slicing"
-              className="inline-flex min-w-[220px] items-center justify-center rounded-full bg-[#0071e3] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#0077ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3] focus-visible:ring-offset-2"
-            >
-              Open demo
-            </Link>
-            <Link
-              href="/stkde-3d"
-              className="inline-flex min-w-[220px] items-center justify-center rounded-full border border-[#22d3ee]/60 bg-[#061a1f] px-7 py-3 text-sm font-semibold text-[#a5f3fc] transition hover:border-[#67e8f9] hover:bg-[#08262c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22d3ee] focus-visible:ring-offset-2"
-            >
-              3D STKDE
-            </Link>
-            <Link
-              href="/hotspot-evolution"
-              className="inline-flex min-w-[220px] items-center justify-center rounded-full border border-[#34d399]/50 bg-[#06120f] px-7 py-3 text-sm font-semibold text-[#a7f3d0] transition hover:border-[#6ee7b7] hover:bg-[#081815] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399] focus-visible:ring-offset-2"
-            >
-              Hotspot evolution
-            </Link>
-            </div>
-        </div>
-      </section>
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center justify-center gap-6 p-8 text-center">
+      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">ATS Perception Study</h1>
+      <p className="text-sm text-slate-700">
+        A short, anonymous web experiment comparing two timeline visualizations. You will see 26 timeline stimuli and answer brief questions about them. No personally identifying information is collected.
+      </p>
+      <Link
+        href="/experiment"
+        className="inline-flex min-w-[220px] items-center justify-center rounded-md bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+      >
+        Start the experiment
+      </Link>
+      <p className="text-xs text-slate-500">Estimated time: 8–12 minutes. Desktop browser recommended.</p>
     </main>
   );
 }
