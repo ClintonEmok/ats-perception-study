@@ -32,19 +32,16 @@ describe("buildStimulusLayout", () => {
   });
 
   it("covers all base datasets with non-empty rugs", () => {
-    for (const base of BASE_DATASETS) {
-      const uniform = buildStimulusLayout({
-        ...base,
-        datasetId: `${base.id}--uniform`,
-        condition: "uniform",
-      });
-      const ats = buildStimulusLayout({
-        ...base,
-        datasetId: `${base.id}--ats`,
-        condition: "ats",
-      });
-      expect(uniform.rug.length).toBe(base.events.length);
-      expect(ats.rug.length).toBe(base.events.length);
+    const uniform = getUniformVariants();
+    const ats = getAtsVariants();
+    expect(uniform).toHaveLength(BASE_DATASETS.length);
+    expect(ats).toHaveLength(BASE_DATASETS.length);
+    for (let i = 0; i < BASE_DATASETS.length; i++) {
+      const base = BASE_DATASETS[i]!;
+      const layoutU = buildStimulusLayout(uniform[i]!);
+      const layoutA = buildStimulusLayout(ats[i]!);
+      expect(layoutU.rug.length).toBe(base.events.length);
+      expect(layoutA.rug.length).toBe(base.events.length);
     }
   });
 });

@@ -7,9 +7,15 @@ export interface TimingSource {
   onVisibilityChange(listener: (hidden: boolean) => void): () => void;
 }
 
+export interface VisibilityDoc {
+  hidden: boolean;
+  addEventListener(type: "visibilitychange", listener: () => void): void;
+  removeEventListener(type: "visibilitychange", listener: () => void): void;
+}
+
 export interface TimingSourceOptions {
   performance?: Pick<Performance, "now"> | null;
-  document?: Pick<Document, "addEventListener" | "removeEventListener"> | null;
+  document?: VisibilityDoc | null;
 }
 
 export function createTimingSource(options: TimingSourceOptions = {}): TimingSource {
@@ -24,7 +30,7 @@ export function createTimingSource(options: TimingSourceOptions = {}): TimingSou
   }
   const doc = "document" in options
     ? options.document ?? null
-    : (typeof document !== "undefined" ? document : null);
+    : (typeof document !== "undefined" ? (document as unknown as VisibilityDoc) : null);
 
   let onset: number | null = null;
   let response: number | null = null;
