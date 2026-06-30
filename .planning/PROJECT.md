@@ -2,33 +2,39 @@
 
 ## What This Is
 
-This is a Next.js prototype for bursty spatiotemporal crime analysis. It combines a 2D map, a 3D Space-Time Cube, and a staged workflow where users Detect bursts, review/apply slices in Slices, and Inspect them with immediate context and comparison controls — with the map, cube, and timeline staying synchronized around the active slice.
+This is a Next.js prototype for bursty spatiotemporal crime analysis. It combines a 2D map, a 3D Space-Time Cube, and a dual timeline where users brush time, inspect points, and see bursty intervals expand or compress as the time resolution changes — with the map, cube, and timeline staying synchronized around the active slice. v3.4 shipped a parameterized adaptive signal contract (burstiness / density / contextual) with a TypeScript-ported winsorized Pearson residual metric backed by a thesis-grade Python comparison against Goh-Barabasi.
 
 ## Core Value
 
-Help users understand dense vs sparse spatiotemporal crime patterns through a synchronized exploration tool.
+Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
 
 ## Current Status
 
-**v3.4 Burstiness-First Adaptive Timeline** is the active milestone. The `dashboard-demo` route keeps burstiness as the primary adaptive signal, preserves density as a configurable fallback, and keeps the detail timeline histogram-based with clearer burst onset/ramp-up cues.
+**v3.4 Burstiness-First Adaptive Timeline** shipped 2026-06-30. The `dashboard-demo` route supports three runtime-switchable adaptive signal sources (burstiness default, density, contextual z) backed by a 168-cell hour×dayOfWeek baseline. A 3D adaptive warp axis, interactive slice editing, demo presets with atomic workspace sync, and an `/evaluation` study route are all functional. Two core phases (83, 84) shipped without formal VERIFICATION.md — known gap, see v3.4-MILESTONE-AUDIT.md. Remaining work: evaluation readiness (Phase 80 partial), memory pressure reduction (Phase 81), and POI map integration (Phase 82).
 
 ## Requirements
 
 ### Validated
 
 - ✓ **FLOW-07** — Detect is the obvious entry point for burst scanning and slice generation — v3.1
-- ✓ **FLOW-08** — Slices is the obvious review/apply surface for pending and manual slices — v3.1
+- ✓ **FLOW-08** — Slices is the obvious review/apply surface — v3.1
 - ✓ **FLOW-09** — Inspect shows active slice state and comparison controls immediately — v3.1
-- ✓ **FLOW-10** — Map, cube, and timeline stay synchronized with the active slice while chrome stays minimal — v3.1
-- ✓ v3.0 Burstiness-Driven Adaptive Slicing — completed and validated
-- ✓ All prior milestones through MVP Finale — completed and validated
+- ✓ **FLOW-10** — Map, cube, and timeline stay synchronized with the active slice — v3.1
+- ✓ **ADP-01 through ADP-06** — Adaptive 3D warp axis, interactive slices, density strips — v3.4
+- ✓ **CBP-01 through CBP-08** — Contextual burstiness vs Goh-Barabasi comparison, decision gate GO — v3.4
+- ✓ **BFT-01/BFT-02** — Parameterized adaptive signal contract (burstiness default + density/contextual fallbacks) — v3.4
+- ✓ **BFT-03** — Existing density-derived implementation preserved — v3.4
+- ✓ **BFT-04 through BFT-09** — Histogram-based detail timeline, burst onset/ramp-up cues, stable overview — v3.4
+- ✓ **BFT-11/BFT-12** — Density fallback verified, existing workflow compatibility — v3.4
+- ✓ Demo presets dropdown wired to dashboard-demo stores (T1-T8 task windows + reset) — v3.4
+- ✓ POI layer (police, schools, transit, parks) on dashboard-demo 2D map — v3.4
 
 ### Active
 
-- **BFT-01/BFT-02** — adaptive warp can switch between burstiness and density through one shared parameterized signal contract.
-- **BFT-03/BFT-04/BFT-05** — the detail timeline stays histogram-based and reads adaptive change as bin spacing/aggregation, not a points-mode switch.
-- **BFT-06/BFT-07/BFT-08** — the overview stays a stable context frame while the detail view emphasizes burst onset and ramp-up cues.
-- **BFT-09/BFT-10/BFT-11/BFT-12** — the dashboard-demo timeline exposes a toggle/parameter for burstiness vs density weighting and keeps the density fallback available for comparison.
+- [ ] **BFT-10** — Expose visible toggle for switching burstiness vs density vs contextual (implemented but hidden — see v3.4-MILESTONE-AUDIT.md)
+- [ ] **D-01, D-03, D-07, D-10, D-12, D-14, D-15, D-16** — Evaluation readiness: complete /evaluation route and pilot verification (Phase 80)
+- [ ] **Phase 81** — Reduce dashboard memory pressure (overview/detail separation, pre-aggregated reads)
+- [ ] **Phase 82** — Add POI to 2D map verification
 
 ### Out of Scope
 
@@ -45,8 +51,9 @@ Help users understand dense vs sparse spatiotemporal crime patterns through a sy
 - The active planning surface is `dashboard-demo`
 - Core stack includes TypeScript, Zustand, Three.js, MapLibre, DuckDB, Apache Arrow, and Web Workers
 - v3.1 phases (72-75) complete: Workflow Clarity, Inspection Speed, Coordination Polish, Presentation Cleanup
-- v3.2 completed with visualization quality improvements inside the demo 3D STKDE widget rather than broad map/timeline animation
-- Known concerns include large components, excessive console logging, silent mock-data fallbacks, input validation gaps, and heavy data processing on the main thread
+- v3.2 completed with visualization quality improvements inside the demo 3D STKDE widget
+- v3.4 shipped with burstiness-first adaptive timeline, contextual z metric (CV ratio 56.7x vs Goh-Barabasi), parameterized signal contract, demo presets, and POI map layer
+- Known gaps: Phase 83/84 missing VERIFICATION.md, BFT-10 Select hidden, 17 deferred items in STATE.md, uncommitted DashboardDemoRailTabs.tsx wiring
 - Codebase analysis exists in `.planning/codebase/`, milestone history in `.planning/milestones/`
 
 ## Constraints
@@ -61,17 +68,20 @@ Help users understand dense vs sparse spatiotemporal crime patterns through a sy
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Keep the App Router modular monolith structure | Matches the existing codebase and keeps feature boundaries clear | ✓ Good |
-| Pair 2D density with 3D STC views | Matches the paper's hybrid visualization design and supports overview + trace tasks | ✓ Good |
+| Pair 2D density with 3D STC views | Matches the paper's hybrid visualization design | ✓ Good |
 | Use non-uniform temporal scaling for burst analysis | Preserves metric duration while making burst order legible | ✓ Good |
-| Use shared comparable-bin warp scoring for demo previews | Keeps same-granularity warp widths visible without reordering or collapsing bins | ✓ Good |
+| Use shared comparable-bin warp scoring for demo previews | Keeps same-granularity warp widths visible | ✓ Good |
 | Keep hotspot and guidance features as support features | They help analysis without becoming the main task model | ✓ Good |
 | Run adaptive-time computation in Web Workers | Prevents expensive warp calculations from blocking interaction | ✓ Good |
 | Recenter planning on `dashboard-demo` | The demo route is the actual workflow surface | ✓ Good |
-| Detect-first workflow rail | Detect is the natural entry point for burst scanning and slice generation | ✓ Good |
-| Slices owns review/apply | Separates draft-state from applied-state actions; pending drafts before applied slices | ✓ Good |
-| Inspect immediacy | Active-slice context and comparison controls visible without extra clicks | ✓ Good |
-| Minimal chrome | Shell stays quiet enough to support the analysis loop; auto-switch on apply, no stepper | ✓ Good |
-| Parameterized adaptive signal | Burstiness becomes the default driver, but density stays available as a first-class fallback/compare path | ✓ New |
+| Detect-first workflow rail | Detect is the natural entry point for burst scanning | ✓ Good |
+| Slices owns review/apply | Separates draft-state from applied-state actions | ✓ Good |
+| Inspect immediacy | Active-slice context visible without extra clicks | ✓ Good |
+| Parameterized adaptive signal contract (burstiness/density/contextual) | Burstiness becomes the default driver; density/contextual available as fallback/compare | ✓ Good |
+| Winsorized Pearson residual for contextual z | Sensitivity check confirms structural equivalence to standard z (CV ratio 1.0113x) | ✓ Good |
+| Decision gate on Python analysis before TypeScript wiring | Phase 83 CBP-05 verdict GO unblocked Phase 84 | ✓ Good |
+| Static-first → API-fallback baseline loader | 168-cell JSON committed; DuckDB API route as fallback | ✓ Good |
+| Action-bag helper pattern for preset wiring | Pure function with 6-setter interface, testable in isolation | ✓ Good |
 
 ## Evolution
 
@@ -91,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 for v3.4 Burstiness-First Adaptive Timeline*
+*Last updated: 2026-06-30 after v3.4 Burstiness-First Adaptive Timeline milestone*

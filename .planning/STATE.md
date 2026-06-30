@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: Burstiness-First Adaptive Timeline
-current_phase: 86
-current_phase_name: wire up demopresetselect
-status: complete
-stopped_at: Completed 86-01 (wire up demopresetselect)
-last_updated: "2026-06-29T16:42:30.000Z"
-last_activity: 2026-06-29
-last_activity_desc: Phase 86-01 complete — DemoPresetSelect wired through applyDemoPreset helper
+current_phase: 4
+status: Awaiting next milestone
+stopped_at: Phase 84-03 complete; 84-AUDIT ready
+last_updated: "2026-06-30T09:54:51.284Z"
+last_activity: 2026-06-30
+last_activity_desc: Milestone v3.4 completed and archived
 progress:
   total_phases: 10
-  completed_phases: 5
+  completed_phases: 4
   total_plans: 19
-  completed_plans: 12
-  percent: 36
+  completed_plans: 11
+  percent: 40
+current_phase_name: wire up demopresetselect
 ---
 
 # Project State
@@ -28,9 +28,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 86 (wire up demopresetselect) — COMPLETE
-Status: Phase 86 complete
-Last activity: 2026-06-29 — Phase 86-01 complete (3 atomic commits: helper + tests, component wiring, shell test)
+Phase: Milestone v3.4 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-30 — Milestone v3.4 completed and archived
 
 ### 80-03 Pending Handoff
 
@@ -71,6 +72,7 @@ Pilot verification auto-evidence (Tasks 1+2): typecheck ✓, lint ✓, 4/4 page.
 | 83 Contextual Burstiness | 5 | 5/5 | ~25m (all plans complete; verdict GO) |
 | 84 Burstiness Signal Contract | 3 | 3/3 | ~13m (all 3 plans complete; sensitivity check PASS) |
 | 86 Wire up demopresetselect | 1 | 1/1 | ~8m (helper + component + shell test in 3 atomic commits) |
+| 86 | 1 | - | - |
 
 **Recent Trend:**
 
@@ -149,6 +151,32 @@ Recent decisions affecting current work:
 - Phase 82 added: add poi to 2d map on dashboard demo
 - Phase 86 added: wire up demopresetselect
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-06-30:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | 3d-warp-alignment-investigation | diagnosed |
+| debug | 3d-warp-low-factor-discontinuity | investigating |
+| debug | burst-generation-flow | investigating |
+| debug | burst-metrics-methodology | unknown |
+| debug | dashboard-demo-timeline-init | diagnosed |
+| debug | selection-first-burst-drafts | diagnosed |
+| debug | selection-first-draft | investigating |
+| debug | timeline-warp-factor-noop | investigating |
+| quick_task | burstiness-driven-handoff (20260627) | missing |
+| quick_task | delete-slicemanagerui-remove-pendingdraft | unknown |
+| quick_task | move-floating-crime-types-legend-card | unknown |
+| quick_task | remove-dashboard-and-dashboard (20260629) | missing |
+| todo | audit-dashboard-demo-vs-thesis-alignment | pending |
+| todo | replace-arbitrary-burst-threshold-with-data-driven | pending |
+| todo | showcase-adaptive-time-scaling-in-dashboard-demo | pending |
+| seed | SEED-001-aggregated-district-type-3d | dormant |
+| context | Phase 84 CONTEXT open questions (3) | open |
+
+**Known verification overrides: 2 (Phase 83, Phase 84 — see v3.4-MILESTONE-AUDIT.md)**
+
 ### Blockers/Concerns
 
 - Phase 80 Task 3 (pilot verification) intentionally deferred per user request — not a blocker, just paused.
@@ -188,3 +216,7 @@ Resume file: None
 - **84-01** ✓ COMPLETE — AdaptiveSignalSource contract (3 mapper types) + activeSignalSource field with persist middleware + addSliceFromBin / replaceSlicesFromBins dispatch refactor + 7-test burstiness parity suite (BFT-01/02/12 satisfied)
 - **84-02** ✓ COMPLETE — Density mapper wired to /public/baselines/baseline_168.json + DuckDB fallback API route + getBaseline168Sync() helper replaces the first `null` in the dispatch + 7 density tests (BFT-02 fallback / BFT-03 / BFT-11 satisfied)
 - **84-03** ✓ COMPLETE — Winsorized z TS port (d3-array.quantile) + sensitivity check (PASS, CV ratio 1.0113x) + 3-way <Select> in GlobalWarpControls + getBaseline168WinsorizedSync() real impl + adaptiveSignalSource feature flag + 16 new unit tests (BFT-02 finalised / BFT-10 satisfied)
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
