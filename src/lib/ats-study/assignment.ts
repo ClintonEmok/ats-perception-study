@@ -1,0 +1,44 @@
+export type Condition = "uniform" | "ats";
+export type ConditionOrder = readonly Condition[];
+
+export const CONDITION_ORDERS: readonly ConditionOrder[] = [
+  ["uniform", "ats", "ats", "uniform", "uniform", "ats", "ats", "uniform"],
+  ["ats", "uniform", "uniform", "ats", "ats", "uniform", "uniform", "ats"],
+] as const;
+
+export const TOTAL_EXPERIMENTAL_TRIALS = 8;
+
+export function assignConditionOrder(participantIndex: number): ConditionOrder {
+  if (!Number.isInteger(participantIndex) || participantIndex < 0) {
+    throw new Error(`participantIndex must be a non-negative integer, got ${participantIndex}`);
+  }
+  const orderIndex = participantIndex % CONDITION_ORDERS.length;
+  return CONDITION_ORDERS[orderIndex]!;
+}
+
+export function conditionForTrial(participantIndex: number, trialIndex: number): Condition {
+  if (trialIndex < 0 || trialIndex >= TOTAL_EXPERIMENTAL_TRIALS) {
+    throw new Error(`trialIndex out of range [0, ${TOTAL_EXPERIMENTAL_TRIALS}): ${trialIndex}`);
+  }
+  const order = assignConditionOrder(participantIndex);
+  return order[trialIndex]!;
+}
+
+export function balanceReport(): {
+  uniformCount: number;
+  atsCount: number;
+  perOrder: { uniform: number; ats: number }[];
+} {
+  const perOrder = CONDITION_ORDERS.map((order) => {
+    let uniform = 0;
+    let ats = 0;
+    for (const c of order) {
+      if (c === "uniform") uniform += 1;
+      else ats += 1;
+    }
+    return { uniform, ats };
+  });
+  const uniformCount = perOrder.reduce((acc, p) => acc + p.uniform, 0);
+  const atsCount = perOrder.reduce((acc, p) => acc + p.ats, 0);
+  return { uniformCount, atsCount, perOrder };
+}
