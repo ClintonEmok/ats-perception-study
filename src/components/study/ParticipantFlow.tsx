@@ -6,6 +6,7 @@ import { useExperimentStore, type ConvexWrites } from "@/store/useExperimentStor
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { TrialRunner } from "./TrialRunner";
 import { PracticeFeedback } from "./PracticeFeedback";
+import { DebriefPanel, PostStudyQuestionnaire, downloadSessionResponses } from "./PostStudyQuestionnaire";
 import { buildExperimentalTrialOrder, buildPracticeTrials, TASK_LABELS, type TaskType } from "@/lib/ats-study/protocol";
 import { getVariantByDatasetId } from "@/lib/ats-study/datasets";
 
@@ -223,54 +224,23 @@ function PhaseView({ feedback, setFeedback }: PhaseViewProps) {
 
   if (view.phase === "questionnaire") {
     return (
-      <section className="flex flex-col gap-4" data-phase="questionnaire">
-        <h2 className="text-lg font-semibold">Final questionnaire</h2>
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium">Which visualization did you prefer?</legend>
-          {(["uniform", "ats", "no-preference"] as const).map((option) => (
-            <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="radio"
-                name="preference"
-                value={option}
-                checked={view.questionnaire.preference === option}
-                onChange={() => view.setQuestionnaireAnswer("preference", option)}
-              />
-              {option === "no-preference" ? "No preference" : option === "uniform" ? "Uniform" : "ATS"}
-            </label>
-          ))}
-        </fieldset>
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
-          Free-text feedback
-          <textarea
-            value={view.questionnaire.freeText}
-            onChange={(event) => view.setQuestionnaireAnswer("freeText", event.target.value)}
-            rows={4}
-            className="rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-900"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={() => void view.submitQuestionnaire()}
-          className="self-start rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          Submit
-        </button>
-      </section>
+      <PostStudyQuestionnaire
+        onSubmit={() => void view.submitQuestionnaire()}
+      />
     );
   }
 
   return (
-    <section className="flex flex-col gap-3" data-phase="debrief">
-      <h2 className="text-lg font-semibold">Thank you</h2>
-      <p className="text-sm text-slate-700">Your responses were recorded anonymously. You can close this tab.</p>
+    <div className="flex flex-col gap-3">
+      <DebriefPanel onDownload={downloadSessionResponses} />
       <button
         type="button"
         onClick={() => void view.finishSession()}
         className="self-start rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+        data-testid="finish-session"
       >
         Finish and lock responses
       </button>
-    </section>
+    </div>
   );
 }

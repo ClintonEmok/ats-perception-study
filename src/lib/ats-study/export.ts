@@ -23,7 +23,16 @@ export interface ExportableTrial {
 
 export interface ExportableQuestionnaire {
   sessionId: string;
-  preference: "uniform" | "ats" | "no-preference" | null;
+  preference:
+    | "uniform"
+    | "ats"
+    | "no-preference"
+    | "Strongly uniform"
+    | "Uniform"
+    | "Neutral"
+    | "ATS"
+    | "Strongly ATS"
+    | null;
   freeText: string;
   submittedAt: number;
 }

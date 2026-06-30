@@ -7,6 +7,7 @@ import { PeakIdentificationChoice } from "./PeakIdentificationChoice";
 import { PeriodComparisonChoice } from "./PeriodComparisonChoice";
 import { PatternRecognitionChoice } from "./PatternRecognitionChoice";
 import { FIXATION_MS, type TaskType } from "@/lib/ats-study/protocol";
+import { CONFIDENCE_ANCHORS } from "@/lib/ats-study/questionnaire";
 import type { RenderedVariant } from "@/lib/ats-study/datasets";
 
 export interface TrialRunnerProps {
@@ -65,21 +66,27 @@ export function TrialRunner({ variant, taskType, correctAnswer, showFixation = t
           {taskType === "pattern" && <PatternRecognitionChoice onChoose={choose} disabled={phase === "responded"} />}
           <div className="flex items-center gap-3 text-sm text-slate-700" data-testid="confidence-scale">
             <span>Confidence:</span>
-            {[1, 2, 3, 4, 5].map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setConfidence(value)}
-                aria-pressed={confidence === value}
-                className={`h-7 w-7 rounded-full border text-xs font-semibold ${
-                  confidence === value
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
-                }`}
-              >
-                {value}
-              </button>
-            ))}
+            {CONFIDENCE_ANCHORS.map((anchor, index) => {
+              const value = index + 1;
+              return (
+                <button
+                  key={anchor}
+                  type="button"
+                  onClick={() => setConfidence(value)}
+                  aria-pressed={confidence === value}
+                  aria-label={anchor}
+                  title={anchor}
+                  data-anchor={anchor}
+                  className={`h-9 rounded-md border px-3 text-xs font-semibold ${
+                    confidence === value
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  {anchor}
+                </button>
+              );
+            })}
           </div>
         </>
       )}

@@ -24,8 +24,19 @@ export interface TrialResponse {
   recordedAt: number;
 }
 
+export type PreferenceValue =
+  | "uniform"
+  | "ats"
+  | "no-preference"
+  | "Strongly uniform"
+  | "Uniform"
+  | "Neutral"
+  | "ATS"
+  | "Strongly ATS"
+  | null;
+
 export interface QuestionnaireAnswers {
-  preference: "uniform" | "ats" | "no-preference" | null;
+  preference: PreferenceValue;
   freeText: string;
 }
 

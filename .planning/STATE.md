@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: ATS Perception Study
-status: executing
-last_updated: "2026-06-30T15:35:00Z"
+status: planning
+last_updated: "2026-06-30T19:15:00Z"
 last_activity: 2026-06-30
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
   total_plans: 4
   completed_plans: 4
-  percent: 100
+  percent: 80
 ---
 
 # Project State
@@ -19,16 +19,16 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** v4.0 milestone audit + cleanup
+**Current focus:** Phase 91 — Questionnaire Iteration
 
 ## Current Position
 
-Phase: 90 (v4.0 Phase 4 of 4 — Deployment / Route Stripping / Pilot)
-Plan: 1
-Status: Complete
-Last activity: 2026-06-30 — Phase 90 committed (`6293eb0`)
+Phase: 91 (v4.0 Phase 5 of 5 — Questionnaire Iteration)
+Plan: —
+Status: Ready to plan
+Last activity: 2026-06-30 — Phase 91 inserted after audit found DEPLOY-04/05 credential-blocked
 
-Progress: [████████████████] 100%
+Progress: [████████████████░░] 80%
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [████████████████] 100%
 | 88 Stimulus Rendering & RT Measurement | 1 | done | — |
 | 89 Experiment Flow & Trial Engine | 1 | done | — |
 | 90 Deployment / Route Stripping / Pilot | 1 | done | — |
+| 91 Questionnaire Iteration | TBD | — | — |
 
 **Recent Trend:**
 - Last 4 plans: 87 (Convex schema, counterbalancing, ATS mapping, base datasets), 88 (SVG stimulus, performance.now timing), 89 (Zustand state machine, task components, trial runner, /experiment route), 90 (route stripping, deployment gates, pilot prep).
@@ -72,16 +73,17 @@ Progress: [████████████████] 100%
 
 ### Pending Todos
 
+- Plan + execute Phase 91 (Questionnaire Iteration).
 - Provision the Convex production project (`ats-perception-study-prod`) and set `NEXT_PUBLIC_CONVEX_URL` + `CONVEX_DEPLOY_KEY` in the Vercel environment.
 - Run the 2-3 participant pilot per `docs/PILOT.md`.
-- Run `gsd-audit-milestone` and `gsd-complete-milestone` to close v4.0.
+- Run `gsd-complete-milestone` to close v4.0.
 
 ### Blockers/Concerns
 
-- None. The study branch is ready for the Convex production deploy.
+- None. Phase 91 work is independent of the Convex/Vercel deploy.
 
 ## Session Continuity
 
 Last session: 2026-06-30
-Stopped at: All 4 v4.0 phases complete; milestone audit next.
+Stopped at: Phase 91 inserted; ready to plan.
 Resume file: None

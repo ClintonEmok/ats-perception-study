@@ -71,10 +71,24 @@ v4.0 turns the prototype into a self-contained ATS perception study built on the
   4. The study is deployed to Vercel with the Convex production project and environment variables configured. (deferred to deployment step)
   5. Researchers can export aggregated trial results and complete a 2-3 participant pilot before opening recruitment. (deferred to pilot step)
 
+### Phase 91: Questionnaire Iteration
+
+**Goal**: Refine the post-study questionnaire UX so the per-trial confidence scale, the preference question, and the free-text feedback are tuned to what a real participant would say after 24 experimental trials.
+**Depends on**: Phase 89
+**Requirements**: EXPMT-06 (post-study questionnaire iteration)
+**Plans**: 1
+**Status**: Ready to plan
+**Success Criteria**:
+
+  1. Per-trial confidence scale wording and anchors match Likert-5 conventions used in published perception studies.
+  2. Post-study preference question supports a 5-point ATS-vs-Uniform scale in addition to the existing "uniform / ats / no-preference" radio.
+  3. Free-text field has a minimum character count and a soft warning to encourage substantive feedback.
+  4. Debrief screen offers "Download my responses" so the participant leaves with a copy of their data.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 87 → 88 → 89 → 90
+Phases execute in numeric order: 87 → 88 → 89 → 90 → 91
 
 | Phase | Milestone | Status | Requirements | Success Criteria |
 |-------|-----------|--------|--------------|------------------|
@@ -82,3 +96,4 @@ Phases execute in numeric order: 87 → 88 → 89 → 90
 | 88. Stimulus Rendering & RT Measurement | v4.0 | Complete | 3 | 5 |
 | 89. Experiment Flow & Trial Engine | v4.0 | Complete | 6 | 5 |
 | 90. Deployment / Route Stripping / Pilot | v4.0 | Complete (build + gates; deploy + pilot deferred) | 6 | 3 |
+| 91. Questionnaire Iteration | v4.0 | Ready to plan | 1 | 0 |
