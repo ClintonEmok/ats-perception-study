@@ -2,15 +2,26 @@
 
 ## What This Is
 
-This is a Next.js prototype for bursty spatiotemporal crime analysis. It combines a 2D map, a 3D Space-Time Cube, and a dual timeline where users brush time, inspect points, and see bursty intervals expand or compress as the time resolution changes — with the map, cube, and timeline staying synchronized around the active slice. v3.4 shipped a parameterized adaptive signal contract (burstiness / density / contextual) with a TypeScript-ported winsorized Pearson residual metric backed by a thesis-grade Python comparison against Goh-Barabasi.
+This is a Next.js prototype for bursty spatiotemporal crime analysis. It combines a 2D map, a 3D Space-Time Cube, and a dual timeline where users brush time, inspect points, and see bursty intervals expand or compress as the time resolution changes — with the map, cube, and timeline staying synchronized around the active slice. v3.4 shipped a parameterized adaptive signal contract (burstiness / density / contextual) with a TypeScript-ported winsorized Pearson residual metric backed by a thesis-grade Python comparison against Goh-Barabasi. v4.0 adds a controlled within-subjects web experiment (ATS Perception Study) validating Adaptive Temporal Scaling against Uniform timelines.
 
 ## Core Value
 
 Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
 
+## Current Milestone: v4.0 ATS Perception Study
+
+**Goal:** Deliver a controlled within-subjects web experiment comparing Adaptive Temporal Scaling vs Uniform timeline perception.
+
+**Target features:**
+- SVG timeline stimuli (event rug + allocation bands) rendered client-side
+- 3 task types: Peak Identification, Period Comparison, Pattern Recognition
+- 24 experimental trials + 2 practice, counterbalanced Uniform/ATS conditions
+- Per-trial response recording (accuracy, RT, confidence) via Convex backend
+- Anonymous participant flow with post-study questionnaire
+
 ## Current Status
 
-**v3.4 Burstiness-First Adaptive Timeline** shipped 2026-06-30. The `dashboard-demo` route supports three runtime-switchable adaptive signal sources (burstiness default, density, contextual z) backed by a 168-cell hour×dayOfWeek baseline. A 3D adaptive warp axis, interactive slice editing, demo presets with atomic workspace sync, and an `/evaluation` study route are all functional. Two core phases (83, 84) shipped without formal VERIFICATION.md — known gap, see v3.4-MILESTONE-AUDIT.md. Remaining work: evaluation readiness (Phase 80 partial), memory pressure reduction (Phase 81), and POI map integration (Phase 82).
+**v3.4 Burstiness-First Adaptive Timeline** shipped 2026-06-30. **v4.0 ATS Perception Study** initiating 2026-06-30 on dedicated `ats-study` branch. The `dashboard-demo` route supports three runtime-switchable adaptive signal sources (burstiness default, density, contextual z) backed by a 168-cell hour×dayOfWeek baseline. Remaining work: evaluation readiness (Phase 80 partial), memory pressure reduction (Phase 81), and POI map integration (Phase 82).
 
 ## Requirements
 
@@ -31,6 +42,14 @@ Help users understand dense vs sparse spatiotemporal crime patterns by keeping t
 
 ### Active
 
+- [ ] **EXP-01** — Render synthetic event sequences as SVG timeline stimuli (event rug + allocation bands) for both Uniform and ATS conditions
+- [ ] **EXP-02** — Implement 3 task types: Peak Identification (3-choice MCQ), Period Comparison (binary), Pattern Recognition (4-choice MCQ)
+- [ ] **EXP-03** — Deliver 24 counterbalanced experimental trials (12 Uniform, 12 ATS) with 2 practice trials
+- [ ] **EXP-04** — Record per-trial response data (accuracy, response time, confidence, condition, dataset ID, task type)
+- [ ] **EXP-05** — Anonymous participant flow with unique ID assignment, instructions, trials, post-study questionnaire
+- [ ] **EXP-06** — Deploy self-contained experiment route (strip unrelated prototype routes from ats-study branch)
+- [ ] **EXP-07** — Compute ATS mapping in client-side JS from burstiness-derived per-interval allocation weights
+- [ ] **EXP-08** — Convex schema and API for response storage and retrieval
 - [ ] **BFT-10** — Expose visible toggle for switching burstiness vs density vs contextual (implemented but hidden — see v3.4-MILESTONE-AUDIT.md)
 - [ ] **D-01, D-03, D-07, D-10, D-12, D-14, D-15, D-16** — Evaluation readiness: complete /evaluation route and pilot verification (Phase 80)
 - [ ] **Phase 81** — Reduce dashboard memory pressure (overview/detail separation, pre-aggregated reads)
@@ -53,6 +72,7 @@ Help users understand dense vs sparse spatiotemporal crime patterns by keeping t
 - v3.1 phases (72-75) complete: Workflow Clarity, Inspection Speed, Coordination Polish, Presentation Cleanup
 - v3.2 completed with visualization quality improvements inside the demo 3D STKDE widget
 - v3.4 shipped with burstiness-first adaptive timeline, contextual z metric (CV ratio 56.7x vs Goh-Barabasi), parameterized signal contract, demo presets, and POI map layer
+- v4.0 starts on dedicated `ats-study` branch for controlled ATS vs Uniform perception experiment
 - Known gaps: Phase 83/84 missing VERIFICATION.md, BFT-10 Select hidden, 17 deferred items in STATE.md, uncommitted DashboardDemoRailTabs.tsx wiring
 - Codebase analysis exists in `.planning/codebase/`, milestone history in `.planning/milestones/`
 
@@ -82,6 +102,7 @@ Help users understand dense vs sparse spatiotemporal crime patterns by keeping t
 | Decision gate on Python analysis before TypeScript wiring | Phase 83 CBP-05 verdict GO unblocked Phase 84 | ✓ Good |
 | Static-first → API-fallback baseline loader | 168-cell JSON committed; DuckDB API route as fallback | ✓ Good |
 | Action-bag helper pattern for preset wiring | Pure function with 6-setter interface, testable in isolation | ✓ Good |
+| ATS Perception Study on dedicated `ats-study` branch | Keeps experimental code isolated from prototype; Convex-only backend avoids DuckDB dependency | ✓ Good |
 
 ## Evolution
 
@@ -101,4 +122,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-30 after v3.4 Burstiness-First Adaptive Timeline milestone*
+*Last updated: 2026-06-30 — v4.0 ATS Perception Study milestone initiated*

@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.4
-milestone_name: Burstiness-First Adaptive Timeline
-current_phase: 4
-status: Awaiting next milestone
-stopped_at: Phase 84-03 complete; 84-AUDIT ready
-last_updated: "2026-06-30T09:54:51.284Z"
+milestone: v4.0
+milestone_name: ATS Perception Study
+status: planning
+last_updated: "2026-06-30T11:09:53.693Z"
 last_activity: 2026-06-30
-last_activity_desc: Milestone v3.4 completed and archived
 progress:
-  total_phases: 10
-  completed_phases: 4
-  total_plans: 19
-  completed_plans: 11
-  percent: 40
-current_phase_name: wire up demopresetselect
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -28,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: Milestone v3.4 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-30 — Milestone v3.4 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-30 — Milestone v4.0 started
 
 ### 80-03 Pending Handoff
 
