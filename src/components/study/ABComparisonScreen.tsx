@@ -230,6 +230,8 @@ export interface ABComparisonScreenProps {
   taskType: TaskType;
   onAdvance: () => void;
   isLast: boolean;
+  showEventRug?: boolean;
+  showHoverTooltips?: boolean;
 }
 
 export function ABComparisonScreen({
@@ -239,6 +241,8 @@ export function ABComparisonScreen({
   taskType,
   onAdvance,
   isLast,
+  showEventRug = true,
+  showHoverTooltips = true,
 }: ABComparisonScreenProps) {
   const participantIndex = useExperimentStore((state) => state.participantIndex);
   const recordAbResponse = useExperimentStore((state) => state.recordAbResponse);
@@ -305,14 +309,13 @@ export function ABComparisonScreen({
 
   const edgesA = buildEdges(shownA, windowData.counts, totalSeconds);
   const edgesB = buildEdges(shownB, windowData.counts, totalSeconds);
-  const rug = subsampleRug(windowData.timestamps, dateStrToMs(windowData.start), totalSeconds, 500);
   const ticksA = computeTicks(edgesA, windowDays, totalSeconds);
   const ticksB = computeTicks(edgesB, windowDays, totalSeconds);
   const edgesAPx = edgesA.map((s) => xScale(s));
   const edgesBPx = edgesB.map((s) => xScale(s));
   const ticksAPx = ticksA.values.map((s) => xScale(s));
   const ticksBPx = ticksB.values.map((s) => xScale(s));
-  const rugPx = rug.map((s) => xScale(s));
+  const rugPx = showEventRug ? subsampleRug(windowData.timestamps, dateStrToMs(windowData.start), totalSeconds, 500).map((s) => xScale(s)) : [];
 
   const commit = async () => {
     if (!choice) return;
@@ -349,26 +352,30 @@ export function ABComparisonScreen({
           <rect x={0} y={0} width={1100} height={320} fill="#ffffff" pointerEvents="none" />
           <line x1={8} y1={68} x2={990} y2={68} stroke="#1f1f1f" strokeWidth={1} />
 
-          <g>
-            {rugPx.map((x, idx) => (
-              <line
-                key={idx}
-                x1={x}
-                x2={x}
-                y1={14}
-                y2={60}
-                stroke="#475569"
-                strokeOpacity={0.55}
-                strokeWidth={0.6}
-              />
-            ))}
-          </g>
-          <text x={996} y={32} fontSize={11} fontWeight={600} fill="#0f172a">
-            Shared event rug
-          </text>
-          <text x={996} y={48} fontSize={10} fontStyle="italic" fill="#64748b">
-            {windowData.totalEvents.toLocaleString("en-US")} events
-          </text>
+          {showEventRug ? (
+            <>
+              <g>
+                {rugPx.map((x, idx) => (
+                  <line
+                    key={idx}
+                    x1={x}
+                    x2={x}
+                    y1={14}
+                    y2={60}
+                    stroke="#475569"
+                    strokeOpacity={0.55}
+                    strokeWidth={0.6}
+                  />
+                ))}
+              </g>
+              <text x={996} y={32} fontSize={11} fontWeight={600} fill="#0f172a">
+                Shared event rug
+              </text>
+              <text x={996} y={48} fontSize={10} fontStyle="italic" fill="#64748b">
+                {windowData.totalEvents.toLocaleString("en-US")} events
+              </text>
+            </>
+          ) : null}
 
           <ComparisonRow
             edgesPx={edgesAPx}
@@ -381,6 +388,7 @@ export function ABComparisonScreen({
             ticksPx={ticksAPx}
             tickLabels={ticksA.labels}
             label="Visualization A"
+            showHoverTooltips={showHoverTooltips}
           />
 
           <ComparisonRow
@@ -394,6 +402,7 @@ export function ABComparisonScreen({
             ticksPx={ticksBPx}
             tickLabels={ticksB.labels}
             label="Visualization B"
+            showHoverTooltips={showHoverTooltips}
           />
         </svg>
       </div>
@@ -488,6 +497,7 @@ type ComparisonRowProps = {
   ticksPx: number[];
   tickLabels: string[];
   label: string;
+  showHoverTooltips: boolean;
 };
 
 function ComparisonRow({
@@ -501,6 +511,7 @@ function ComparisonRow({
   ticksPx,
   tickLabels,
   label,
+  showHoverTooltips,
 }: ComparisonRowProps) {
   const plotX0 = 8;
   const plotX1 = 990;
@@ -524,9 +535,11 @@ function ComparisonRow({
               stroke="#1f1f1f"
               strokeWidth={0.7}
             >
-              <title>
-                {formatBinLabel(startSec, endSec, startMs, windowDays)} · {counts[i] ?? 0} events
-              </title>
+              {showHoverTooltips ? (
+                <title>
+                  {formatBinLabel(startSec, endSec, startMs, windowDays)} · {counts[i] ?? 0} events
+                </title>
+              ) : null}
             </rect>
           </g>
         );

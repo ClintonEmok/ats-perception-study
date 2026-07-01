@@ -39,6 +39,8 @@ export function TrialScreen({ onFinish }: TrialScreenProps) {
         windowIndex={spec.windowIndex}
         taskType={taskType}
         isLast={isLast}
+        showEventRug={false}
+        showHoverTooltips={false}
         onAdvance={() => {
           const nextIndex = view.trialCursor + 1;
           view.advanceTrial();
