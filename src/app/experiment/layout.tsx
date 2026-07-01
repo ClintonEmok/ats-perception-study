@@ -3,31 +3,37 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
-import { useExperimentStore, type ConvexWrites } from "@/store/useExperimentStore";
+import { useExperimentStore } from "@/store/useExperimentStore";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
-
-const noopWrites: ConvexWrites = {
-  startSession: async () => undefined,
-  completeSession: async () => undefined,
-  recordAbResponse: async () => undefined,
-  submitQuestionnaire: async () => undefined,
-};
 
 export default function ExperimentLayout({ children }: { children: ReactNode }) {
   const sessionId = useExperimentStore((state) => state.sessionId);
   const consentAccepted = useExperimentStore((state) => state.consentAccepted);
   const participantIndex = useExperimentStore((state) => state.participantIndex);
   const startSession = useExperimentStore((state) => state.startSession);
-  const setConvexWrites = useExperimentStore((state) => state.setConvexWrites);
+  const convexWrites = useExperimentStore((state) => state.convexWrites);
+  const hasHydrated = useExperimentStore((state) => state.hasHydrated);
 
   useEffect(() => {
-    if (sessionId !== null) {
-      setConvexWrites(noopWrites);
-      return;
+    const unsubscribe = useExperimentStore.persist.onFinishHydration((state) => {
+      if (state && !state.hasHydrated) {
+        useExperimentStore.setState({ hasHydrated: true });
+      }
+    });
+
+    if (!useExperimentStore.persist.hasHydrated()) {
+      void useExperimentStore.persist.rehydrate();
+    } else if (!hasHydrated) {
+      useExperimentStore.setState({ hasHydrated: true });
     }
-    if (!consentAccepted) return;
-    void startSession(participantIndex, noopWrites);
-  }, [sessionId, participantIndex, consentAccepted, startSession, setConvexWrites]);
+
+    return unsubscribe;
+  }, [hasHydrated]);
+
+  useEffect(() => {
+    if (!hasHydrated || !consentAccepted || sessionId !== null || !convexWrites) return;
+    void startSession(participantIndex, convexWrites);
+  }, [hasHydrated, sessionId, participantIndex, consentAccepted, convexWrites, startSession]);
 
   useNavigationGuard({ active: consentAccepted || sessionId !== null });
 
