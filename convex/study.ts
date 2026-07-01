@@ -8,16 +8,12 @@ const sessionStatus = v.union(
   v.literal("abandoned"),
 );
 
-const preference = v.union(
-  v.literal("uniform"),
-  v.literal("ats"),
-  v.literal("no_preference"),
-);
-
 type StartSessionArgs = {
   participantId: string;
   participantName?: string;
   userAgent?: string;
+  startedAt?: number;
+  conditionOrder: ReadonlyArray<"uniform" | "ats">;
 };
 
 type RecordAbResponseArgs = {
@@ -32,13 +28,21 @@ type RecordAbResponseArgs = {
 };
 
 type SessionIdArgs = { sessionId: Id<"studySessions"> };
-type SubmitQuestionnaireArgs = { sessionId: Id<"studySessions">; preference: "uniform" | "ats" | "no_preference"; freeText: string; participantName?: string };
+type CompleteSessionArgs = { sessionId: Id<"studySessions">; finishedAt?: number };
+type SubmitQuestionnaireArgs = {
+  sessionId: Id<"studySessions">;
+  freeText: string;
+  participantName?: string;
+  submittedAt?: number;
+};
 
 export const startSession = mutation({
   args: {
     participantId: v.string(),
     participantName: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    startedAt: v.optional(v.number()),
+    conditionOrder: v.array(v.union(v.literal("uniform"), v.literal("ats"))),
   },
   returns: v.id("studySessions"),
   handler: async (ctx: MutationCtx, rawArgs): Promise<Id<"studySessions">> => {
@@ -51,7 +55,7 @@ export const startSession = mutation({
       userAgent?: string;
     } = {
       participantId: args.participantId,
-      startedAt: Date.now(),
+      startedAt: args.startedAt ?? Date.now(),
       status: "active",
     };
     if (args.participantName !== undefined) {
@@ -85,13 +89,14 @@ export const recordAbResponse = mutation({
 export const completeSession = mutation({
   args: {
     sessionId: v.id("studySessions"),
+    finishedAt: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx: MutationCtx, rawArgs): Promise<null> => {
-    const args = rawArgs as unknown as SessionIdArgs;
+    const args = rawArgs as unknown as CompleteSessionArgs;
     await ctx.db.patch("studySessions", args.sessionId, {
       status: "completed",
-      completedAt: Date.now(),
+      completedAt: args.finishedAt ?? Date.now(),
     });
     return null;
   },
@@ -100,24 +105,22 @@ export const completeSession = mutation({
 export const submitQuestionnaire = mutation({
   args: {
     sessionId: v.id("studySessions"),
-    preference,
     freeText: v.string(),
     participantName: v.optional(v.string()),
+    submittedAt: v.optional(v.number()),
   },
   returns: v.id("studyQuestionnaires"),
   handler: async (ctx: MutationCtx, rawArgs): Promise<Id<"studyQuestionnaires">> => {
     const args = rawArgs as unknown as SubmitQuestionnaireArgs;
     const doc: {
       sessionId: Id<"studySessions">;
-      preference: "uniform" | "ats" | "no_preference";
       freeText: string;
       participantName?: string;
       submittedAt: number;
     } = {
       sessionId: args.sessionId,
-      preference: args.preference,
       freeText: args.freeText,
-      submittedAt: Date.now(),
+      submittedAt: args.submittedAt ?? Date.now(),
     };
     if (args.participantName !== undefined) {
       doc.participantName = args.participantName;

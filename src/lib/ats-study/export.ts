@@ -21,21 +21,12 @@ export interface ExportableTrial {
   isCorrect: boolean;
   responseTimeMs: number;
   confidence: number;
+  rationale: string;
   recordedAt: number;
 }
 
 export interface ExportableQuestionnaire {
   sessionId: string;
-  preference:
-    | "uniform"
-    | "ats"
-    | "no-preference"
-    | "Strongly uniform"
-    | "Uniform"
-    | "Neutral"
-    | "ATS"
-    | "Strongly ATS"
-    | null;
   freeText: string;
   participantName: string | null;
   submittedAt: number;

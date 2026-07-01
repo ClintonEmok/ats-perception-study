@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useExperimentStore } from "@/store/useExperimentStore";
-import { PracticeScreen } from "@/components/study/screens/PracticeScreen";
+import { TrialScreen } from "@/components/study/screens/TrialScreen";
 import { useStudyExperimentSlug } from "@/hooks/useStudyExperimentSlug";
 import { studyStepHref } from "@/lib/ats-study/routes";
 
-function PracticePageContent() {
+export function TrialRouteClient() {
   const router = useRouter();
   const slug = useStudyExperimentSlug();
   const hasHydrated = useExperimentStore((state) => state.hasHydrated);
@@ -25,8 +25,8 @@ function PracticePageContent() {
       router.replace(studyStepHref("instructions", slug));
       return;
     }
-    if (phase === "trial") {
-      router.replace(studyStepHref("trial", slug));
+    if (phase === "practice") {
+      router.replace(studyStepHref("practice", slug));
       return;
     }
     if (phase === "questionnaire") {
@@ -39,16 +39,8 @@ function PracticePageContent() {
   }, [hasHydrated, consentAccepted, instructionsSeen, phase, router, slug]);
 
   if (!hasHydrated) {
-    return <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading study…</div>;
+    return <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading trial…</div>;
   }
 
-  return <PracticeScreen onFinish={() => router.push(studyStepHref("trial", slug))} />;
-}
-
-export default function PracticePage() {
-  return (
-    <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading study…</div>}>
-      <PracticePageContent />
-    </Suspense>
-  );
+  return <TrialScreen onFinish={() => router.push(studyStepHref("questionnaire", slug))} />;
 }

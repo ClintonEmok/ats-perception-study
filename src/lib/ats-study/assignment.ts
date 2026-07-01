@@ -3,10 +3,19 @@ import type { TaskType } from "./protocol";
 
 export type TaskOrdering = "AB" | "BA";
 
+export interface ComparisonTrialItem {
+  kind: "comparison";
+  window: ABWindowSpec;
+  taskType: TaskType;
+}
+
+export type StudyTrialItem = ComparisonTrialItem;
+
 export const A_B_ORDERING_COUNT = 6;
-export const WINDOWS_PER_GROUP = 5;
+export const WINDOWS_PER_GROUP = 10;
 export const WINDOWS_PER_GROUP_SELECTION = 3;
 export const WINDOWS_PER_PARTICIPANT = 12;
+const EXCLUDED_WINDOW_KEYS = new Set(["14,3", "30,3"]);
 
 export const TASK_CYCLE: ReadonlyArray<TaskType> = ["peak", "comparison", "pattern"] as const;
 
@@ -39,6 +48,20 @@ export function orderingForParticipant(
   return value;
 }
 
+export function buildParticipantTrialItems(
+  participantIndex: number,
+  windows: ReadonlyArray<ABWindowSpec>,
+): StudyTrialItem[] {
+  const selectedWindows = selectParticipantWindows(participantIndex, windows);
+  return selectedWindows.map((window, trialIndex) => {
+    return {
+      kind: "comparison",
+      window,
+      taskType: taskForWindow(participantIndex, trialIndex),
+    } satisfies ComparisonTrialItem;
+  });
+}
+
 function takeCircular<T>(items: readonly T[], start: number, count: number): T[] {
   const out: T[] = [];
   if (items.length === 0) return out;
@@ -55,20 +78,26 @@ export function selectParticipantWindows(
   if (!Number.isInteger(participantIndex) || participantIndex < 0) {
     throw new Error(`participantIndex must be a non-negative integer, got ${participantIndex}`);
   }
-  if (windows.length !== 20) {
-    throw new Error(`windows must contain the 20-window pool, got ${windows.length}`);
+  if (windows.length !== 40) {
+    throw new Error(`windows must contain the 40-window pool, got ${windows.length}`);
   }
 
   const groups = new Map<number, ABWindowSpec[]>();
   for (const window of windows) {
+    if (EXCLUDED_WINDOW_KEYS.has(window.windowKey)) {
+      continue;
+    }
     const bucket = groups.get(window.windowDays) ?? [];
     bucket.push(window);
     groups.set(window.windowDays, bucket);
   }
 
   const orderedGroups = [...groups.entries()].sort(([a], [b]) => a - b).map(([, group]) => group);
-  if (orderedGroups.length !== 4 || orderedGroups.some((group) => group.length !== WINDOWS_PER_GROUP)) {
-    throw new Error(`Expected 4 groups of ${WINDOWS_PER_GROUP} windows`);
+  if (
+    orderedGroups.length !== 4 ||
+    orderedGroups.some((group) => group.length !== WINDOWS_PER_GROUP && group.length !== WINDOWS_PER_GROUP - 1)
+  ) {
+    throw new Error(`Expected 4 groups of 10 windows with up to one excluded window per group`);
   }
 
   const offset = participantIndex % WINDOWS_PER_GROUP;

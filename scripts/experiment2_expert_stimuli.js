@@ -29,34 +29,25 @@ const FILL_COLOR = '#d8d8d8';
 const RUG_COLOR = '#475569';
 const MUTED_COLOR = '#64748b';
 
-const SELECTED_WINDOWS = [
-  [1, 1],
-  [1, 2],
-  [1, 3],
-  [1, 4],
-  [1, 5],
-  [14, 1],
-  [14, 2],
-  [14, 3],
-  [14, 4],
-  [14, 5],
-  [30, 1],
-  [30, 2],
-  [30, 3],
-  [30, 4],
-  [30, 5],
-  [90, 1],
-  [90, 2],
-  [90, 3],
-  [90, 4],
-  [90, 5],
-];
+const IS_WARP_FACTOR_VARIANT = process.env.EXPERIMENT2_VARIANT === 'warp-factor';
 
-const STRATEGY_SPECS = {
+const BASELINE_STRATEGY_SPECS = {
   uniform: { label: 'Uniform', weightGain: null },
   raw_density: { label: 'Raw density', weightGain: 5.0 },
   density_mild: { label: 'Raw density (mild)', weightGain: 2.0 },
   density_firm: { label: 'Raw density (firm)', weightGain: 10.0 },
+};
+
+const WARP_FACTOR_STRATEGY_SPECS = {
+  warp_100: { label: 'Warp 100%', weightGain: 5.0 },
+  warp_150: { label: 'Warp 150%', weightGain: 7.5 },
+  warp_200: { label: 'Warp 200%', weightGain: 10.0 },
+  warp_300: { label: 'Warp 300%', weightGain: 15.0 },
+};
+
+const STRATEGY_SPECS = {
+  ...BASELINE_STRATEGY_SPECS,
+  ...WARP_FACTOR_STRATEGY_SPECS,
 };
 
 const STRATEGY_LABELS = Object.fromEntries(
@@ -64,22 +55,25 @@ const STRATEGY_LABELS = Object.fromEntries(
 );
 
 function strategiesForWindow(windowDays, rank) {
-  if (rank === 1) return 'raw_density';
-  if (rank === 2) return 'density_mild';
-  if (rank === 3) return 'density_firm';
-  if (rank === 4) return windowDays <= 14 ? 'density_mild' : 'raw_density';
-  return windowDays <= 14 ? 'raw_density' : 'density_mild';
+  if (IS_WARP_FACTOR_VARIANT) {
+    if (rank === 1) return ['warp_100', 'warp_300'];
+    if (rank === 2) return ['warp_100', 'warp_200'];
+    if (rank === 3) return ['warp_150', 'warp_300'];
+    if (rank === 4) return ['warp_150', 'warp_200'];
+    return windowDays <= 14 ? ['warp_200', 'warp_300'] : ['warp_100', 'warp_150'];
+  }
+  if (rank === 1) return ['uniform', 'raw_density'];
+  if (rank === 2) return ['uniform', 'density_mild'];
+  if (rank === 3) return ['uniform', 'density_firm'];
+  if (rank === 4) return windowDays <= 14 ? ['uniform', 'density_mild'] : ['uniform', 'raw_density'];
+  return windowDays <= 14 ? ['uniform', 'raw_density'] : ['uniform', 'density_mild'];
 }
-
-const WINDOW_STRATEGIES = Object.fromEntries(
-  SELECTED_WINDOWS.map(([windowDays, rank]) => [`${windowDays},${rank}`, ['uniform', strategiesForWindow(windowDays, rank)]]),
-);
 
 const SESSION_PROTOCOL = `# Expert Interview — Session Protocol
 
 ## Stimuli
 
-  Twenty figures, each comparing two visualizations of the same time window:
+  Forty figures, each comparing two visualizations of the same time window:
 
 - **Visualization A** and **Visualization B** are anonymous. They are
   randomization-keyed (see \`REVEAL_KEY.md\` for the mapping).
@@ -117,7 +111,7 @@ While the expert is looking at the figure:
 
 ## Closing bridge to the prototype
 
-After all twenty figures have been discussed:
+After all forty figures have been discussed:
 
 > "Now that you've seen the underlying visualization concept, here's
 >  how it is integrated into the interactive prototype."
@@ -713,8 +707,7 @@ async function runForWindow(data, outDir, rng) {
   const binSeconds = binHours * 3600;
   const totalSeconds = counts.length * binSeconds;
 
-  const key = `${window.windowDays},${window.rank}`;
-  const [s0, s1] = WINDOW_STRATEGIES[key];
+  const [s0, s1] = strategiesForWindow(window.windowDays, window.rank);
   const [strategyA, strategyB] = shuffleSeeded([s0, s1], rng);
 
   const edgesA = buildEdgesForStrategy(strategyA, counts, totalSeconds);
@@ -795,19 +788,18 @@ async function main() {
   const allWindows = loadShowcaseWindows(args.windowsPath);
   const byKey = new Map(allWindows.map((w) => [`${w.windowDays},${w.rank}`, w]));
 
-  const selectedWindowMetas = [];
-  for (const [size, rank] of SELECTED_WINDOWS) {
-    const window = byKey.get(`${size},${rank}`);
-    if (!window) {
-      process.stderr.write(`Missing window ${size}d #${rank} in ${args.windowsPath}\n`);
+  const selectedWindowMetas = allWindows;
+  for (const window of selectedWindowMetas) {
+    const key = `${window.windowDays},${window.rank}`;
+    if (!byKey.has(key)) {
+      process.stderr.write(`Missing window ${window.windowDays}d #${window.rank} in ${args.windowsPath}\n`);
       process.exit(2);
     }
-    selectedWindowMetas.push(window);
   }
 
   process.stdout.write(`[setup] output = ${args.outputDir}\n`);
   process.stdout.write(`[setup] seed   = ${args.seed}\n`);
-  process.stdout.write(`[setup] ${SELECTED_WINDOWS.length} windows selected\n`);
+  process.stdout.write(`[setup] ${selectedWindowMetas.length} windows selected\n`);
   process.stdout.write(`[setup] streaming ${args.csvPath} once for all windows\n`);
 
   const states = prepareWindowStates(selectedWindowMetas);
@@ -817,13 +809,13 @@ async function main() {
   const windowDirs = [];
   for (let i = 0; i < datasets.length; i += 1) {
     const data = datasets[i];
-    const [size, rank] = SELECTED_WINDOWS[i];
+    const { windowDays: size, rank } = selectedWindowMetas[i];
     const outDir = path.join(
       args.outputDir,
       `window_${String(i + 1).padStart(2, '0')}_${size}d_rank${rank}`,
     );
     process.stdout.write(
-      `\n[window ${i + 1}/${SELECTED_WINDOWS.length}] ${size}d #${rank}  ${data.window.start} → ${data.window.end}  ` +
+      `\n[window ${i + 1}/${selectedWindowMetas.length}] ${size}d #${rank}  ${data.window.start} → ${data.window.end}  ` +
         `(${data.timestamps.length.toLocaleString('en-US')} events)\n`,
     );
     const result = await runForWindow(data, outDir, rng);

@@ -11,7 +11,8 @@
     "test": "vitest",
     "check:imports": "node scripts/check-import-guard.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
-    "stimuli:exp2": "node scripts/experiment2_expert_stimuli.js"
+    "stimuli:exp2": "node scripts/experiment2_expert_stimuli.js",
+    "stimuli:exp2-warp": "node scripts/experiment2_warp_factor_stimuli.js"
   },
   "dependencies": {
     "@radix-ui/react-tooltip": "^1.2.10",

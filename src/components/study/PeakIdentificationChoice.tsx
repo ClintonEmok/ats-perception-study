@@ -14,7 +14,7 @@ export function PeakIdentificationChoice({ onChoose, disabled }: PeakIdentificat
       aria-label={`${TASK_LABELS.peak} choices`}
       data-testid="peak-identification-choice"
     >
-      <legend className="text-sm font-medium">Which period has the highest activity?</legend>
+      <legend className="text-sm font-medium">Which day or period had the most events?</legend>
       <div className="flex flex-wrap gap-2">
         {PEAK_CHOICES.map((choice) => (
           <button

@@ -16,7 +16,6 @@ type WindowData = {
   end: string;
   cv: number;
   peakRatio: number;
-  totalEvents: number;
   counts: number[];
   timestamps: number[];
   strategyA: Strategy;
@@ -219,14 +218,20 @@ function formatBinLabel(
 
 function promptForTask(taskType: TaskType): string {
   if (taskType === "peak") return "Which period contains the highest activity?";
-  if (taskType === "comparison") return "Which period has more events?";
-  return "Which option best describes the pattern?";
+  if (taskType === "comparison") return "Which visualization makes it easier to identify the period with the most events?";
+  return "Which visualization makes the pattern easier to see?";
+}
+
+function patternHelpText(): string {
+  return "Pattern means how events are distributed across time, like one burst, several spikes, or a steady flow.";
 }
 
 export interface ABComparisonScreenProps {
   windowKey: string;
   windowDays: number;
   windowIndex: number;
+  questionNumber?: number;
+  totalQuestions?: number;
   taskType: TaskType;
   onAdvance: () => void;
   isLast: boolean;
@@ -239,6 +244,8 @@ export function ABComparisonScreen({
   windowKey,
   windowDays,
   windowIndex,
+  questionNumber,
+  totalQuestions,
   taskType,
   onAdvance,
   isLast,
@@ -250,6 +257,7 @@ export function ABComparisonScreen({
   const recordAbResponse = useExperimentStore((state) => state.recordAbResponse);
   const [dataState, setDataState] = useState<DataState>({ status: "loading" });
   const [choice, setChoice] = useState<"A" | "B" | null>(null);
+  const [rationale, setRationale] = useState("");
   const [confidence, setConfidence] = useState(3);
   const onsetAtRef = useRef<number | null>(null);
 
@@ -290,12 +298,13 @@ export function ABComparisonScreen({
     if (!windowData) return;
     onsetAtRef.current = performance.now();
     setChoice(null);
+    setRationale("");
     setConfidence(3);
   }, [windowData, windowKey]);
 
   const totalSeconds = windowData ? windowData.counts.length * (windowDays > 1 ? 24 : 1) * 3600 : 0;
   const xScale = useMemo(
-    () => scaleLinear({ domain: [0, Math.max(totalSeconds, 1)], range: [8, 1090] }),
+    () => scaleLinear({ domain: [0, Math.max(totalSeconds, 1)], range: [56, 1160] }),
     [totalSeconds],
   );
 
@@ -326,7 +335,7 @@ export function ABComparisonScreen({
         windowKey,
         taskType,
         choice,
-        rationale: "",
+        rationale,
         responseTimeMs,
         confidence,
       });
@@ -334,63 +343,70 @@ export function ABComparisonScreen({
     onAdvance();
   };
 
-  const totalWindows = 12;
+  const totalWindows = totalQuestions ?? 12;
+  const visibleQuestionNumber = questionNumber ?? windowIndex + 1;
 
   return (
     <section className="flex flex-col gap-4" data-testid={`ab-screen-${windowKey}`}>
       <header className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">
-          Question {windowIndex + 1} / {totalWindows} · {windowDays}d #{windowData.rank}
+          Question {visibleQuestionNumber} / {totalWindows} · {windowDays}d #{windowData.rank}
           <span className="ml-2 text-sm font-normal text-slate-600">
             {formatShort(windowData.start)} → {formatShort(windowData.end)}
           </span>
         </h2>
-        <p className="text-xs uppercase tracking-wide text-slate-500">{TASK_LABELS[taskType]}</p>
-        <p className="text-sm text-slate-700">{promptForTask(taskType)}</p>
+        {taskType !== "pattern" ? <p className="text-xs uppercase tracking-wide text-slate-500">{TASK_LABELS[taskType]}</p> : null}
+        <p className={taskType === "pattern" ? "text-base font-medium text-slate-800" : "text-sm text-slate-700"}>
+          Task: {promptForTask(taskType)}
+        </p>
+        {taskType === "pattern" ? (
+          <details className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+            <summary className="cursor-pointer font-medium text-slate-900">What counts as a pattern?</summary>
+            <p className="mt-2 leading-5">{patternHelpText()}</p>
+          </details>
+        ) : null}
       </header>
 
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <svg viewBox="0 0 1100 320" width="100%" className="block select-none" role="img" aria-label="A/B comparison stimulus">
-          <rect x={0} y={0} width={1100} height={320} fill="#ffffff" pointerEvents="none" />
+        <svg viewBox="0 0 1180 580" width="100%" className="block select-none" role="img" aria-label="A/B comparison stimulus">
+          <rect x={0} y={0} width={1180} height={580} fill="#ffffff" pointerEvents="none" />
 
           <ComparisonRow
             edgesPx={edgesAPx}
-            y={86}
-            h={70}
+            y={108}
+            h={92}
             counts={windowData.counts}
             startMs={dateStrToMs(windowData.start)}
             windowDays={windowDays}
             totalSeconds={totalSeconds}
             ticksPx={ticksAPx}
             tickLabels={ticksA.labels}
-            label="Visualization A"
+            label="A"
             showHoverTooltips={showHoverTooltips}
             showEventRug={showEventRug && shownA === "uniform"}
             rugPx={rugPx}
-            totalEvents={windowData.totalEvents}
           />
 
           <ComparisonRow
             edgesPx={edgesBPx}
-            y={174}
-            h={70}
+            y={378}
+            h={92}
             counts={windowData.counts}
             startMs={dateStrToMs(windowData.start)}
             windowDays={windowDays}
             totalSeconds={totalSeconds}
             ticksPx={ticksBPx}
             tickLabels={ticksB.labels}
-            label="Visualization B"
+            label="B"
             showHoverTooltips={showHoverTooltips}
             showEventRug={showEventRug && shownB === "uniform"}
             rugPx={rugPx}
-            totalEvents={windowData.totalEvents}
           />
         </svg>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium text-slate-800">Which option answers the question best?</legend>
+        <legend className="text-sm font-medium text-slate-800">Which visualization made it easier to answer the question?</legend>
         <div className="flex gap-2">
           {(["A", "B"] as const).map((c) => (
             <button
@@ -410,6 +426,20 @@ export function ABComparisonScreen({
           ))}
         </div>
       </fieldset>
+
+      {taskType === "comparison" ? (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium text-slate-800">Why did you prefer this visualization? (optional)</legend>
+          <textarea
+            value={rationale}
+            onChange={(event) => setRationale(event.target.value)}
+            rows={3}
+            className="rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-900"
+            placeholder="Tell us what stood out or felt clearer."
+            data-testid="comparison-rationale"
+          />
+        </fieldset>
+      ) : null}
 
       <div className="flex items-center gap-3 text-sm text-slate-700" data-testid="confidence-scale">
         <span>Confidence:</span>
@@ -468,7 +498,6 @@ type ComparisonRowProps = {
   showHoverTooltips: boolean;
   showEventRug: boolean;
   rugPx: number[];
-  totalEvents: number;
 };
 
 function ComparisonRow({
@@ -485,13 +514,12 @@ function ComparisonRow({
   showHoverTooltips,
   showEventRug,
   rugPx,
-  totalEvents,
 }: ComparisonRowProps) {
-  const plotX0 = 8;
-  const plotX1 = 990;
+  const plotX0 = 56;
+  const plotX1 = 1160;
   const axisY = y + h;
-  const rugTop = y - 64;
-  const rugBottom = y - 24;
+  const rugTop = y - 78;
+  const rugBottom = y - 32;
   return (
     <g data-testid={`row-${label}`}>
       {showEventRug ? (
@@ -510,15 +538,9 @@ function ComparisonRow({
               />
             ))}
           </g>
-          <text x={996} y={rugTop + 18} fontSize={11} fontWeight={600} fill="#0f172a">
-            Event rug
-          </text>
-          <text x={996} y={rugTop + 34} fontSize={10} fontStyle="italic" fill="#64748b">
-            {totalEvents.toLocaleString("en-US")} events
-          </text>
         </>
       ) : null}
-      <text x={plotX0} y={y - 18} fontSize={11} fontWeight={700} fill="#0f172a">
+      <text x={8} y={y + h / 2} fontSize={12} fontWeight={700} fill="#0f172a" dominantBaseline="middle">
         {label}
       </text>
       <line x1={plotX0} y1={axisY} x2={plotX1} y2={axisY} stroke="#1f1f1f" strokeWidth={1} />

@@ -24,15 +24,16 @@ export const EXPERIMENTAL_TRIAL_COUNT = 12;
 export const TRIALS_PER_TASK = 4;
 export const TASKS_PER_WINDOW = 3;
 export const PARTICIPANT_TASK_COUNT = 4;
-export const WINDOW_COUNT = 20;
+export const WINDOW_COUNT = 40;
 
 export const TASK_LABELS: Record<TaskType, string> = {
   peak: "Peak task",
-  comparison: "Period comparison",
+  comparison: "Visualization comparison",
   pattern: "Pattern task",
 };
 
 export const PEAK_CHOICES: ReadonlyArray<"A" | "B" | "C"> = ["A", "B", "C"];
+export type PeakChoice = (typeof PEAK_CHOICES)[number];
 export const PATTERN_CHOICES: ReadonlyArray<PatternKind> = [
   "uniform",
   "single-burst",

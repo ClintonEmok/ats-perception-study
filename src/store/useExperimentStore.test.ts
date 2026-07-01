@@ -78,14 +78,42 @@ describe("useExperimentStore", () => {
     await useExperimentStore.getState().startSession(0, writes);
     const s = useExperimentStore.getState();
     expect(s.sessionId).toBeTruthy();
-    expect(writes.startSession).toHaveBeenCalled();
+    expect(s.questionNumber).toBe(1);
+    expect(writes.startSession).toHaveBeenCalledWith(
+      expect.objectContaining({ conditionOrder: ["uniform", "ats"] }),
+    );
+    expect(s.trialItems).toHaveLength(12);
   });
 
-  it("starts on the ats-perception-v5 experiment by default with a 20-window pool", () => {
+  it("builds a comparison-only trial deck", async () => {
+    const writes = makeWrites();
+    await useExperimentStore.getState().startSession(1, writes);
+    const items = useExperimentStore.getState().trialItems;
+    expect(items).toHaveLength(12);
+    expect(items.every((item) => item.kind === "comparison")).toBe(true);
+  });
+
+  it("queues the local export fallback when completeSession keeps failing", async () => {
+    const writes: ConvexWrites = {
+      startSession: vi.fn().mockResolvedValue(undefined),
+      completeSession: vi.fn().mockRejectedValue(new Error("offline")),
+      recordAbResponse: vi.fn().mockResolvedValue(undefined),
+      submitQuestionnaire: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await useExperimentStore.getState().startSession(0, writes);
+    await useExperimentStore.getState().finishSession();
+
+    expect(writes.completeSession).toHaveBeenCalledTimes(3);
+    expect(useExperimentStore.getState().fallbackDownloadQueued).toBe(true);
+    expect(useExperimentStore.getState().fallbackDownloadReason).toBe("completeSession");
+  });
+
+  it("starts on the ats-perception-v5 experiment by default with a 40-window pool", () => {
     expect(useExperimentStore.getState().experimentSlug).toBe(ATS_PERCEPTION_SLUG);
     const config = getExperiment(ATS_PERCEPTION_SLUG);
     expect(config).not.toBeNull();
-    expect(config?.windows).toHaveLength(20);
+    expect(config?.windows).toHaveLength(40);
     expect(config?.totalTrials).toBe(12);
   });
 
@@ -117,6 +145,7 @@ describe("useExperimentStore", () => {
         windowKey: "1,1",
         taskType: "peak",
         choice: "A",
+        rationale: "ATS felt clearer",
         responseTimeMs: 1234,
         confidence: 4,
       }),
@@ -143,7 +172,17 @@ describe("useExperimentStore", () => {
 
   it("advanceTrial rolls into questionnaire after the 12th trial", () => {
     const config = getExperiment(ATS_PERCEPTION_SLUG)!;
-    useExperimentStore.setState({ phase: "trial", trialCursor: 11, trialWindows: config.windows.slice(0, 12) });
+    useExperimentStore.setState({
+      phase: "trial",
+      trialCursor: 11,
+      questionNumber: 12,
+      trialWindows: config.windows.slice(0, 12),
+      trialItems: Array.from({ length: 12 }, (_, index) => ({
+        kind: "comparison" as const,
+        window: config.windows[index % config.windows.length]!,
+        taskType: "peak" as const,
+      })),
+    });
     useExperimentStore.getState().advanceTrial();
     expect(useExperimentStore.getState().phase).toBe("questionnaire");
   });
@@ -151,7 +190,6 @@ describe("useExperimentStore", () => {
   it("submits the questionnaire and transitions to debrief", async () => {
     const writes = makeWrites();
     await useExperimentStore.getState().startSession(0, writes);
-    useExperimentStore.getState().setQuestionnaireAnswer("preference", "ats");
     useExperimentStore.getState().setQuestionnaireAnswer("freeText", "ATS feels calmer.");
     await useExperimentStore.getState().submitQuestionnaire();
     expect(writes.submitQuestionnaire).toHaveBeenCalled();
@@ -165,7 +203,6 @@ describe("useExperimentStore", () => {
     expect(writes.startSessionMock).toHaveBeenCalledWith(
       expect.objectContaining({ participantName: "Alex" }),
     );
-    useExperimentStore.getState().setQuestionnaireAnswer("preference", "ats");
     useExperimentStore.getState().setQuestionnaireAnswer("freeText", "ATS feels calmer.");
     await useExperimentStore.getState().submitQuestionnaire();
     expect(writes.submitQuestionnaireMock).toHaveBeenCalledWith(
@@ -195,7 +232,7 @@ describe("useExperimentStore", () => {
     expect(useExperimentStore.getState().consentAccepted).toBe(false);
     expect(useExperimentStore.getState().phase).toBe("consent");
     expect(useExperimentStore.getState().abResponses).toEqual([]);
-    expect(useExperimentStore.getState().questionnaire).toEqual({ preference: null, freeText: "" });
+    expect(useExperimentStore.getState().questionnaire).toEqual({ freeText: "" });
     expect(useExperimentStore.getState().convexWrites).toBe(writes);
   });
 });

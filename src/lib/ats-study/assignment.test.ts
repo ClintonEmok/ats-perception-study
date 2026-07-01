@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   A_B_ORDERING_COUNT,
   TASK_CYCLE,
-  WINDOWS_PER_GROUP_SELECTION,
   WINDOWS_PER_PARTICIPANT,
+  buildParticipantTrialItems,
   type TaskOrdering,
   balanceReport,
   orderingForParticipant,
@@ -13,26 +13,10 @@ import {
 import type { ABWindowSpec } from "./experiments";
 
 const WINDOW_KEYS = [
-  "1,1",
-  "1,2",
-  "1,3",
-  "1,4",
-  "1,5",
-  "14,1",
-  "14,2",
-  "14,3",
-  "14,4",
-  "14,5",
-  "30,1",
-  "30,2",
-  "30,3",
-  "30,4",
-  "30,5",
-  "90,1",
-  "90,2",
-  "90,3",
-  "90,4",
-  "90,5",
+  ...Array.from({ length: 10 }, (_, i) => `1,${i + 1}`),
+  ...Array.from({ length: 10 }, (_, i) => `14,${i + 1}`),
+  ...Array.from({ length: 10 }, (_, i) => `30,${i + 1}`),
+  ...Array.from({ length: 10 }, (_, i) => `90,${i + 1}`),
 ] as const;
 
 const WINDOW_POOL: ABWindowSpec[] = WINDOW_KEYS.map((windowKey, windowIndex) => {
@@ -91,14 +75,16 @@ describe("taskForWindow", () => {
 });
 
 describe("selectParticipantWindows", () => {
-  it("selects a balanced 12-window subset from the 20-window pool", () => {
+  it("selects a balanced 12-window subset from the 40-window pool", () => {
     const subset = selectParticipantWindows(0, WINDOW_POOL);
     expect(subset).toHaveLength(WINDOWS_PER_PARTICIPANT);
+    expect(subset.some((window) => window.windowKey === "14,3")).toBe(false);
+    expect(subset.some((window) => window.windowKey === "30,3")).toBe(false);
     const perGroup = new Map<number, number>();
     for (const window of subset) {
       perGroup.set(window.windowDays, (perGroup.get(window.windowDays) ?? 0) + 1);
     }
-    expect([...perGroup.values()]).toEqual(Array.from({ length: 4 }, () => WINDOWS_PER_GROUP_SELECTION));
+    expect([...perGroup.values()]).toEqual(Array.from({ length: 4 }, () => 3));
   });
 
   it("changes the subset with participant index", () => {
@@ -108,7 +94,15 @@ describe("selectParticipantWindows", () => {
   });
 
   it("rejects invalid pool sizes", () => {
-    expect(() => selectParticipantWindows(0, WINDOW_POOL.slice(0, 19))).toThrow();
+    expect(() => selectParticipantWindows(0, WINDOW_POOL.slice(0, 39))).toThrow();
+  });
+});
+
+describe("buildParticipantTrialItems", () => {
+  it("builds a comparison-only participant deck", () => {
+    const items = buildParticipantTrialItems(0, WINDOW_POOL);
+    expect(items).toHaveLength(WINDOWS_PER_PARTICIPANT);
+    expect(items.every((item) => item.kind === "comparison")).toBe(true);
   });
 });
 

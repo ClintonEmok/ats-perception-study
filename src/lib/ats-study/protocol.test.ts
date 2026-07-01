@@ -8,9 +8,9 @@ import {
 } from "./protocol";
 
 describe("protocol constants", () => {
-  it("matches the 20-window pool and 12-trial totals", () => {
+  it("matches the 40-window pool and 12-trial totals", () => {
     expect(EXPERIMENTAL_TRIAL_COUNT).toBe(12);
-    expect(WINDOW_COUNT).toBe(20);
+    expect(WINDOW_COUNT).toBe(40);
     expect(TRIALS_PER_TASK).toBe(4);
     expect(FIXATION_MS).toBe(500);
   });

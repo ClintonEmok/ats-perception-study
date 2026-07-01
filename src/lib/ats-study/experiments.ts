@@ -16,28 +16,10 @@ export interface ExperimentConfig {
 export const ATS_PERCEPTION_SLUG = "ats-perception-v5";
 export const ATS_PERCEPTION_V4_SLUG = "ats-perception-v4";
 
-const ATS_PERCEPTION_V5_WINDOW_KEYS: ReadonlyArray<readonly [number, number]> = [
-  [1, 1],
-  [1, 2],
-  [1, 3],
-  [1, 4],
-  [1, 5],
-  [14, 1],
-  [14, 2],
-  [14, 3],
-  [14, 4],
-  [14, 5],
-  [30, 1],
-  [30, 2],
-  [30, 3],
-  [30, 4],
-  [30, 5],
-  [90, 1],
-  [90, 2],
-  [90, 3],
-  [90, 4],
-  [90, 5],
-];
+const ATS_PERCEPTION_V5_WINDOW_DAYS = [1, 14, 30, 90] as const;
+const ATS_PERCEPTION_V5_WINDOW_KEYS: ReadonlyArray<readonly [number, number]> = ATS_PERCEPTION_V5_WINDOW_DAYS.flatMap(
+  (windowDays) => Array.from({ length: 10 }, (_, index) => [windowDays, index + 1] as const),
+);
 
 const ATS_PERCEPTION_V5_WINDOWS: readonly ABWindowSpec[] = ATS_PERCEPTION_V5_WINDOW_KEYS.map(
   ([windowDays, rank], windowIndex) => ({
@@ -53,7 +35,7 @@ const EXPERIMENTS: readonly ExperimentConfig[] = [
     slug: ATS_PERCEPTION_SLUG,
     title: "ATS Perception Study v5",
     description:
-      "Compare 20 candidate windows of crime data via side-by-side A/B comparison of two time allocations. Each participant sees a balanced 12-window subset under 3 task types (peak, comparison, pattern).",
+      "Compare 40 candidate windows of crime data via side-by-side A/B comparison of two time allocations. Each participant sees a balanced 12-window subset under 3 task types (peak, comparison, pattern).",
     windows: ATS_PERCEPTION_V5_WINDOWS,
     totalTrials: 12,
   },

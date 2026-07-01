@@ -16,7 +16,7 @@ export function PeriodComparisonChoice({ onChoose, disabled, firstLabel = "First
       aria-label={`${TASK_LABELS.comparison} choices`}
       data-testid="period-comparison-choice"
     >
-      <legend className="text-sm font-medium">Which period has more events?</legend>
+      <legend className="text-sm font-medium">Which visualization made it easier to answer the question?</legend>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

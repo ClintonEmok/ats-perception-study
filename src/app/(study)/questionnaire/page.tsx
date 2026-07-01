@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useExperimentStore } from "@/store/useExperimentStore";
 import { QuestionnaireScreen } from "@/components/study/screens/QuestionnaireScreen";
 import { useStudyExperimentSlug } from "@/hooks/useStudyExperimentSlug";
 import { studyStepHref } from "@/lib/ats-study/routes";
 
-export default function QuestionnairePage() {
+function QuestionnairePageContent() {
   const router = useRouter();
   const slug = useStudyExperimentSlug();
+  const hasHydrated = useExperimentStore((state) => state.hasHydrated);
   const consentAccepted = useExperimentStore((state) => state.consentAccepted);
   const instructionsSeen = useExperimentStore((state) => state.instructionsSeen);
   const phase = useExperimentStore((state) => state.phase);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!consentAccepted) {
       router.replace(studyStepHref("consent", slug));
       return;
@@ -34,7 +36,19 @@ export default function QuestionnairePage() {
     if (phase === "debrief") {
       router.replace(studyStepHref("debrief", slug));
     }
-  }, [consentAccepted, instructionsSeen, phase, router, slug]);
+  }, [hasHydrated, consentAccepted, instructionsSeen, phase, router, slug]);
+
+  if (!hasHydrated) {
+    return <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading study…</div>;
+  }
 
   return <QuestionnaireScreen onSubmitted={() => router.push(studyStepHref("debrief", slug))} />;
+}
+
+export default function QuestionnairePage() {
+  return (
+    <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading study…</div>}>
+      <QuestionnairePageContent />
+    </Suspense>
+  );
 }

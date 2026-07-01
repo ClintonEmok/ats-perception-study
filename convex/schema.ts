@@ -32,7 +32,6 @@ export default defineSchema({
 
   studyQuestionnaires: defineTable({
     sessionId: v.id("studySessions"),
-    preference: v.union(v.literal("uniform"), v.literal("ats"), v.literal("no_preference")),
     freeText: v.string(),
     participantName: v.optional(v.string()),
     submittedAt: v.number(),

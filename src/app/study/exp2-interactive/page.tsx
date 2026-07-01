@@ -656,7 +656,7 @@ function WindowCard({
           windowDays={w.windowDays}
           ticksPx={ticksAPx}
           tickLabels={ticksA.labels}
-          label="Visualization A"
+          label="A"
           labelColor={response.choice === "A" ? "#0f172a" : "#475569"}
           onHover={onHover}
           windowKey={w.key}
@@ -674,7 +674,7 @@ function WindowCard({
           windowDays={w.windowDays}
           ticksPx={ticksBPx}
           tickLabels={ticksB.labels}
-          label="Visualization B"
+          label="B"
           labelColor={response.choice === "B" ? "#0f172a" : "#475569"}
           onHover={onHover}
           windowKey={w.key}
@@ -684,7 +684,7 @@ function WindowCard({
       <div className="mt-4 flex flex-col gap-3">
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium text-slate-800">
-            Which option answers the question best?
+            Which visualization made it easier to answer the question?
           </legend>
           <div className="flex gap-2">
             {(["A", "B"] as const).map((c) => (

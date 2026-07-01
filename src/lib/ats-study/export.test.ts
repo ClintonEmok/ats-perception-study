@@ -32,6 +32,7 @@ const input: ExportInput = {
       isCorrect: true,
       responseTimeMs: 1500,
       confidence: 4,
+      rationale: "It looked flatter.",
       recordedAt: 1100,
     },
     {
@@ -47,13 +48,13 @@ const input: ExportInput = {
       isCorrect: false,
       responseTimeMs: 2100,
       confidence: 3,
+      rationale: "It highlighted the peak more clearly.",
       recordedAt: 1200,
     },
   ],
   questionnaires: [
     {
       sessionId: "s1",
-      preference: "ats",
       freeText: 'I found ATS easier, "less crowded".',
       participantName: "Alex",
       submittedAt: 1500,
@@ -77,7 +78,7 @@ describe("export", () => {
     const parsed = JSON.parse(json);
     expect(parsed.sessions).toHaveLength(1);
     expect(parsed.trials).toHaveLength(2);
-    expect(parsed.questionnaires[0].preference).toBe("ats");
+    expect(parsed.questionnaires[0].freeText).toContain("ATS easier");
   });
 
   it("returns both CSV and JSON from a single call", () => {
