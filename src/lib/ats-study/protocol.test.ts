@@ -8,17 +8,18 @@ import {
 } from "./protocol";
 
 describe("protocol constants", () => {
-  it("matches the locked 12-window totals", () => {
+  it("matches the 20-window pool and 12-trial totals", () => {
     expect(EXPERIMENTAL_TRIAL_COUNT).toBe(12);
-    expect(WINDOW_COUNT).toBe(12);
+    expect(WINDOW_COUNT).toBe(20);
     expect(TRIALS_PER_TASK).toBe(4);
     expect(FIXATION_MS).toBe(500);
   });
 
-  it("exposes 5 ordered phases (no practice phase in v5)", () => {
+  it("exposes 6 ordered phases (with a practice step in v5)", () => {
     expect(PROTOCOL_PHASES).toEqual([
       "consent",
       "instructions",
+      "practice",
       "trial",
       "questionnaire",
       "debrief",

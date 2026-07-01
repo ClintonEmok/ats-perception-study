@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { requireExperiment, type ExperimentConfig, type ABWindowSpec, ATS_PERCEPTION_SLUG } from "@/lib/ats-study/experiments";
+import { selectParticipantWindows } from "@/lib/ats-study/assignment";
 import type { ProtocolPhase, TaskType } from "@/lib/ats-study/protocol";
 
 export type AbChoice = "A" | "B";
@@ -66,6 +67,7 @@ export interface ExperimentState {
   experimentSlug: string;
   phase: ProtocolPhase;
   trialCursor: number;
+  trialWindows: ABWindowSpec[];
   abResponses: AbResponse[];
   questionnaire: QuestionnaireAnswers;
   convexWrites: ConvexWrites | null;
@@ -108,6 +110,7 @@ const initialState: ExperimentState = {
   experimentSlug: ATS_PERCEPTION_SLUG,
   phase: "consent",
   trialCursor: 0,
+  trialWindows: [],
   abResponses: [],
   questionnaire: { preference: null, freeText: "" },
   convexWrites: null,
@@ -121,9 +124,8 @@ export function getActiveExperiment(state: { experimentSlug: string }): Experime
   return requireExperiment(state.experimentSlug);
 }
 
-export function getWindowAt(state: { experimentSlug: string; trialCursor: number }): ABWindowSpec | null {
-  const config = getActiveExperiment(state);
-  return config.windows[state.trialCursor] ?? null;
+export function getWindowAt(state: { trialWindows: ABWindowSpec[]; trialCursor: number }): ABWindowSpec | null {
+  return state.trialWindows[state.trialCursor] ?? null;
 }
 
 export const useExperimentStore = create<ExperimentStore>()(
@@ -134,7 +136,7 @@ export const useExperimentStore = create<ExperimentStore>()(
       setParticipantName: (name) => set({ participantName: name }),
       acceptConsent: () => set({ consentAccepted: true, phase: "instructions" }),
       beginInstructions: () => set({ phase: "instructions" }),
-      completeInstructions: () => set({ instructionsSeen: true, phase: "trial", trialCursor: 0 }),
+      completeInstructions: () => set({ instructionsSeen: true, phase: "practice", trialCursor: 0 }),
       startSession: async (participantIndex, writes) => {
         const sessionId =
           typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -147,6 +149,7 @@ export const useExperimentStore = create<ExperimentStore>()(
           participantIndex,
           convexWrites: writes,
           trialCursor: 0,
+          trialWindows: selectParticipantWindows(participantIndex, getActiveExperiment(get()).windows),
           abResponses: [],
           questionnaire: { preference: null, freeText: "" },
           startedAt,
@@ -195,9 +198,8 @@ export const useExperimentStore = create<ExperimentStore>()(
       },
       advanceTrial: () => {
         const state = get();
-        const config = getActiveExperiment(state);
         const next = state.trialCursor + 1;
-        if (next >= config.windows.length) {
+        if (next >= state.trialWindows.length) {
           set({ trialCursor: 0, phase: "questionnaire" });
         } else {
           set({ trialCursor: next });
@@ -252,6 +254,7 @@ export const useExperimentStore = create<ExperimentStore>()(
         experimentSlug: state.experimentSlug,
         phase: state.phase,
         trialCursor: state.trialCursor,
+        trialWindows: state.trialWindows,
         abResponses: state.abResponses,
         questionnaire: state.questionnaire,
         consentAccepted: state.consentAccepted,

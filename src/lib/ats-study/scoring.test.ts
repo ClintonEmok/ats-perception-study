@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { scoreComparison, scorePattern, scorePeak, scoreTrial } from "./scoring";
 
 describe("scoring", () => {
-  it("scores peak identification", () => {
+  it("scores peak task", () => {
     expect(scorePeak({ chosen: "A", correct: "A" })).toBe(true);
     expect(scorePeak({ chosen: "B", correct: "A" })).toBe(false);
   });

@@ -684,7 +684,7 @@ function WindowCard({
       <div className="mt-4 flex flex-col gap-3">
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium text-slate-800">
-            Which would you choose?
+            Which option answers the question best?
           </legend>
           <div className="flex gap-2">
             {(["A", "B"] as const).map((c) => (
@@ -705,19 +705,6 @@ function WindowCard({
           </div>
         </fieldset>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-slate-800">
-            Why? <span className="font-normal text-slate-500">(optional)</span>
-          </span>
-          <textarea
-            value={response.rationale}
-            onChange={(e) => onRationale(e.target.value)}
-            rows={2}
-            placeholder="A few words on what makes this one easier or harder to read."
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
-            data-testid={`rationale-${w.key}`}
-          />
-        </label>
       </div>
     </article>
   );

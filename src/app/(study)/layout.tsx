@@ -33,7 +33,7 @@ export default function StudyLayout({ children }: { children: ReactNode }) {
 
   return (
     <ConvexClientProvider>
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">{children}</main>
+      <main className="mx-auto flex w-full max-w-none flex-col gap-6 px-8 py-6">{children}</main>
     </ConvexClientProvider>
   );
 }

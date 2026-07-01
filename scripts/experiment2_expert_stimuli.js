@@ -31,16 +31,24 @@ const MUTED_COLOR = '#64748b';
 
 const SELECTED_WINDOWS = [
   [1, 1],
+  [1, 2],
   [1, 3],
+  [1, 4],
   [1, 5],
   [14, 1],
+  [14, 2],
   [14, 3],
+  [14, 4],
   [14, 5],
   [30, 1],
+  [30, 2],
   [30, 3],
+  [30, 4],
   [30, 5],
   [90, 1],
+  [90, 2],
   [90, 3],
+  [90, 4],
   [90, 5],
 ];
 
@@ -55,26 +63,23 @@ const STRATEGY_LABELS = Object.fromEntries(
   Object.entries(STRATEGY_SPECS).map(([k, v]) => [k, v.label]),
 );
 
-const WINDOW_STRATEGIES = {
-  '1,1': ['uniform', 'raw_density'],
-  '1,3': ['uniform', 'density_mild'],
-  '1,5': ['uniform', 'density_firm'],
-  '14,1': ['uniform', 'raw_density'],
-  '14,3': ['density_mild', 'raw_density'],
-  '14,5': ['uniform', 'density_firm'],
-  '30,1': ['uniform', 'density_mild'],
-  '30,3': ['density_mild', 'density_firm'],
-  '30,5': ['density_mild', 'raw_density'],
-  '90,1': ['uniform', 'density_mild'],
-  '90,3': ['density_mild', 'density_firm'],
-  '90,5': ['density_mild', 'raw_density'],
-};
+function strategiesForWindow(windowDays, rank) {
+  if (rank === 1) return 'raw_density';
+  if (rank === 2) return 'density_mild';
+  if (rank === 3) return 'density_firm';
+  if (rank === 4) return windowDays <= 14 ? 'density_mild' : 'raw_density';
+  return windowDays <= 14 ? 'raw_density' : 'density_mild';
+}
+
+const WINDOW_STRATEGIES = Object.fromEntries(
+  SELECTED_WINDOWS.map(([windowDays, rank]) => [`${windowDays},${rank}`, ['uniform', strategiesForWindow(windowDays, rank)]]),
+);
 
 const SESSION_PROTOCOL = `# Expert Interview — Session Protocol
 
 ## Stimuli
 
-Twelve figures, each comparing two visualizations of the same time window:
+  Twenty figures, each comparing two visualizations of the same time window:
 
 - **Visualization A** and **Visualization B** are anonymous. They are
   randomization-keyed (see \`REVEAL_KEY.md\` for the mapping).
@@ -112,7 +117,7 @@ While the expert is looking at the figure:
 
 ## Closing bridge to the prototype
 
-After all twelve figures have been discussed:
+After all twenty figures have been discussed:
 
 > "Now that you've seen the underlying visualization concept, here's
 >  how it is integrated into the interactive prototype."
@@ -634,7 +639,7 @@ async function renderIndexSheet(outPath, windowDirs) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('Index sheet — all twelve stimuli (moderator reference)', W / 2, 22);
+  ctx.fillText('Index sheet — all twenty stimuli (moderator reference)', W / 2, 22);
 
   for (let i = 0; i < windowDirs.length; i += 1) {
     const row = Math.floor(i / nCols);
@@ -818,7 +823,7 @@ async function main() {
       `window_${String(i + 1).padStart(2, '0')}_${size}d_rank${rank}`,
     );
     process.stdout.write(
-      `\n[window ${i + 1}/12] ${size}d #${rank}  ${data.window.start} → ${data.window.end}  ` +
+      `\n[window ${i + 1}/${SELECTED_WINDOWS.length}] ${size}d #${rank}  ${data.window.start} → ${data.window.end}  ` +
         `(${data.timestamps.length.toLocaleString('en-US')} events)\n`,
     );
     const result = await runForWindow(data, outDir, rng);

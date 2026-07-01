@@ -63,14 +63,14 @@ describe("useExperimentStore", () => {
     expect(after.phase).toBe("instructions");
   });
 
-  it("transitions through instructions straight to trial (no practice phase in v5)", () => {
+  it("transitions through instructions into practice before trial", () => {
     const s = useExperimentStore.getState();
     s.acceptConsent();
     s.beginInstructions();
     expect(useExperimentStore.getState().phase).toBe("instructions");
     s.completeInstructions();
     expect(useExperimentStore.getState().instructionsSeen).toBe(true);
-    expect(useExperimentStore.getState().phase).toBe("trial");
+    expect(useExperimentStore.getState().phase).toBe("practice");
   });
 
   it("starts a session with the v5 slug", async () => {
@@ -81,11 +81,11 @@ describe("useExperimentStore", () => {
     expect(writes.startSession).toHaveBeenCalled();
   });
 
-  it("starts on the ats-perception-v5 experiment by default with 12 windows", () => {
+  it("starts on the ats-perception-v5 experiment by default with a 20-window pool", () => {
     expect(useExperimentStore.getState().experimentSlug).toBe(ATS_PERCEPTION_SLUG);
     const config = getExperiment(ATS_PERCEPTION_SLUG);
     expect(config).not.toBeNull();
-    expect(config?.windows).toHaveLength(12);
+    expect(config?.windows).toHaveLength(20);
     expect(config?.totalTrials).toBe(12);
   });
 
@@ -110,7 +110,7 @@ describe("useExperimentStore", () => {
     expect(state.abResponses[0]?.windowKey).toBe("1,1");
     expect(state.abResponses[0]?.taskType).toBe("peak");
     expect(state.abResponses[0]?.choice).toBe("A");
-    expect(state.phase).toBe("trial");
+    expect(state.phase).toBe("practice");
     expect(state.trialCursor).toBe(0);
     expect(writes.recordAbResponse).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -143,7 +143,7 @@ describe("useExperimentStore", () => {
 
   it("advanceTrial rolls into questionnaire after the 12th trial", () => {
     const config = getExperiment(ATS_PERCEPTION_SLUG)!;
-    useExperimentStore.setState({ phase: "trial", trialCursor: config.windows.length - 1 });
+    useExperimentStore.setState({ phase: "trial", trialCursor: 11, trialWindows: config.windows.slice(0, 12) });
     useExperimentStore.getState().advanceTrial();
     expect(useExperimentStore.getState().phase).toBe("questionnaire");
   });

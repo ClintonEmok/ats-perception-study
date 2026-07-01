@@ -23,6 +23,10 @@ export default function QuestionnairePage() {
       router.replace(studyStepHref("instructions", slug));
       return;
     }
+    if (phase === "practice") {
+      router.replace(studyStepHref("practice", slug));
+      return;
+    }
     if (phase === "trial") {
       router.replace(studyStepHref("trial", slug));
       return;

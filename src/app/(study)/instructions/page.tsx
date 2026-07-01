@@ -19,9 +19,9 @@ export default function InstructionsPage() {
       return;
     }
     if (instructionsSeen) {
-      router.replace(studyStepHref("trial", slug));
+      router.replace(studyStepHref("practice", slug));
     }
   }, [consentAccepted, instructionsSeen, router, slug]);
 
-  return <InstructionsScreen onBegin={() => router.push(studyStepHref("trial", slug))} />;
+  return <InstructionsScreen onBegin={() => router.push(studyStepHref("practice", slug))} />;
 }

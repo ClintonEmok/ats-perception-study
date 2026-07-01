@@ -218,9 +218,9 @@ function formatBinLabel(
 }
 
 function promptForTask(taskType: TaskType): string {
-  if (taskType === "peak") return "Which visualization would help you spot the peak most quickly?";
-  if (taskType === "comparison") return "Which visualization would you use to compare periods of increased activity?";
-  return "Which visualization makes the pattern easiest to read?";
+  if (taskType === "peak") return "Which period contains the highest activity?";
+  if (taskType === "comparison") return "Which period has more events?";
+  return "Which option best describes the pattern?";
 }
 
 export interface ABComparisonScreenProps {
@@ -232,6 +232,7 @@ export interface ABComparisonScreenProps {
   isLast: boolean;
   showEventRug?: boolean;
   showHoverTooltips?: boolean;
+  recordResponse?: boolean;
 }
 
 export function ABComparisonScreen({
@@ -243,12 +244,12 @@ export function ABComparisonScreen({
   isLast,
   showEventRug = true,
   showHoverTooltips = true,
+  recordResponse = true,
 }: ABComparisonScreenProps) {
   const participantIndex = useExperimentStore((state) => state.participantIndex);
   const recordAbResponse = useExperimentStore((state) => state.recordAbResponse);
   const [dataState, setDataState] = useState<DataState>({ status: "loading" });
   const [choice, setChoice] = useState<"A" | "B" | null>(null);
-  const [rationale, setRationale] = useState("");
   const [confidence, setConfidence] = useState(3);
   const onsetAtRef = useRef<number | null>(null);
 
@@ -289,7 +290,6 @@ export function ABComparisonScreen({
     if (!windowData) return;
     onsetAtRef.current = performance.now();
     setChoice(null);
-    setRationale("");
     setConfidence(3);
   }, [windowData, windowKey]);
 
@@ -319,16 +319,18 @@ export function ABComparisonScreen({
 
   const commit = async () => {
     if (!choice) return;
-    const onsetAt = onsetAtRef.current ?? performance.now();
-    const responseTimeMs = Math.max(0, performance.now() - onsetAt);
-    await recordAbResponse({
-      windowKey,
-      taskType,
-      choice,
-      rationale,
-      responseTimeMs,
-      confidence,
-    });
+    if (recordResponse) {
+      const onsetAt = onsetAtRef.current ?? performance.now();
+      const responseTimeMs = Math.max(0, performance.now() - onsetAt);
+      await recordAbResponse({
+        windowKey,
+        taskType,
+        choice,
+        rationale: "",
+        responseTimeMs,
+        confidence,
+      });
+    }
     onAdvance();
   };
 
@@ -338,7 +340,7 @@ export function ABComparisonScreen({
     <section className="flex flex-col gap-4" data-testid={`ab-screen-${windowKey}`}>
       <header className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">
-          Window {windowIndex + 1} of {totalWindows} · {windowDays}d #{windowData.rank}
+          Question {windowIndex + 1} / {totalWindows} · {windowDays}d #{windowData.rank}
           <span className="ml-2 text-sm font-normal text-slate-600">
             {formatShort(windowData.start)} → {formatShort(windowData.end)}
           </span>
@@ -350,32 +352,6 @@ export function ABComparisonScreen({
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <svg viewBox="0 0 1100 320" width="100%" className="block select-none" role="img" aria-label="A/B comparison stimulus">
           <rect x={0} y={0} width={1100} height={320} fill="#ffffff" pointerEvents="none" />
-          <line x1={8} y1={68} x2={990} y2={68} stroke="#1f1f1f" strokeWidth={1} />
-
-          {showEventRug ? (
-            <>
-              <g>
-                {rugPx.map((x, idx) => (
-                  <line
-                    key={idx}
-                    x1={x}
-                    x2={x}
-                    y1={14}
-                    y2={60}
-                    stroke="#475569"
-                    strokeOpacity={0.55}
-                    strokeWidth={0.6}
-                  />
-                ))}
-              </g>
-              <text x={996} y={32} fontSize={11} fontWeight={600} fill="#0f172a">
-                Shared event rug
-              </text>
-              <text x={996} y={48} fontSize={10} fontStyle="italic" fill="#64748b">
-                {windowData.totalEvents.toLocaleString("en-US")} events
-              </text>
-            </>
-          ) : null}
 
           <ComparisonRow
             edgesPx={edgesAPx}
@@ -389,6 +365,9 @@ export function ABComparisonScreen({
             tickLabels={ticksA.labels}
             label="Visualization A"
             showHoverTooltips={showHoverTooltips}
+            showEventRug={showEventRug && shownA === "uniform"}
+            rugPx={rugPx}
+            totalEvents={windowData.totalEvents}
           />
 
           <ComparisonRow
@@ -403,12 +382,15 @@ export function ABComparisonScreen({
             tickLabels={ticksB.labels}
             label="Visualization B"
             showHoverTooltips={showHoverTooltips}
+            showEventRug={showEventRug && shownB === "uniform"}
+            rugPx={rugPx}
+            totalEvents={windowData.totalEvents}
           />
         </svg>
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium text-slate-800">Which would you choose?</legend>
+        <legend className="text-sm font-medium text-slate-800">Which option answers the question best?</legend>
         <div className="flex gap-2">
           {(["A", "B"] as const).map((c) => (
             <button
@@ -428,20 +410,6 @@ export function ABComparisonScreen({
           ))}
         </div>
       </fieldset>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-slate-800">
-          Why? <span className="font-normal text-slate-500">(optional)</span>
-        </span>
-        <textarea
-          value={rationale}
-          onChange={(e) => setRationale(e.target.value)}
-          rows={2}
-          placeholder="A few words on what makes this easier or harder to read."
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
-          data-testid="ab-rationale"
-        />
-      </label>
 
       <div className="flex items-center gap-3 text-sm text-slate-700" data-testid="confidence-scale">
         <span>Confidence:</span>
@@ -498,6 +466,9 @@ type ComparisonRowProps = {
   tickLabels: string[];
   label: string;
   showHoverTooltips: boolean;
+  showEventRug: boolean;
+  rugPx: number[];
+  totalEvents: number;
 };
 
 function ComparisonRow({
@@ -512,12 +483,44 @@ function ComparisonRow({
   tickLabels,
   label,
   showHoverTooltips,
+  showEventRug,
+  rugPx,
+  totalEvents,
 }: ComparisonRowProps) {
   const plotX0 = 8;
   const plotX1 = 990;
   const axisY = y + h;
+  const rugTop = y - 64;
+  const rugBottom = y - 24;
   return (
     <g data-testid={`row-${label}`}>
+      {showEventRug ? (
+        <>
+          <g>
+            {rugPx.map((x, idx) => (
+              <line
+                key={idx}
+                x1={x}
+                x2={x}
+                y1={rugTop}
+                y2={rugBottom}
+                stroke="#475569"
+                strokeOpacity={0.55}
+                strokeWidth={0.6}
+              />
+            ))}
+          </g>
+          <text x={996} y={rugTop + 18} fontSize={11} fontWeight={600} fill="#0f172a">
+            Event rug
+          </text>
+          <text x={996} y={rugTop + 34} fontSize={10} fontStyle="italic" fill="#64748b">
+            {totalEvents.toLocaleString("en-US")} events
+          </text>
+        </>
+      ) : null}
+      <text x={plotX0} y={y - 18} fontSize={11} fontWeight={700} fill="#0f172a">
+        {label}
+      </text>
       <line x1={plotX0} y1={axisY} x2={plotX1} y2={axisY} stroke="#1f1f1f" strokeWidth={1} />
       {edgesPx.slice(0, -1).map((xLeft, i) => {
         const xRight = edgesPx[i + 1];
@@ -552,9 +555,6 @@ function ComparisonRow({
           </text>
         </g>
       ))}
-      <text x={996} y={y + h / 2} fontSize={12} fontWeight={600} fill="#475569" dominantBaseline="middle">
-        {label}
-      </text>
     </g>
   );
 }

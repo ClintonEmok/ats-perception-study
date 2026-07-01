@@ -1,10 +1,11 @@
 import { ATS_PERCEPTION_SLUG, isValidExperimentSlug, listExperiments } from "./experiments";
 
-export type StudyStep = "consent" | "instructions" | "trial" | "questionnaire" | "debrief";
+export type StudyStep = "consent" | "instructions" | "practice" | "trial" | "questionnaire" | "debrief";
 
 const STEP_PATHS: Record<StudyStep, string> = {
   consent: "/consent",
   instructions: "/instructions",
+  practice: "/practice",
   trial: "/trial",
   questionnaire: "/questionnaire",
   debrief: "/debrief",

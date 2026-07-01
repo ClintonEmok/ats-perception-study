@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useExperimentStore } from "@/store/useExperimentStore";
-import { TrialScreen } from "@/components/study/screens/TrialScreen";
+import { PracticeScreen } from "@/components/study/screens/PracticeScreen";
 import { useStudyExperimentSlug } from "@/hooks/useStudyExperimentSlug";
 import { studyStepHref } from "@/lib/ats-study/routes";
 
-export default function TrialPage() {
+export default function PracticePage() {
   const router = useRouter();
   const slug = useStudyExperimentSlug();
   const consentAccepted = useExperimentStore((state) => state.consentAccepted);
@@ -23,8 +23,8 @@ export default function TrialPage() {
       router.replace(studyStepHref("instructions", slug));
       return;
     }
-    if (phase === "practice") {
-      router.replace(studyStepHref("practice", slug));
+    if (phase === "trial") {
+      router.replace(studyStepHref("trial", slug));
       return;
     }
     if (phase === "questionnaire") {
@@ -36,5 +36,5 @@ export default function TrialPage() {
     }
   }, [consentAccepted, instructionsSeen, phase, router, slug]);
 
-  return <TrialScreen onFinish={() => router.push(studyStepHref("questionnaire", slug))} />;
+  return <PracticeScreen onFinish={() => router.push(studyStepHref("trial", slug))} />;
 }

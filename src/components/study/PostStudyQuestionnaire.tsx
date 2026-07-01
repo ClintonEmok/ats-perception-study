@@ -50,8 +50,8 @@ export function PostStudyQuestionnaire({ onSubmit }: PostStudyQuestionnaireProps
       <header>
         <h2 className="text-lg font-semibold">Final questionnaire</h2>
         <p className="text-sm text-slate-600">
-          Please take a moment to share your impressions. Your answers are anonymous and stored alongside
-          your trial responses.
+          Please take a moment to share your overall impressions. Your answers are anonymous and stored
+          alongside your trial responses.
         </p>
       </header>
 
@@ -110,7 +110,7 @@ export function PostStudyQuestionnaire({ onSubmit }: PostStudyQuestionnaireProps
       <fieldset className="flex flex-col gap-2" data-testid="free-text-fieldset">
         <legend className="text-sm font-medium">Free-text feedback</legend>
         <label className="flex flex-col gap-1 text-sm text-slate-700">
-          What helped or got in the way of your decision? (minimum {MIN_FREE_TEXT_CHARS} characters)
+          What helped or got in the way of your overall preference? (minimum {MIN_FREE_TEXT_CHARS} characters)
           <textarea
             value={freeText}
             onChange={(event) => {

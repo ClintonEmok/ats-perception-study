@@ -2,13 +2,43 @@ import { describe, expect, it } from "vitest";
 import {
   A_B_ORDERING_COUNT,
   TASK_CYCLE,
+  WINDOWS_PER_GROUP_SELECTION,
+  WINDOWS_PER_PARTICIPANT,
   type TaskOrdering,
   balanceReport,
   orderingForParticipant,
+  selectParticipantWindows,
   taskForWindow,
 } from "./assignment";
+import type { ABWindowSpec } from "./experiments";
 
-const WINDOW_KEYS = ["1,1", "1,3", "1,5", "14,1", "14,3", "14,5", "30,1", "30,3", "30,5", "90,1", "90,3", "90,5"] as const;
+const WINDOW_KEYS = [
+  "1,1",
+  "1,2",
+  "1,3",
+  "1,4",
+  "1,5",
+  "14,1",
+  "14,2",
+  "14,3",
+  "14,4",
+  "14,5",
+  "30,1",
+  "30,2",
+  "30,3",
+  "30,4",
+  "30,5",
+  "90,1",
+  "90,2",
+  "90,3",
+  "90,4",
+  "90,5",
+] as const;
+
+const WINDOW_POOL: ABWindowSpec[] = WINDOW_KEYS.map((windowKey, windowIndex) => {
+  const [windowDays, rank] = windowKey.split(",").map(Number);
+  return { windowIndex, windowKey, windowDays, rank };
+});
 
 const buildOrderings = (picker: (i: number) => TaskOrdering): ReadonlyArray<Record<string, TaskOrdering>> =>
   Array.from({ length: 6 }, (_, s) => {
@@ -24,17 +54,17 @@ const fakeOrderings = buildOrderings((i) => (i % 2 === 0 ? "AB" : "BA"));
 describe("taskForWindow", () => {
   it("returns one of the three task types", () => {
     for (let p = 0; p < 5; p += 1) {
-      for (let i = 0; i < 12; i += 1) {
+      for (let i = 0; i < WINDOWS_PER_PARTICIPANT; i += 1) {
         const task = taskForWindow(p, i);
         expect(TASK_CYCLE).toContain(task);
       }
     }
   });
 
-  it("gives each participant 4 trials per task across 12 windows", () => {
+  it("gives each participant 4 trials per task across the 12-window subset", () => {
     for (let p = 0; p < 6; p += 1) {
       const counts: Record<string, number> = { peak: 0, comparison: 0, pattern: 0 };
-      for (let i = 0; i < 12; i += 1) {
+      for (let i = 0; i < WINDOWS_PER_PARTICIPANT; i += 1) {
         const task = taskForWindow(p, i);
         counts[task] = (counts[task] ?? 0) + 1;
       }
@@ -43,7 +73,7 @@ describe("taskForWindow", () => {
   });
 
   it("covers each task exactly once per window across 3 participants", () => {
-    for (let i = 0; i < 12; i += 1) {
+    for (let i = 0; i < WINDOWS_PER_PARTICIPANT; i += 1) {
       const seen = new Set<string>();
       for (let p = 0; p < TASK_CYCLE.length; p += 1) {
         seen.add(taskForWindow(p, i));
@@ -57,6 +87,28 @@ describe("taskForWindow", () => {
     expect(() => taskForWindow(0, -1)).toThrow();
     expect(() => taskForWindow(1.5, 0)).toThrow();
     expect(() => taskForWindow(0, 1.5)).toThrow();
+  });
+});
+
+describe("selectParticipantWindows", () => {
+  it("selects a balanced 12-window subset from the 20-window pool", () => {
+    const subset = selectParticipantWindows(0, WINDOW_POOL);
+    expect(subset).toHaveLength(WINDOWS_PER_PARTICIPANT);
+    const perGroup = new Map<number, number>();
+    for (const window of subset) {
+      perGroup.set(window.windowDays, (perGroup.get(window.windowDays) ?? 0) + 1);
+    }
+    expect([...perGroup.values()]).toEqual(Array.from({ length: 4 }, () => WINDOWS_PER_GROUP_SELECTION));
+  });
+
+  it("changes the subset with participant index", () => {
+    const subset0 = selectParticipantWindows(0, WINDOW_POOL).map((w) => w.windowKey);
+    const subset1 = selectParticipantWindows(1, WINDOW_POOL).map((w) => w.windowKey);
+    expect(subset0).not.toEqual(subset1);
+  });
+
+  it("rejects invalid pool sizes", () => {
+    expect(() => selectParticipantWindows(0, WINDOW_POOL.slice(0, 19))).toThrow();
   });
 });
 
@@ -82,6 +134,6 @@ describe("balanceReport", () => {
   it("reports 12 trials per task across the 3 canonical participants", () => {
     const report = balanceReport(12, fakeOrderings);
     expect(report.perTask).toEqual({ peak: 12, comparison: 12, pattern: 12 });
-    expect(report.perOrdering.ab + report.perOrdering.ba).toBe(A_B_ORDERING_COUNT * 12);
+    expect(report.perOrdering.ab + report.perOrdering.ba).toBe(A_B_ORDERING_COUNT * WINDOW_KEYS.length);
   });
 });

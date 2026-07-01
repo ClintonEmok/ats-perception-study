@@ -24,12 +24,12 @@ export const EXPERIMENTAL_TRIAL_COUNT = 12;
 export const TRIALS_PER_TASK = 4;
 export const TASKS_PER_WINDOW = 3;
 export const PARTICIPANT_TASK_COUNT = 4;
-export const WINDOW_COUNT = 12;
+export const WINDOW_COUNT = 20;
 
 export const TASK_LABELS: Record<TaskType, string> = {
-  peak: "Peak identification",
+  peak: "Peak task",
   comparison: "Period comparison",
-  pattern: "Pattern recognition",
+  pattern: "Pattern task",
 };
 
 export const PEAK_CHOICES: ReadonlyArray<"A" | "B" | "C"> = ["A", "B", "C"];
@@ -43,6 +43,7 @@ export const PATTERN_CHOICES: ReadonlyArray<PatternKind> = [
 export const PROTOCOL_PHASES = [
   "consent",
   "instructions",
+  "practice",
   "trial",
   "questionnaire",
   "debrief",

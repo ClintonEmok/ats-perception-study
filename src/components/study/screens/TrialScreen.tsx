@@ -2,7 +2,6 @@
 
 import { useShallow } from "zustand/react/shallow";
 import { useExperimentStore } from "@/store/useExperimentStore";
-import { requireExperiment } from "@/lib/ats-study/experiments";
 import { taskForWindow } from "@/lib/ats-study/assignment";
 import { ABComparisonScreen } from "@/components/study/ABComparisonScreen";
 
@@ -13,18 +12,18 @@ export interface TrialScreenProps {
 export function TrialScreen({ onFinish }: TrialScreenProps) {
   const view = useExperimentStore(
     useShallow((state) => ({
-      experimentSlug: state.experimentSlug,
       trialCursor: state.trialCursor,
       participantIndex: state.participantIndex,
+      trialWindows: state.trialWindows,
       advanceTrial: state.advanceTrial,
+      experimentSlug: state.experimentSlug,
     })),
   );
 
-  const config = requireExperiment(view.experimentSlug);
-  const spec = config.windows[view.trialCursor] ?? null;
+  const spec = view.trialWindows[view.trialCursor] ?? null;
   if (!spec) return null;
   const taskType = taskForWindow(view.participantIndex, view.trialCursor);
-  const isLast = view.trialCursor + 1 >= config.windows.length;
+  const isLast = view.trialCursor + 1 >= view.trialWindows.length;
 
   return (
     <section
@@ -39,12 +38,12 @@ export function TrialScreen({ onFinish }: TrialScreenProps) {
         windowIndex={spec.windowIndex}
         taskType={taskType}
         isLast={isLast}
-        showEventRug={false}
+        showEventRug
         showHoverTooltips={false}
         onAdvance={() => {
           const nextIndex = view.trialCursor + 1;
           view.advanceTrial();
-          if (nextIndex >= config.windows.length) onFinish();
+          if (nextIndex >= view.trialWindows.length) onFinish();
         }}
       />
     </section>
