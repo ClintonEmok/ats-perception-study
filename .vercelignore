@@ -1,0 +1,10 @@
+node_modules/
+.next/
+data/
+datapreprocessing/
+burst_aware_experiment_output/
+/output/
+logs/
+.agents/
+.planning/
+dev.log
