@@ -1,9 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useExperimentStore } from "@/store/useExperimentStore";
 import { requireExperiment } from "@/lib/ats-study/experiments";
-import { taskForWindow } from "@/lib/ats-study/assignment";
+import { selectPracticeWindows, taskForWindow } from "@/lib/ats-study/assignment";
 import { ABComparisonScreen } from "@/components/study/ABComparisonScreen";
 
 export interface PracticeScreenProps {
@@ -11,6 +12,7 @@ export interface PracticeScreenProps {
 }
 
 export function PracticeScreen({ onFinish }: PracticeScreenProps) {
+  const [practiceCursor, setPracticeCursor] = useState(0);
   const view = useExperimentStore(
     useShallow((state) => ({
       experimentSlug: state.experimentSlug,
@@ -20,8 +22,9 @@ export function PracticeScreen({ onFinish }: PracticeScreenProps) {
     })),
   );
   const config = requireExperiment(view.experimentSlug);
-  const spec = view.trialWindows[0] ?? config.windows[0] ?? null;
-  const taskType = taskForWindow(view.participantIndex, 0);
+  const practiceWindows = useMemo(() => selectPracticeWindows(config.windows), [config.windows]);
+  const spec = practiceWindows[practiceCursor] ?? null;
+  const taskType = taskForWindow(view.participantIndex, practiceCursor);
 
   if (!spec) return null;
 
@@ -47,12 +50,18 @@ export function PracticeScreen({ onFinish }: PracticeScreenProps) {
         windowKey={spec.windowKey}
         windowDays={spec.windowDays}
         windowIndex={spec.windowIndex}
+        questionNumber={practiceCursor + 1}
+        totalQuestions={practiceWindows.length}
         taskType={taskType}
-        isLast={false}
+        isLast={practiceCursor + 1 >= practiceWindows.length}
         showEventRug
         showHoverTooltips
         recordResponse={false}
         onAdvance={() => {
+          if (practiceCursor + 1 < practiceWindows.length) {
+            setPracticeCursor((current) => current + 1);
+            return;
+          }
           view.startTrials();
           onFinish();
         }}

@@ -15,6 +15,8 @@ export const A_B_ORDERING_COUNT = 6;
 export const WINDOWS_PER_GROUP = 10;
 export const WINDOWS_PER_GROUP_SELECTION = 3;
 export const WINDOWS_PER_PARTICIPANT = 12;
+export const PRACTICE_WINDOW_COUNT = 5;
+const PRACTICE_WINDOW_KEYS = new Set(["1,1", "1,2", "1,3", "1,4", "1,5"]);
 const EXCLUDED_WINDOW_KEYS = new Set(["14,3", "30,3"]);
 
 export const TASK_CYCLE: ReadonlyArray<TaskType> = ["peak", "comparison", "pattern"] as const;
@@ -62,6 +64,14 @@ export function buildParticipantTrialItems(
   });
 }
 
+export function selectPracticeWindows(windows: ReadonlyArray<ABWindowSpec>): ABWindowSpec[] {
+  const selected = windows.filter((window) => PRACTICE_WINDOW_KEYS.has(window.windowKey));
+  if (selected.length !== PRACTICE_WINDOW_COUNT) {
+    throw new Error(`Expected ${PRACTICE_WINDOW_COUNT} practice windows, got ${selected.length}`);
+  }
+  return selected.sort((a, b) => a.windowKey.localeCompare(b.windowKey, "en-US", { numeric: true }));
+}
+
 function takeCircular<T>(items: readonly T[], start: number, count: number): T[] {
   const out: T[] = [];
   if (items.length === 0) return out;
@@ -95,9 +105,9 @@ export function selectParticipantWindows(
   const orderedGroups = [...groups.entries()].sort(([a], [b]) => a - b).map(([, group]) => group);
   if (
     orderedGroups.length !== 4 ||
-    orderedGroups.some((group) => group.length !== WINDOWS_PER_GROUP && group.length !== WINDOWS_PER_GROUP - 1)
+    orderedGroups.some((group) => ![WINDOWS_PER_GROUP, WINDOWS_PER_GROUP - 1, PRACTICE_WINDOW_COUNT].includes(group.length))
   ) {
-    throw new Error(`Expected 4 groups of 10 windows with up to one excluded window per group`);
+    throw new Error(`Expected 4 groups of 10 windows with practice and comparison exclusions accounted for`);
   }
 
   const offset = participantIndex % WINDOWS_PER_GROUP;

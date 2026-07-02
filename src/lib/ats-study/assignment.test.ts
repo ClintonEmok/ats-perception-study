@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   A_B_ORDERING_COUNT,
   TASK_CYCLE,
+  PRACTICE_WINDOW_COUNT,
   WINDOWS_PER_PARTICIPANT,
   buildParticipantTrialItems,
   type TaskOrdering,
   balanceReport,
   orderingForParticipant,
+  selectPracticeWindows,
   selectParticipantWindows,
   taskForWindow,
 } from "./assignment";
@@ -95,6 +97,20 @@ describe("selectParticipantWindows", () => {
 
   it("rejects invalid pool sizes", () => {
     expect(() => selectParticipantWindows(0, WINDOW_POOL.slice(0, 39))).toThrow();
+  });
+});
+
+describe("selectPracticeWindows", () => {
+  it("selects five 1-day practice windows", () => {
+    const practice = selectPracticeWindows(WINDOW_POOL);
+    expect(practice).toHaveLength(PRACTICE_WINDOW_COUNT);
+    expect(practice.map((window) => window.windowKey)).toEqual([
+      "1,1",
+      "1,2",
+      "1,3",
+      "1,4",
+      "1,5",
+    ]);
   });
 });
 
