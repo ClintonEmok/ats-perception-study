@@ -7,11 +7,24 @@ import { PALETTES } from '@/lib/palettes';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useFilterStore } from '@/store/useFilterStore';
 
+type FitToBoxControls = {
+  fitToBox?: (
+    box: THREE.Box3,
+    smooth?: boolean,
+    options?: {
+      paddingLeft?: number;
+      paddingRight?: number;
+      paddingTop?: number;
+      paddingBottom?: number;
+    }
+  ) => void;
+};
+
 export const ClusterLabels: React.FC = () => {
   const { clusters, selectedClusterId, hoveredClusterId, setSelectedClusterId, setHoveredClusterId, clearClusterSelection } = useClusterStore();
   const setSpatialBounds = useFilterStore((state) => state.setSpatialBounds);
   const clearSpatialBounds = useFilterStore((state) => state.clearSpatialBounds);
-  const controls = useThree((state: any) => state.controls) as any;
+  const controls = useThree((state) => state.controls as FitToBoxControls | undefined);
   const theme = useThemeStore((state) => state.theme);
   const palette = PALETTES[theme].categoryColors;
 
@@ -84,15 +97,15 @@ export const ClusterLabels: React.FC = () => {
               }}
             >
               <div 
-                className={`px-2 py-1 rounded border text-white text-[10px] whitespace-nowrap shadow-xl flex items-center gap-2 transition-transform group-hover:scale-110 group-active:scale-95 ${cluster.id === selectedClusterId ? 'bg-violet-950/95 border-violet-300/60' : cluster.id === hoveredClusterId ? 'bg-slate-950/95 border-sky-300/50' : 'bg-black/90 border-white/20'}`}
+                className={`px-2 py-1 rounded border text-[10px] whitespace-nowrap shadow-xl flex items-center gap-2 transition-transform group-hover:scale-110 group-active:scale-95 ${cluster.id === selectedClusterId ? 'bg-violet-50 border-violet-200 text-violet-950' : cluster.id === hoveredClusterId ? 'bg-sky-50 border-sky-200 text-sky-950' : 'bg-background/90 border-border text-foreground'}`}
                 style={{ borderTop: `2px solid ${resolveClusterColor(cluster.dominantType)}` }}
               >
                 <span className="font-medium">{cluster.dominantType}</span>
-                <span className="opacity-60 text-[9px] px-1 bg-white/10 rounded">{cluster.count}</span>
+                <span className="rounded bg-foreground/5 px-1 text-[9px] opacity-70">{cluster.count}</span>
               </div>
-              <div className="mt-1 rounded bg-black/75 px-2 py-1 text-[9px] leading-tight text-slate-100 shadow-lg border border-white/10 text-center whitespace-nowrap">
+              <div className="mt-1 rounded border border-border bg-background/85 px-2 py-1 text-center whitespace-nowrap text-[9px] leading-tight text-muted-foreground shadow-lg backdrop-blur">
                 <div>{formatClusterTimeRange(cluster.timeRange)}</div>
-                <div className="uppercase tracking-[0.18em] text-slate-300">{cluster.dominantType}</div>
+                <div className="uppercase tracking-[0.18em] text-foreground">{cluster.dominantType}</div>
               </div>
               {/* Leader Line (CSS) */}
               <div 

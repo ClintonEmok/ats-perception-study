@@ -376,27 +376,15 @@ export function TimeslicingAlgosRouteShell() {
   }, [adaptiveBinDiagnosticsRows, selectedBinTraitFilters]);
 
   const binTableTotalPages = Math.max(1, Math.ceil(filteredAdaptiveBinDiagnosticsRows.length / BIN_TABLE_PAGE_SIZE));
-  const clampedBinTablePage = Math.min(binTablePage, binTableTotalPages);
+  const clampedBinTablePage = showRouteDiagnosticsDetails
+    ? Math.min(binTablePage, binTableTotalPages)
+    : 1;
 
   const pagedAdaptiveBinDiagnosticsRows = useMemo(() => {
     const startIndex = (clampedBinTablePage - 1) * BIN_TABLE_PAGE_SIZE;
     const endIndex = startIndex + BIN_TABLE_PAGE_SIZE;
     return filteredAdaptiveBinDiagnosticsRows.slice(startIndex, endIndex);
   }, [BIN_TABLE_PAGE_SIZE, clampedBinTablePage, filteredAdaptiveBinDiagnosticsRows]);
-
-  useEffect(() => {
-    if (!showRouteDiagnosticsDetails) {
-      setBinTablePage(1);
-      return;
-    }
-    if (binTablePage > binTableTotalPages) {
-      setBinTablePage(binTableTotalPages);
-    }
-  }, [binTablePage, binTableTotalPages, showRouteDiagnosticsDetails]);
-
-  useEffect(() => {
-    setBinTablePage(1);
-  }, [selectedBinTraitFilters]);
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-100 md:px-12">

@@ -6,7 +6,7 @@ export interface DataPoint {
   z: number;
   type: string;
   block?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Re-export ColumnarData from canonical location

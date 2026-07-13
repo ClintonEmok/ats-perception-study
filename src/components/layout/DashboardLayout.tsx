@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useSyncExternalStore } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { useLayoutStore } from "@/store/useLayoutStore";
 
@@ -18,11 +18,11 @@ export default function DashboardLayout({
   className = "",
 }: DashboardLayoutProps) {
   const { outerLayout, innerLayout, setOuterLayout, setInnerLayout } = useLayoutStore();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   if (!isMounted) {
     return null; // Avoid hydration mismatch and ensure store is ready

@@ -194,21 +194,21 @@ export function OnboardingTour() {
           // elements to the dark card language from the UI spec.
           popover.wrapper.classList.add(
             cn(
-              "rounded-lg border border-slate-700 bg-slate-900 text-slate-100",
+              "rounded-lg border border-border bg-card text-card-foreground",
               "shadow-xl backdrop-blur",
             ),
           );
           popover.wrapper.style.padding = "16px";
           popover.wrapper.style.maxWidth = "420px";
-          popover.title.classList.add("text-base font-semibold text-slate-50");
+          popover.title.classList.add("text-base font-semibold text-foreground");
           popover.title.style.marginBottom = "6px";
-          popover.description.classList.add("text-sm leading-relaxed text-slate-300");
+          popover.description.classList.add("text-sm leading-relaxed text-muted-foreground");
           popover.description.style.fontSize = "14px";
           popover.footer.style.marginTop = "16px";
           popover.footer.classList.add("flex items-center justify-between gap-2");
           for (const button of [popover.nextButton, popover.previousButton]) {
             button.classList.add(
-              "rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-[12px] font-semibold text-slate-100 hover:bg-slate-700",
+              "rounded-md border border-border bg-muted px-3 py-1.5 text-[12px] font-semibold text-foreground hover:bg-muted/80",
             );
             button.style.background = "";
             button.style.color = "";
@@ -217,9 +217,9 @@ export function OnboardingTour() {
           popover.nextButton.classList.add(
             "border-violet-500/70 bg-violet-500/15 text-violet-100",
           );
-          popover.closeButton.classList.add("text-slate-400 hover:text-slate-100");
-          popover.progress.classList.add("text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400");
-          popover.arrow.style.borderTopColor = "rgb(15 23 42 / 1)";
+          popover.closeButton.classList.add("text-muted-foreground hover:text-foreground");
+          popover.progress.classList.add("text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground");
+          popover.arrow.style.borderTopColor = "rgb(255 255 255 / 1)";
         },
         steps: EVAL_TRAINING_STEPS.map((step) => ({
           popover: { ...step.popover },

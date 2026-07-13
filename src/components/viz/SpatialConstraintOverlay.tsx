@@ -64,8 +64,8 @@ export function SpatialConstraintOverlay() {
               <div
                 className={`rounded border px-2 py-1 text-[10px] font-medium shadow-md backdrop-blur ${
                   isActive
-                    ? 'border-emerald-300/90 bg-emerald-500/20 text-emerald-100'
-                    : 'border-slate-300/60 bg-slate-900/75 text-slate-100'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                    : 'border-border bg-background/85 text-foreground'
                 }`}
               >
                 {overlay.label}

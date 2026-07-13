@@ -92,7 +92,7 @@ export async function buildFullPopulationStkdeInputs(
 ): Promise<FullPopulationStkdeInputs> {
   const startedAt = performance.now();
   const chunkSize = Math.max(1, options?.chunkSize ?? 20_000);
-  const db = (await getDb()) as DbLike;
+  const db = (await getDb()) as unknown as DbLike;
   const tableName = await ensureSortedCrimesTable();
   const grid = buildStkdeGridConfig(request);
   const cellCount = grid.rows * grid.cols;

@@ -35,7 +35,6 @@ import { FeatureFlagItem } from './FeatureFlagItem';
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  options?: any; // Add generic options prop to fix linter
 }
 
 const CATEGORIES: { value: FeatureCategory; label: string }[] = [

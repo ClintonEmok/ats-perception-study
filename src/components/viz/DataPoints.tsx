@@ -171,7 +171,7 @@ export const DataPoints = forwardRef<THREE.InstancedMesh, DataPointsProps>(({ da
     const colorArr = new Float32Array(count * 3);
     data.forEach((point, i) => {
       types[i] = getCrimeTypeId(point.type);
-      districts[i] = point.districtId || 0;
+      districts[i] = typeof point.districtId === 'number' ? point.districtId : 0;
       // Use colorMap from store, normalize point type to UPPERCASE
       const typeKey = point.type.toUpperCase();
       // Try exact match, or 'OTHER'

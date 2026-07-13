@@ -55,6 +55,8 @@ describe('resetSandboxState', () => {
           range: [10, 30],
           weight: 2,
           enabled: true,
+          source: 'manual',
+          warpProfileId: null,
         },
       ],
     });

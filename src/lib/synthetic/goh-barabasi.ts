@@ -151,7 +151,7 @@ function alphaFor(type: string, baseAlpha: number, overrides: Record<string, num
  * bursty feel without one outlier consuming the entire window.
  */
 function samplePowerLawIET(rng: () => number, alpha: number, capSec: number): number {
-  const u = rng();
+  let u = rng();
   if (u <= 0) u = 1e-12;
   const exponent = -1 / (alpha - 1);
   const tau = Math.pow(1 - u, exponent);

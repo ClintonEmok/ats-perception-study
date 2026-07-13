@@ -328,23 +328,23 @@ export default function TimelineTest3DPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-100 md:px-12">
+    <main className="min-h-screen bg-background px-6 py-10 text-foreground md:px-12">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">Timeline Test 3D</h1>
-          <p className="max-w-3xl text-sm text-slate-300">
+          <p className="max-w-3xl text-sm text-muted-foreground">
             Dedicated 3D route foundation with route-local orchestration helpers.
           </p>
         </header>
 
-        <section className="rounded-xl border border-slate-700/60 bg-slate-900/65 p-5 text-sm text-slate-300">
+        <section className="rounded-xl border border-border bg-card/65 p-5 text-sm text-muted-foreground">
           <div className="flex flex-wrap items-center gap-6">
             <span>
-              Data: <strong className="text-slate-100">{dataSummaryLabel}</strong>
+              Data: <strong className="text-foreground">{dataSummaryLabel}</strong>
             </span>
             <span>
               Range:{" "}
-              <strong className="text-slate-100">
+              <strong className="text-foreground">
                 {new Date(domainStartSec * 1000).toLocaleDateString()} -{" "}
                 {new Date(domainEndSec * 1000).toLocaleDateString()}
               </strong>
@@ -359,9 +359,9 @@ export default function TimelineTest3DPage() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-md border border-slate-700/70 bg-slate-950/60 p-3">
+          <div className="rounded-md border border-border bg-background/60 p-3">
             {isLoading ? (
-              <div className="flex h-40 items-center justify-center text-slate-400">
+              <div className="flex h-40 items-center justify-center text-muted-foreground">
                 Loading crime data...
               </div>
             ) : error ? (

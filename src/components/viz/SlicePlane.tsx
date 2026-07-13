@@ -90,16 +90,18 @@ export function SlicePlane({ slice, y, onUpdate, yToTime, timeToY, stkdeSurface,
     if (slice.isLocked) return;
     e.stopPropagation(); // Stop camera controls
     setIsDragging(true);
-    // @ts-ignore - setPointerCapture exists on Element
-    gl.domElement.setPointerCapture(e.pointerId);
+    if ('setPointerCapture' in gl.domElement) {
+      gl.domElement.setPointerCapture(e.pointerId);
+    }
   };
 
   const handlePointerUp = (e: ThreeEvent<PointerEvent>) => {
     if (slice.isLocked) return;
     e.stopPropagation();
     setIsDragging(false);
-    // @ts-ignore
-    gl.domElement.releasePointerCapture(e.pointerId);
+    if ('releasePointerCapture' in gl.domElement) {
+      gl.domElement.releasePointerCapture(e.pointerId);
+    }
   };
 
   // Global pointer move for robust dragging
@@ -224,11 +226,11 @@ export function SlicePlane({ slice, y, onUpdate, yToTime, timeToY, stkdeSurface,
         </mesh>
         
         <Html position={[2, 0, 0]} center className="pointer-events-none select-none">
-          <div className="rounded-md border border-white/15 bg-slate-950/90 px-2 py-1 text-[10px] leading-tight text-slate-50 shadow-sm whitespace-nowrap">
+          <div className="rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] leading-tight text-foreground shadow-sm whitespace-nowrap backdrop-blur">
             <div className="font-medium tracking-wide">
               {label}
             </div>
-            <div className="text-[9px] uppercase tracking-[0.18em] text-slate-300">
+            <div className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
               {slice.isLocked ? 'Locked' : isRange ? 'Range' : 'Point'}
             </div>
           </div>

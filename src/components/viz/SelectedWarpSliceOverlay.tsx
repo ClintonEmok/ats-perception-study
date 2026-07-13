@@ -8,10 +8,44 @@ import { useViewportStore } from '@/lib/stores/viewportStore';
 import { useAdaptiveStore } from '@/store/useAdaptiveStore';
 import { useTimeStore } from '@/store/useTimeStore';
 import { useWarpSliceStore } from '@/store/useWarpSliceStore';
+import type { TimeSlice } from '@/store/useSliceStore';
+import type { WarpSlice } from '@/store/useWarpSliceStore';
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const DATA_MIN_TIMESTAMP = 978307200; // 2001-01-01
 const DATA_MAX_TIMESTAMP = 1767571200; // 2026-01-01
+const DEFAULT_MAP_DOMAIN: [number, number] = [0, 100];
+
+type OverlaySlice = TimeSlice | WarpSlice;
+
+type SliceStoreSelectionState = {
+  activeSliceId?: string | null;
+  activeWarpId?: string | null;
+  selectedSliceId?: string | null;
+};
+
+const isWarpSlice = (slice: OverlaySlice): slice is WarpSlice => 'label' in slice;
+
+const getOverlaySliceRange = (slice: OverlaySlice): [number, number] => {
+  if (Array.isArray(slice.range) && slice.range.length >= 2) {
+    return [Number(slice.range[0]), Number(slice.range[1])];
+  }
+
+  if (isWarpSlice(slice)) {
+    return [0, 0];
+  }
+
+  return [Number(slice.time), Number(slice.time)];
+};
+
+const isOverlaySliceEnabled = (slice: OverlaySlice) =>
+  isWarpSlice(slice) ? slice.enabled : slice.isVisible;
+
+const getOverlaySliceWeight = (slice: OverlaySlice) =>
+  isWarpSlice(slice) ? slice.weight : (slice.warpWeight ?? 1);
+
+const getOverlaySliceLabel = (slice: OverlaySlice) =>
+  isWarpSlice(slice) ? slice.label : slice.name;
 
 const buildSliceAuthoredWarpMap = (
   slices: Array<{ enabled: boolean; range: [number, number]; weight: number }>,
@@ -65,16 +99,14 @@ const buildSliceAuthoredWarpMap = (
   return authoredMap;
 };
 
-const normalizeStoreSlices = (slices: Array<any>): Array<{ enabled: boolean; range: [number, number]; weight: number }> =>
+const normalizeStoreSlices = (slices: OverlaySlice[]): Array<{ enabled: boolean; range: [number, number]; weight: number }> =>
   slices.map((slice) => {
-    const range = Array.isArray(slice.range) && slice.range.length >= 2
-      ? [Number(slice.range[0]), Number(slice.range[1])] as [number, number]
-      : [Number(slice.time ?? 0), Number(slice.time ?? 0)] as [number, number];
+    const range = getOverlaySliceRange(slice);
 
     return {
-      enabled: Boolean(slice.enabled ?? slice.warpEnabled ?? slice.isVisible ?? true),
+      enabled: isOverlaySliceEnabled(slice),
       range,
-      weight: Number.isFinite(Number(slice.weight ?? slice.warpWeight ?? 1)) ? Number(slice.weight ?? slice.warpWeight ?? 1) : 1,
+      weight: Number.isFinite(getOverlaySliceWeight(slice)) ? getOverlaySliceWeight(slice) : 1,
     };
   });
 
@@ -114,19 +146,19 @@ export function SelectedWarpSliceOverlay({
   const sliceStore = (sliceStoreOverride ?? useWarpSliceStore) as typeof useWarpSliceStore;
   const adaptiveStore = (adaptiveStoreOverride ?? useAdaptiveStore) as typeof useAdaptiveStore;
   const timeStore = (timeStoreOverride ?? useTimeStore) as typeof useTimeStore;
-  const slices = useStore(sliceStore, (state) => state.slices);
+  const slices = useStore(sliceStore, (state) => state.slices as OverlaySlice[]);
   const selectedSliceId = useStore(
     sliceStore,
-    (state: any) => state.selectedSliceId ?? state.activeSliceId ?? state.activeWarpId ?? null
+    (state: SliceStoreSelectionState) => state.selectedSliceId ?? state.activeSliceId ?? state.activeWarpId ?? null
   );
   const timeScaleMode = useStore(timeStore, (state) => state.timeScaleMode);
   const warpFactor = useStore(adaptiveStore, (state) => state.warpFactor);
   const warpSource = useStore(adaptiveStore, (state) => state.warpSource);
   const warpMap = useStore(adaptiveStore, (state) => state.warpMap);
-  const mapDomain = useStore(adaptiveStore, (state) => state.mapDomain) ?? [0, 100];
+  const mapDomain = useStore(adaptiveStore, (state) => state.mapDomain ?? DEFAULT_MAP_DOMAIN);
 
   const authoredWarpMap = useMemo(
-    () => buildSliceAuthoredWarpMap(normalizeStoreSlices(slices as Array<any>), mapDomain, Math.max(96, warpMap?.length || 0)),
+    () => buildSliceAuthoredWarpMap(normalizeStoreSlices(slices), mapDomain, Math.max(96, warpMap?.length || 0)),
     [mapDomain, slices, warpMap?.length]
   );
   const effectiveWarpMap = warpSource === 'slice-authored' ? authoredWarpMap : warpMap;
@@ -181,16 +213,13 @@ export function SelectedWarpSliceOverlay({
     if (!selectedSliceId) {
       return null;
     }
-    return slices.find((slice: any) => slice.id === selectedSliceId && (slice.enabled ?? slice.isVisible ?? true)) ?? null;
+    return slices.find((slice) => slice.id === selectedSliceId && isOverlaySliceEnabled(slice)) ?? null;
   }, [selectedSliceId, slices]);
 
-  const selectedSliceMeta = selectedSlice as any;
-  const selectedSliceRange: [number, number] = selectedSliceMeta?.range && selectedSliceMeta.range.length >= 2
-    ? [Number(selectedSliceMeta.range[0]), Number(selectedSliceMeta.range[1])]
-    : [Number(selectedSliceMeta?.time ?? 0), Number(selectedSliceMeta?.time ?? 0)];
+  const selectedSliceRange: [number, number] = selectedSlice ? getOverlaySliceRange(selectedSlice) : [0, 0];
 
   const sliceLabel = selectedSlice
-    ? `${selectedSliceMeta?.name?.trim() || 'Applied slice'} · linked selection`
+    ? `${getOverlaySliceLabel(selectedSlice)?.trim() || 'Applied slice'} · linked selection`
     : 'Linked selection';
 
   if (!selectedSlice) {
@@ -232,7 +261,7 @@ export function SelectedWarpSliceOverlay({
         <Edges color="#22d3ee" linewidth={1} scale={1.001} />
       </mesh>
       <Html position={[0, height / 2 + 4, 0]} center className="pointer-events-none select-none">
-        <div className="rounded-full border border-cyan-300/40 bg-slate-950/90 px-2 py-1 text-[10px] text-cyan-100 shadow-sm">
+        <div className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-[10px] text-cyan-950 shadow-sm">
           {sliceLabel}
           {timeScaleMode === 'adaptive' ? ' · compare cue' : ' · relational cue'}
         </div>

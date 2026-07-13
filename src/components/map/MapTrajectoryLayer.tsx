@@ -42,8 +42,13 @@ export const MapTrajectoryLayer: React.FC = () => {
       }
     } else {
       points = data
-        .filter(p => p.block === selectedBlock)
-        .map(p => ({ lat: p.lat, lon: p.lon }));
+        .filter(
+          (p) =>
+            p.block === selectedBlock &&
+            typeof p.lat === 'number' &&
+            typeof p.lon === 'number'
+        )
+        .map((p) => ({ lat: p.lat as number, lon: p.lon as number }));
     }
 
     if (points.length < 2) return null;

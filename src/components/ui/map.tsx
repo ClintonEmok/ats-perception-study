@@ -102,7 +102,7 @@ function createLazyComponent<T extends ComponentType<any>>(
 ) {
     const LazyComponent = lazy(factory)
 
-    return (props: React.ComponentProps<T>) => {
+    const WrappedLazyComponent = (props: React.ComponentProps<T>) => {
         const [isMounted, setIsMounted] = useState(false)
 
         useEffect(() => {
@@ -119,6 +119,10 @@ function createLazyComponent<T extends ComponentType<any>>(
             </Suspense>
         )
     }
+
+    WrappedLazyComponent.displayName = "WrappedLazyComponent"
+
+    return WrappedLazyComponent
 }
 
 const LeafletMapContainer = createLazyComponent(() =>
@@ -506,8 +510,7 @@ function MapLayersControl({
             </DropdownMenuTrigger>
             <DropdownMenuContent
                 align="end"
-                className="z-1000"
-                container={map.getContainer()}>
+                className="z-1000">
                 {showTileLayersDropdown && (
                     <>
                         <DropdownMenuLabel>{tileLayersLabel}</DropdownMenuLabel>

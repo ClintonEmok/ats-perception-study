@@ -1,14 +1,15 @@
 import { useState, useCallback } from 'react';
 import { RecordBatchReader } from 'apache-arrow';
 
+type StreamBatch = unknown;
+
 interface UseCrimeStreamResult {
   isLoading: boolean;
   error: Error | null;
   fetchStream: () => Promise<void>;
-  batches: any[]; // We might want to be more specific with types later
 }
 
-export const useCrimeStream = (onBatch?: (batch: any) => void) => {
+export const useCrimeStream = (onBatch?: (batch: StreamBatch) => void): UseCrimeStreamResult => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

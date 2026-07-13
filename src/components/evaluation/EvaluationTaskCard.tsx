@@ -186,41 +186,41 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
     >
       <div
         className={cn(
-          "pointer-events-auto rounded-lg border border-slate-700 bg-slate-900/95 text-slate-100 shadow-2xl backdrop-blur",
+          "pointer-events-auto rounded-lg border border-border bg-card/95 text-card-foreground shadow-2xl backdrop-blur",
           "max-w-[calc(100vw-48px)]",
         )}
         style={{ maxWidth: NARROW_WIDTH_PX }}
       >
-        <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+        <header className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <ListChecks className="size-3.5 text-violet-300" aria-hidden />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Current task
             </span>
           </div>
-          <span className="font-mono text-[11px] font-semibold text-slate-300">
+          <span className="font-mono text-[11px] font-semibold text-muted-foreground">
             {taskPositionLabel}
           </span>
         </header>
 
         <div className="space-y-3 px-4 py-4">
           <div>
-            <h3 className="text-base font-semibold text-slate-50">{task.shortLabel}</h3>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <h3 className="text-base font-semibold text-foreground">{task.shortLabel}</h3>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {task.id}
             </p>
           </div>
-          <p className="text-sm leading-relaxed text-slate-200">{task.prompt}</p>
+          <p className="text-sm leading-relaxed text-foreground/85">{task.prompt}</p>
 
-          <div className="rounded-md border border-slate-800 bg-slate-950/50 px-3 py-2 text-[12px] text-slate-300">
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
             <div className="flex items-center justify-between gap-3">
-              <span className="uppercase tracking-[0.18em] text-slate-500">Time range</span>
-              <span className="font-mono text-slate-100">{task.timeRange}</span>
+              <span className="uppercase tracking-[0.18em] text-muted-foreground">Time range</span>
+              <span className="font-mono text-foreground">{task.timeRange}</span>
             </div>
             {task.comparisonRange ? (
               <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="uppercase tracking-[0.18em] text-slate-500">Compare against</span>
-                <span className="font-mono text-slate-100">{task.comparisonRange}</span>
+                <span className="uppercase tracking-[0.18em] text-muted-foreground">Compare against</span>
+                <span className="font-mono text-foreground">{task.comparisonRange}</span>
               </div>
             ) : null}
           </div>
@@ -228,7 +228,7 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
           <div className="space-y-2">
             <label
               htmlFor="eval-task-answer"
-              className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400"
+              className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
             >
               Participant answer
             </label>
@@ -239,13 +239,13 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
               placeholder="Type the participant's answer verbatim"
               disabled={readOnly || progress?.state === "completed"}
               rows={3}
-              className="w-full resize-none rounded-md border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40 disabled:opacity-50"
+              className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40 disabled:opacity-50"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1 rounded-md border border-slate-800 bg-slate-950/60 px-2 py-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/30 px-2 py-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Accuracy
               </span>
               <div className="flex items-center gap-2">
@@ -256,7 +256,7 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
                     "rounded-md border px-2 py-0.5 text-[11px] font-semibold",
                     accuracy === 0
                       ? "border-violet-500/70 bg-violet-500/15 text-violet-100"
-                      : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800",
+                      : "border-border bg-background text-muted-foreground hover:bg-muted/80",
                   )}
                   disabled={readOnly || progress?.state === "completed"}
                 >
@@ -269,7 +269,7 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
                     "rounded-md border px-2 py-0.5 text-[11px] font-semibold",
                     accuracy === 1
                       ? "border-violet-500/70 bg-violet-500/15 text-violet-100"
-                      : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800",
+                      : "border-border bg-background text-muted-foreground hover:bg-muted/80",
                   )}
                   disabled={readOnly || progress?.state === "completed"}
                 >
@@ -277,8 +277,8 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
                 </button>
               </div>
             </div>
-            <div className="flex flex-col gap-1 rounded-md border border-slate-800 bg-slate-950/60 px-2 py-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="flex flex-col gap-1 rounded-md border border-border bg-muted/30 px-2 py-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Confidence
               </span>
               <div className="flex items-center gap-2">
@@ -296,7 +296,7 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
                   disabled={readOnly || !showConfidenceStage}
                   aria-label="Participant confidence 1-5"
                 />
-                <span className="font-mono text-sm font-semibold text-slate-100">
+                <span className="font-mono text-sm font-semibold text-foreground">
                   {confidence}
                 </span>
               </div>
@@ -304,7 +304,7 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
           </div>
         </div>
 
-        <footer className="flex items-center justify-between gap-2 border-t border-slate-800 bg-slate-950/60 px-4 py-3">
+        <footer className="flex items-center justify-between gap-2 border-t border-border bg-muted/30 px-4 py-3">
           <Button
             type="button"
             variant="outline"
@@ -316,7 +316,7 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
             Record answer
           </Button>
           {showAnswerStage && !showConfidenceStage ? (
-            <span className="text-[11px] text-slate-500">Type an answer to continue.</span>
+            <span className="text-[11px] text-muted-foreground">Type an answer to continue.</span>
           ) : null}
           {showConfidenceStage ? (
             <Button
@@ -341,7 +341,7 @@ export function EvaluationTaskCard({ readOnly = false }: TaskCardProps) {
                 Advance to questionnaire
               </Button>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
                 <CheckCircle2 className="size-3 text-violet-300" />
                 {currentTaskId} recorded
               </span>

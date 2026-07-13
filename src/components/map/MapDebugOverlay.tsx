@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import type { FeatureCollection, Geometry } from 'geojson';
 import { Layer, Source } from 'react-map-gl/maplibre';
 
 interface MapDebugOverlayProps {
@@ -55,7 +56,7 @@ export default function MapDebugOverlay({ clickPoint, selectedPoint }: MapDebugO
   if (!clickPoint && !selectedPoint) return null;
 
   return (
-    <Source id="debug-overlay-source" type="geojson" data={geoJson as any}>
+      <Source id="debug-overlay-source" type="geojson" data={geoJson as FeatureCollection<Geometry>}>
       {/* Link Line */}
       <Layer
         id="debug-line"

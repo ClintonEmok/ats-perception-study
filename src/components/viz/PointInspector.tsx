@@ -104,11 +104,11 @@ export function PointInspector({ pointId }: PointInspectorProps) {
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">District:</span>
-          <span>{point.district}</span>
+          <span>{String(point.district ?? 'Unknown')}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Block:</span>
-          <span className="truncate max-w-[150px]">{point.block}</span>
+          <span className="truncate max-w-[150px]">{String(point.block ?? 'Unknown')}</span>
         </div>
       </div>
     </div>

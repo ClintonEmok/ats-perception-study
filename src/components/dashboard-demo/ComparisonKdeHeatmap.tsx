@@ -90,22 +90,22 @@ export function ComparisonKdeHeatmap({
   const backgroundFill = useMemo(() => `rgb(${interpolateColor(0, colorScheme).join(',')})`, [colorScheme]);
 
   return (
-    <figure className="rounded-lg border border-border/70 bg-slate-950/40 p-2">
+    <figure className="rounded-lg border border-border/70 bg-card/60 p-2">
       <figcaption className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">
+        <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </span>
-        <span className="text-[10px] tabular-nums text-slate-500">
+        <span className="text-[10px] tabular-nums text-muted-foreground">
           {crimeCount.toLocaleString()} events
         </span>
       </figcaption>
 
       <div
-        className="relative overflow-hidden rounded-md border border-slate-800/80"
+        className="relative overflow-hidden rounded-md border border-border/70"
         style={{ width: size, height: size }}
       >
         {isLoading || !grid ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 text-[10px] text-slate-500">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 text-[10px] text-muted-foreground">
             {isLoading ? 'Loading…' : 'No data'}
           </div>
         ) : (

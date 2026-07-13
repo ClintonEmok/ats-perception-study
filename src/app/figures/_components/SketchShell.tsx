@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 
 type SketchShellProps = {
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
   children: ReactNode;
 };
 
@@ -16,11 +19,20 @@ type SketchChipProps = {
   children: ReactNode;
 };
 
-export function SketchShell({ children }: SketchShellProps) {
+export function SketchShell({ eyebrow, title, subtitle, children }: SketchShellProps) {
   return (
     <main className="min-h-screen bg-neutral-100 text-neutral-900">
       <div className="flex min-h-screen w-full flex-col overflow-hidden p-0">
-        <section className="min-h-0 flex-1 p-4 sm:p-6">{children}</section>
+        <section className="min-h-0 flex-1 p-4 sm:p-6">
+          {eyebrow || title || subtitle ? (
+            <header className="mb-6 rounded-lg border border-neutral-300 bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.02)] sm:px-5">
+              {eyebrow ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">{eyebrow}</p> : null}
+              {title ? <h1 className="mt-1 text-lg font-semibold text-neutral-900">{title}</h1> : null}
+              {subtitle ? <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">{subtitle}</p> : null}
+            </header>
+          ) : null}
+          {children}
+        </section>
       </div>
     </main>
   );

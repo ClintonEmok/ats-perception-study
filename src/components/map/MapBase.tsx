@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map, { MapRef, MapLayerMouseEvent } from 'react-map-gl/maplibre';
+import Map, { MapRef, MapLayerMouseEvent, ViewStateChangeEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { CENTER } from '@/lib/projection';
 import { useThemeStore } from '@/store/useThemeStore';
@@ -24,7 +24,7 @@ interface MapBaseProps {
   onMouseUp?: (event: MapLayerMouseEvent) => void;
   onClick?: (event: MapLayerMouseEvent) => void;
   onMouseLeave?: (event: MapLayerMouseEvent) => void;
-  onMoveEnd?: (event: any) => void;
+  onMoveEnd?: (event: ViewStateChangeEvent) => void;
   dragPan?: boolean;
   cursor?: string;
 }

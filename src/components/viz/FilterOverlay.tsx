@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFilterStore } from "@/store/useFilterStore";
 import { getCrimeTypeId, getDistrictId } from "@/lib/category-maps";
@@ -58,14 +58,15 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
   const clearAllPresets = useFilterStore((state) => state.clearAllPresets);
   const hasPresets = useFilterStore((state) => state.hasPresets());
 
-  const [startInput, setStartInput] = useState("");
-  const [endInput, setEndInput] = useState("");
   const [typeQuery, setTypeQuery] = useState("");
   const [districtQuery, setDistrictQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"types" | "districts" | "time" | "presets">(
     "types"
   );
   const { log } = useLogger();
+  const normalizedSelectedTimeRange = useMemo(() => normalizeTimeRange(selectedTimeRange), [selectedTimeRange]);
+  const [fallbackRange] = useState<[number, number]>(() => [0, Math.floor(Date.now() / 1000)]);
+  const [draftTimeRange, setDraftTimeRange] = useState<{ start: string; end: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -84,8 +85,6 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
   const [facetData, setFacetData] = useState<FacetsResponse>({ types: [], districts: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [facetError, setFacetError] = useState<string | null>(null);
-  const fallbackRangeRef = useRef<[number, number]>([0, Math.floor(Date.now() / 1000)]);
-  const normalizedSelectedTimeRange = useMemo(() => normalizeTimeRange(selectedTimeRange), [selectedTimeRange]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -98,21 +97,10 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  const lastTimeRangeKeyRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const nextKey = normalizedSelectedTimeRange ? `${normalizedSelectedTimeRange[0]}-${normalizedSelectedTimeRange[1]}` : "none";
-    if (lastTimeRangeKeyRef.current === nextKey) return;
-    lastTimeRangeKeyRef.current = nextKey;
-
-    if (normalizedSelectedTimeRange) {
-      setStartInput(toInputDate(normalizedSelectedTimeRange[0]));
-      setEndInput(toInputDate(normalizedSelectedTimeRange[1]));
-      return;
-    }
-    setStartInput("");
-    setEndInput("");
-  }, [normalizedSelectedTimeRange]);
+  const selectedStartInput = normalizedSelectedTimeRange ? toInputDate(normalizedSelectedTimeRange[0]) : "";
+  const selectedEndInput = normalizedSelectedTimeRange ? toInputDate(normalizedSelectedTimeRange[1]) : "";
+  const startInput = draftTimeRange?.start ?? selectedStartInput;
+  const endInput = draftTimeRange?.end ?? selectedEndInput;
 
   const timeRangeLabel = useMemo(() => {
     if (!normalizedSelectedTimeRange) {
@@ -122,8 +110,8 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
   }, [normalizedSelectedTimeRange]);
 
   const activeRange = useMemo(
-    () => normalizedSelectedTimeRange ?? fallbackRangeRef.current,
-    [normalizedSelectedTimeRange]
+    () => normalizedSelectedTimeRange ?? fallbackRange,
+    [fallbackRange, normalizedSelectedTimeRange]
   );
 
   useEffect(() => {
@@ -245,6 +233,7 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
     }
     log("filter_time_range_applied", { start, end });
     setTimeRange([start, end]);
+    setDraftTimeRange(null);
   }, [normalizedSelectedTimeRange, parsedStart, parsedEnd, setTimeRange, log]);
 
   if (!isOpen) return null;
@@ -254,7 +243,7 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
     <div className="fixed inset-0 z-[999] flex items-start justify-end p-4">
       <button
         aria-label="Close filters"
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
         onClick={onClose}
       />
 
@@ -408,7 +397,10 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Time Range</h3>
                 <button
-                  onClick={clearTimeRange}
+                  onClick={() => {
+                    clearTimeRange();
+                    setDraftTimeRange(null);
+                  }}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   Clear
@@ -425,7 +417,10 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
                     value={startInput}
                     onChange={(event) => {
                       const nextValue = event.target.value;
-                      setStartInput(nextValue);
+                      setDraftTimeRange((current) => ({
+                        start: nextValue,
+                        end: current?.end ?? endInput,
+                      }));
                     }}
                   />
                 </label>
@@ -437,7 +432,10 @@ export function FilterOverlay({ isOpen, onClose }: FilterOverlayProps) {
                     value={endInput}
                     onChange={(event) => {
                       const nextValue = event.target.value;
-                      setEndInput(nextValue);
+                      setDraftTimeRange((current) => ({
+                        start: current?.start ?? startInput,
+                        end: nextValue,
+                      }));
                     }}
                   />
                 </label>

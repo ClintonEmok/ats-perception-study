@@ -100,4 +100,4 @@ export const PALETTES: Record<Theme, Palette> = {
   },
 };
 
-export const DEFAULT_THEME: Theme = 'dark';
+export const DEFAULT_THEME: Theme = 'light';

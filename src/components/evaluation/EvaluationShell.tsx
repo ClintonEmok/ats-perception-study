@@ -110,7 +110,7 @@ export function EvaluationShell() {
   };
 
   return (
-    <div className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-slate-950 text-slate-100">
+    <div className="relative flex h-screen min-h-0 flex-col overflow-hidden bg-background text-foreground">
       <EvaluationHeader />
 
       <div className="relative min-h-0 flex-1">
@@ -141,25 +141,25 @@ export function EvaluationShell() {
 
 function WelcomeScreen({ onRerunTraining }: { onRerunTraining: () => void }) {
   return (
-    <div
-      className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm"
-      aria-label="welcome overlay"
-    >
-      <Card className="pointer-events-auto w-full max-w-[520px] border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+      <div
+        className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/70 backdrop-blur-sm"
+        aria-label="welcome overlay"
+      >
+        <Card className="pointer-events-auto w-full max-w-[520px] border-border bg-card text-card-foreground shadow-2xl">
         <CardHeader>
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-300">
             Step 1 of 8
           </span>
-          <CardTitle className="text-base font-semibold text-slate-50">
+          <CardTitle className="text-base font-semibold text-foreground">
             No session in progress
           </CardTitle>
-          <CardDescription className="text-sm text-slate-300">
+          <CardDescription className="text-sm text-muted-foreground">
             Enter a participant ID, then select <strong>Start session</strong> in the
             header to unlock training, tasks, and questionnaires for this participant.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-[12px] leading-relaxed text-slate-400">
+          <p className="text-[12px] leading-relaxed text-muted-foreground">
             Use the header&apos;s <strong>Start session</strong> button to begin. The
             session id, block order, and elapsed timer will appear in the header
             chrome. Training must be completed before the task steps become
@@ -185,25 +185,25 @@ function WelcomeScreen({ onRerunTraining }: { onRerunTraining: () => void }) {
 
 function InterviewPrompt() {
   return (
-    <div
-      className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm"
-      aria-label="interview overlay"
-    >
-      <Card className="pointer-events-auto w-full max-w-[520px] border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+      <div
+        className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/70 backdrop-blur-sm"
+        aria-label="interview overlay"
+      >
+        <Card className="pointer-events-auto w-full max-w-[520px] border-border bg-card text-card-foreground shadow-2xl">
         <CardHeader>
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-300">
             Step 7 of 8
           </span>
-          <CardTitle className="text-base font-semibold text-slate-50">
+          <CardTitle className="text-base font-semibold text-foreground">
             Post-session interview
           </CardTitle>
-          <CardDescription className="text-sm text-slate-300">
+          <CardDescription className="text-sm text-muted-foreground">
             Conduct the open-ended interview. Use the paper backup form for
             note-taking; advance when finished.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="ml-4 list-disc space-y-1 text-[12px] text-slate-300">
+          <ul className="ml-4 list-disc space-y-1 text-[12px] text-muted-foreground">
             <li>What stood out about each condition?</li>
             <li>Which interactions felt natural? Which felt forced?</li>
             <li>Did you notice the unlabeled toggle? When did you try it?</li>
@@ -225,34 +225,34 @@ interface DoneScreenProps {
 
 function DoneScreen({ participantId, blockOrder, onRestart, onEndSession, onReturnHome }: DoneScreenProps) {
   return (
-    <div
-      className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm"
-      aria-label="session complete overlay"
-    >
-      <Card className="pointer-events-auto w-full max-w-[520px] border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+      <div
+        className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+        aria-label="session complete overlay"
+      >
+        <Card className="pointer-events-auto w-full max-w-[520px] border-border bg-card text-card-foreground shadow-2xl">
         <CardHeader>
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-300">
             Step 8 of 8
           </span>
-          <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-50">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold text-foreground">
             <PartyPopper className="size-4 text-violet-300" />
             Session complete
           </CardTitle>
-          <CardDescription className="text-sm text-slate-300">
+          <CardDescription className="text-sm text-muted-foreground">
             Thank the participant and release them. All task and questionnaire
             writes have been mirrored to the local study database.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <dl className="grid grid-cols-2 gap-2 text-[12px]">
-            <dt className="font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <dt className="font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Participant
             </dt>
-            <dd className="font-mono text-slate-100">{participantId ?? "—"}</dd>
-            <dt className="font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <dd className="font-mono text-foreground">{participantId ?? "—"}</dd>
+            <dt className="font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Block order
             </dt>
-            <dd className="font-mono text-slate-100">{blockOrder ?? "—"}</dd>
+            <dd className="font-mono text-foreground">{blockOrder ?? "—"}</dd>
           </dl>
           <div className="flex flex-wrap items-center gap-2">
             <Button

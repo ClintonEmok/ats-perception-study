@@ -2,13 +2,18 @@ import { describe, expect, test } from 'vitest';
 import type { FilteredPoint } from '@/lib/data/types';
 import { analyzeClusters, groupClusterAnalysesBySlice } from './cluster-analysis';
 
-const buildPoint = (overrides: Partial<FilteredPoint> & { typeId: number; districtId: number }): FilteredPoint => ({
+const buildPoint = ({
+  typeId = 1,
+  districtId = 1,
+  originalIndex = 0,
+  ...overrides
+}: Partial<FilteredPoint> & { typeId?: number; districtId?: number; originalIndex?: number } = {}): FilteredPoint => ({
   x: 0,
   y: 0,
   z: 0,
-  typeId: 1,
-  districtId: 1,
-  originalIndex: 0,
+  originalIndex,
+  typeId,
+  districtId,
   ...overrides,
 });
 

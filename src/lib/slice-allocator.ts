@@ -22,7 +22,7 @@ export function allocateNonUniformSlices(
   }
 
   const totalB = bins.reduce((sum, b) => sum + b.combinedB, 0);
-  let slices: AllocatedSlice[] = [];
+  const slices: AllocatedSlice[] = [];
 
   if (totalB <= 0) {
     for (let i = 0; i < bins.length; i++) {
@@ -42,7 +42,7 @@ export function allocateNonUniformSlices(
     allocated: Math.max(1, Math.round((bin.combinedB / totalB) * targetCount)),
   }));
 
-  let used = rawAllocations.reduce((sum, a) => sum + a.allocated, 0);
+  const used = rawAllocations.reduce((sum, a) => sum + a.allocated, 0);
   let remaining = targetCount - used;
 
   while (remaining > 0) {

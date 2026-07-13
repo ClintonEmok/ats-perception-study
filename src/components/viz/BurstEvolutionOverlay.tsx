@@ -96,7 +96,7 @@ export function BurstEvolutionOverlay({
     <group>
       <group position={[48, 0, 48]}>
         <Html center className="pointer-events-none select-none">
-          <div className="rounded-full border border-white/15 bg-slate-950/80 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-100 shadow-sm">
+          <div className="rounded-full border border-border bg-background/85 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-foreground shadow-sm backdrop-blur">
             Burst lifecycle · {model.strongestScore.toFixed(0)}
           </div>
         </Html>

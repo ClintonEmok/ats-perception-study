@@ -17,7 +17,7 @@ import { DensityTrack } from './DensityTrack';
 
 interface DataPoint {
   timestamp: Date | number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface TimelineProps {
@@ -73,8 +73,6 @@ const TimelineContent = ({ width, height, data: propData, onChange, selectedDoma
       }
     };
 
-   if (width < 10) return null;
-
    const densityHeight = 12;
    const margin = { top: 20, right: 20, bottom: 20, left: 20 };
    const innerWidth = width - margin.left - margin.right;
@@ -103,6 +101,8 @@ const TimelineContent = ({ width, height, data: propData, onChange, selectedDoma
 
      return { xScale, yScale, bins };
    }, [data, innerWidth, innerHeight]);
+
+   if (width < 10) return null;
 
    if (!xScale || !yScale) {
      return (

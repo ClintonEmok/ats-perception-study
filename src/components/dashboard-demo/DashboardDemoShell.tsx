@@ -119,7 +119,7 @@ export function DashboardDemoShell() {
             </Button>
             {activeViewport === 'map' ? (
               <>
-                <div className="mx-1 h-5 w-px bg-slate-700/70" aria-hidden="true" />
+                <div className="mx-1 h-5 w-px bg-border/70" aria-hidden="true" />
                 <Button
                   type="button"
                   onClick={() => toggleLayer('poi')}
@@ -168,7 +168,7 @@ export function DashboardDemoShell() {
           </div>
         </section>
 
-        <div className="shrink-0 border-t border-slate-800 bg-slate-900/65">
+        <div className="shrink-0 border-t border-border bg-card/65">
           <DemoTimelinePanel />
         </div>
       </div>

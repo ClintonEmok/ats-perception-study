@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useHotspotEvolution } from '@/hooks/useHotspotEvolution';
 
 const STATUS_COLORS: Record<string, string> = {
-  stable: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
-  transient: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
-  displacing: 'text-rose-400 border-rose-500/30 bg-rose-500/10',
+  stable: 'text-emerald-700 border-emerald-500/30 bg-emerald-500/10 dark:text-emerald-400',
+  transient: 'text-amber-700 border-amber-500/30 bg-amber-500/10 dark:text-amber-400',
+  displacing: 'text-rose-700 border-rose-500/30 bg-rose-500/10 dark:text-rose-400',
 };
 
 const STATUS_ICONS: Record<string, string> = {
@@ -48,17 +48,17 @@ export function HotspotEvolutionCard() {
         </CardDescription>
         <div className="flex flex-wrap gap-1.5 pt-1">
           {stable > 0 && (
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-400">
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-400">
               {stable} stable
             </span>
           )}
           {displacing > 0 && (
-            <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-400">
+            <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-700 dark:text-rose-400">
               {displacing} displacing
             </span>
           )}
           {transient > 0 && (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-400">
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-700 dark:text-amber-400">
               {transient} transient
             </span>
           )}
@@ -69,7 +69,7 @@ export function HotspotEvolutionCard() {
           const first = track.snapshots[0];
           const last = track.snapshots[track.snapshots.length - 1];
           const avgIntensity = track.snapshots.reduce((s, hs) => s + hs.intensityScore, 0) / track.snapshots.length;
-          const statusClass = STATUS_COLORS[track.status] ?? 'text-slate-400 border-slate-600/30 bg-slate-800/30';
+          const statusClass = STATUS_COLORS[track.status] ?? 'text-muted-foreground border-border/70 bg-muted/50';
           const statusIcon = STATUS_ICONS[track.status] ?? '?';
           const supportIcon = TREND_ICONS[track.supportTrend] ?? '?';
           const extentIcon = TREND_ICONS[track.extentTrend] ?? '?';
@@ -83,7 +83,7 @@ export function HotspotEvolutionCard() {
                 <span className={`rounded px-1 py-0.5 text-[10px] font-medium ${statusClass}`}>
                   {statusIcon} {track.status}
                 </span>
-                <span className="truncate text-slate-200 font-medium">{track.label}</span>
+                <span className="truncate font-medium text-foreground">{track.label}</span>
                 <span className="text-muted-foreground whitespace-nowrap">
                   {track.snapshots.length} snapshots
                 </span>

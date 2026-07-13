@@ -26,6 +26,7 @@ export interface DensityAreaChartProps {
 const DEFAULT_HEIGHT = 72;
 const DEFAULT_MARGIN = { top: 8, right: 12, bottom: 8, left: 12 };
 const BASELINE_DENSITY = 0.001;
+const FALLBACK_TIME_DOMAIN: [Date, Date] = [new Date(0), new Date(60_000)];
 
 const clampDensity = (value: number) => (Number.isFinite(value) ? Math.max(0, value) : 0);
 
@@ -62,14 +63,9 @@ export function DensityAreaChart({
   const densityMax = useMemo(() => max(sanitizedData, (d) => d.density) ?? 0, [sanitizedData]);
   const yMax = densityMax > 0 ? densityMax : BASELINE_DENSITY;
 
-  const fallbackTime = useMemo(() => {
-    const now = Date.now();
-    return [new Date(now - 60_000), new Date(now)];
-  }, []);
-
   const timeDomain = hasData
     ? [sanitizedData[0].time, sanitizedData[sanitizedData.length - 1].time]
-    : fallbackTime;
+    : FALLBACK_TIME_DOMAIN;
 
   const xScale = useMemo(
     () =>

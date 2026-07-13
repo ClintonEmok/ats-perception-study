@@ -3,7 +3,7 @@ import { ADAPTIVE_BURST_INFLUENCE } from './adaptive-utils';
 
 export interface TimePoint {
   timestamp: Date | number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AdaptiveScaleConfig {

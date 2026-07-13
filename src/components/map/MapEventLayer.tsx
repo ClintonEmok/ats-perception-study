@@ -167,12 +167,15 @@ export default function MapEventLayer({
           continue;
         }
 
-        if (selectedSpatialBounds && typeof point.lat === 'number' && typeof point.lon === 'number') {
+        const lat = typeof point.lat === 'number' ? point.lat : undefined;
+        const lon = typeof point.lon === 'number' ? point.lon : undefined;
+
+        if (selectedSpatialBounds && lat !== undefined && lon !== undefined) {
           if (
-            point.lat < selectedSpatialBounds.minLat ||
-            point.lat > selectedSpatialBounds.maxLat ||
-            point.lon < selectedSpatialBounds.minLon ||
-            point.lon > selectedSpatialBounds.maxLon
+            lat < selectedSpatialBounds.minLat ||
+            lat > selectedSpatialBounds.maxLat ||
+            lon < selectedSpatialBounds.minLon ||
+            lon > selectedSpatialBounds.maxLon
           ) {
             continue;
           }
@@ -181,8 +184,8 @@ export default function MapEventLayer({
           x: point.x,
           z: point.z,
           index: i,
-          lat: point.lat,
-          lon: point.lon,
+          lat,
+          lon,
           typeId,
           linearY: typeof point.y === 'number' ? point.y : point.timestamp,
         });

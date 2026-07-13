@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import * as THREE from 'three';
 
-export const TimePlane = forwardRef<THREE.Mesh, {}>((_, ref) => {
+export const TimePlane = forwardRef<THREE.Mesh, object>((_, ref) => {
   return (
     <mesh 
       ref={ref} 

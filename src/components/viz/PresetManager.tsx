@@ -247,7 +247,7 @@ export function PresetManager({ onPresetLoaded }: PresetManagerProps) {
             <DialogTitle>Delete preset</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Delete "{deleteTarget?.name}"? This cannot be undone.
+            Delete &quot;{deleteTarget?.name}&quot;? This cannot be undone.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>

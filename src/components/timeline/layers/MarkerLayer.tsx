@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { ScaleLinear, ScaleTime } from 'd3-scale';
 
 interface MarkerLayerProps {
-  data: any[]; // Using any to be flexible with raw data
+  data: Array<{ timestamp: Date | number }>;
   xScale: ScaleTime<number, number>;
   yScale: ScaleLinear<number, number>;
   height: number;

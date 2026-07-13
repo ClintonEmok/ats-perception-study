@@ -46,7 +46,7 @@ export function EvolutionFlowOverlay({
     <group>
       <group position={[48, 0, 48]}>
         <Html center className="pointer-events-none select-none">
-          <div className="rounded-full border border-white/15 bg-slate-950/80 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-100 shadow-sm">
+          <div className="rounded-full border border-border bg-background/85 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-foreground shadow-sm backdrop-blur">
             Pattern flow
           </div>
         </Html>
@@ -76,7 +76,7 @@ export function EvolutionFlowOverlay({
               <meshBasicMaterial color={segment.isActive ? '#67e8f9' : '#94a3b8'} transparent opacity={0.85} side={THREE.DoubleSide} />
             </mesh>
             <Html center position={[50, (fromY + toY) / 2, 50]} className="pointer-events-none select-none">
-              <div className="rounded-full border border-white/10 bg-slate-950/70 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-slate-100 shadow-sm">
+              <div className="rounded-full border border-border bg-background/85 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-foreground shadow-sm backdrop-blur">
                 {segment.label}
               </div>
             </Html>

@@ -69,7 +69,7 @@ export function clusterSlices(
 
   const clusters: SliceCluster[] = [];
   let currentCluster: TimeSlice[] = [slices[0]];
-  let maxDensity = 1;
+  const maxDensity = 1;
 
   for (let i = 1; i < slices.length; i++) {
     const slice = slices[i];

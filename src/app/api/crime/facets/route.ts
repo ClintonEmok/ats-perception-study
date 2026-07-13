@@ -22,6 +22,8 @@ interface ColumnInfo {
   timestampColumn: string;
 }
 
+type DuckDbLike = Awaited<ReturnType<typeof getDb>>;
+
 const DATA_PATH = 'data/crime.parquet';
 let columnInfo: ColumnInfo | null = null;
 
@@ -49,13 +51,13 @@ const quoteIdentifier = (name: string) => `"${name.replace(/"/g, '""')}"`;
 const selectFirst = (columns: Set<string>, candidates: string[]) =>
   candidates.find((candidate) => columns.has(candidate)) || null;
 
-const resolveColumnInfo = async (connection: any): Promise<ColumnInfo> => {
+const resolveColumnInfo = async (connection: DuckDbLike): Promise<ColumnInfo> => {
   if (columnInfo) return columnInfo;
 
   const rows = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
-    connection.all(`SELECT * FROM '${DATA_PATH}' LIMIT 1`, (err: Error | null, res: Record<string, unknown>[]) => {
+    connection.all(`SELECT * FROM '${DATA_PATH}' LIMIT 1`, (err: Error | null, res: unknown[]) => {
       if (err) reject(err);
-      else resolve(res);
+      else resolve(res as Record<string, unknown>[]);
     });
   });
 

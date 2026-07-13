@@ -1,16 +1,14 @@
 'use client';
-
-import { useMemo } from 'react';
 import { useNeighborhoodStats } from '../../hooks/useNeighborhoodStats';
 import { getDistrictDisplayName } from '../stats-view-model';
 
 export function DistrictBreakdown() {
   const { stats, isLoading, isFetching } = useNeighborhoodStats();
 
-  const maxCount = useMemo(() => {
+  const maxCount = (() => {
     if (!stats?.byDistrict || stats.byDistrict.length === 0) return 1;
     return Math.max(...stats.byDistrict.map(d => d.count), 1);
-  }, [stats?.byDistrict]);
+  })();
 
   if (isLoading || isFetching) {
     return (

@@ -47,12 +47,12 @@ export function TopBar() {
     <div className="flex w-full flex-col">
       {/* Demo data warning banner */}
       {isMock && (
-        <div className="flex w-full items-center justify-center bg-amber-500/20 px-4 py-1 text-xs text-amber-200">
+        <div className="flex w-full items-center justify-center border-b border-amber-200 bg-amber-50 px-4 py-1 text-xs text-amber-900">
           <span>⚠️ Using demo data</span>
           <span className="mx-2">|</span>
           <span>Real dataset unavailable</span>
           {dataCount !== undefined && (
-            <span className="ml-2 text-amber-100">
+            <span className="ml-2 text-amber-700">
               ({formatCount(dataCount)} records)
             </span>
           )}
@@ -72,30 +72,30 @@ export function TopBar() {
           </button>
         )}
         {dataCount !== undefined && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-foreground">
             {formatCount(dataCount)} total
           </span>
         )}
         {viewportLoadedCount !== null && (
-          <span className={`text-xs ${isSampled ? 'text-amber-400' : 'text-green-400'}`}>
+          <span className={`text-xs ${isSampled ? 'text-amber-700' : 'text-emerald-700'}`}>
             {formatCount(viewportLoadedCount)} loaded
           </span>
         )}
         {isSampled && totalMatches !== null && totalMatches > (viewportLoadedCount ?? 0) && (
-          <span className="text-xs text-amber-300">
+          <span className="text-xs text-amber-700">
             sampled from {formatCount(totalMatches)}
           </span>
         )}
       </div>
 
       <div className="flex items-center gap-2">
-        {activeFilterCount > 0 && (
-          <div className="flex items-center gap-2 rounded-full border px-2 py-1 text-xs text-muted-foreground">
+          {activeFilterCount > 0 && (
+          <div className="flex items-center gap-2 rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground">
             <span>Filters: {activeFilterCount}</span>
             <button
               type="button"
               onClick={resetFilters}
-              className="rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+              className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
             >
               Clear
             </button>
@@ -105,7 +105,7 @@ export function TopBar() {
           <button
             type="button"
             onClick={() => generateMockData(data.length > 0 ? data.length : 2000)}
-            className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+            className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
             title="Regenerate mock data"
           >
             Regen mock
@@ -117,7 +117,7 @@ export function TopBar() {
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+              className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
             >
               Adaptive Controls
             </button>
@@ -143,7 +143,7 @@ export function TopBar() {
         <button
           type="button"
           onClick={() => setDetailsOpen(true)}
-          className="rounded-full border p-2 text-muted-foreground hover:bg-muted"
+          className="rounded-full border border-border bg-background p-2 text-muted-foreground hover:bg-muted"
           title="Open details"
         >
           <PanelRightOpen className="h-4 w-4" />

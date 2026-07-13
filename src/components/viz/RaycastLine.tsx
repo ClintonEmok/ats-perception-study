@@ -18,7 +18,7 @@ export const RaycastLine: React.FC<RaycastLineProps> = ({
   onComplete
 }) => {
   const lineRef = useRef<THREE.Line>(null);
-  const startTimeRef = useRef<number>(Date.now());
+  const startTimeRef = useRef(0);
 
   // Reset timer when component mounts or props change
   useEffect(() => {

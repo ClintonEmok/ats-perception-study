@@ -66,6 +66,7 @@ describe('useStkdeStore', () => {
       contracts: {
         scoreVersion: 'stkde-v1',
       },
+      sliceResults: {},
     });
 
     expect(useStkdeStore.getState().runStatus).toBe('success');
@@ -96,6 +97,7 @@ describe('useStkdeStore', () => {
       contracts: {
         scoreVersion: 'stkde-v1',
       },
+      sliceResults: {},
     });
 
     store.markStale('applied-slices-updated');

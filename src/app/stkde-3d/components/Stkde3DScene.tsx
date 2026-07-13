@@ -212,9 +212,9 @@ function SceneContent({
   resolveSliceY,
   yOffset = 0,
   heightScale = 1,
-  }: Stkde3DSceneProps & {
-    resolveSliceY: (slice: EvolvingSlice & { sourceSliceId?: string }) => number;
-  }) {
+}: Stkde3DSceneProps & {
+  resolveSliceY: (slice: EvolvingSlice & { sourceSliceId?: string }) => number;
+}) {
   const controlsRef = useRef<CameraControls>(null);
   const focusedSlice = slices[activeIndex]
     ? { ...slices[activeIndex], index: 0 }

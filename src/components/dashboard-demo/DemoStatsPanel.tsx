@@ -71,7 +71,7 @@ function PulseChart({ title, readout, points, accentClassName, labelStep = 1 }: 
                 }}
               />
             </div>
-            <div className="mt-1 min-h-[0.75rem] text-center text-[10px] text-slate-500">
+            <div className="mt-1 min-h-[0.75rem] text-center text-[10px] text-muted-foreground">
               {index % labelStep === 0 || index === points.length - 1 ? point.label : ''}
             </div>
           </div>

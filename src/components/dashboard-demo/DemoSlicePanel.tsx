@@ -51,13 +51,6 @@ const formatCoefficient = (value: number | undefined) => {
   return value.toFixed(2);
 };
 
-const formatNormalizedScore = (value: number | undefined) => {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return null;
-  }
-  return `${Math.round(value)} / 100`;
-};
-
 const toDateTimeLocalValue = (timestampMs: number | null | undefined) => {
   if (timestampMs === null || timestampMs === undefined || !Number.isFinite(timestampMs)) {
     return '';
@@ -638,12 +631,12 @@ export function DemoSlicePanel() {
                       </div>
                     ) : null}
                     {selectedSlice.tieBreakReason ? (
-                      <div className="mt-2 text-xs text-slate-300 whitespace-pre-wrap break-words">
+                      <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap break-words">
                         {selectedSlice.tieBreakReason}
                       </div>
                     ) : null}
                     {selectedSlice.thresholdSource ? (
-                      <div className="mt-2 text-xs text-slate-400 whitespace-pre-wrap break-words">
+                      <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap break-words">
                         {selectedSlice.thresholdSource}
                       </div>
                     ) : null}
@@ -663,56 +656,56 @@ export function DemoSlicePanel() {
           }
         }}
       >
-        <DialogContent className="max-w-3xl border-slate-800 bg-slate-950 text-slate-100">
+        <DialogContent className="max-w-3xl border-border bg-background text-foreground">
           <DialogHeader>
             <DialogTitle>Draft details</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {selectedDraftLabel}
             </DialogDescription>
           </DialogHeader>
 
           {selectedDraft ? (
             <div className="grid gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-md border border-slate-800 bg-slate-900/60 p-3 sm:col-span-2 lg:col-span-3">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Boundary editor</div>
+              <div className="rounded-md border border-border bg-muted/40 p-3 sm:col-span-2 lg:col-span-3">
+                <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Boundary editor</div>
                 <div className="mt-3 flex gap-2">
-                  <label className="min-w-0 flex-1 space-y-1 text-[11px] text-slate-400">
+                  <label className="min-w-0 flex-1 space-y-1 text-[11px] text-muted-foreground">
                     <span>Start datetime</span>
                     <Input
                       type="datetime-local"
                       value={toDateTimeLocalValue(selectedDraft.startTime)}
                       onChange={(event) => handleSelectedDraftStartChange(event.target.value)}
-                      className="border-slate-700 bg-slate-950 text-slate-100"
+                      className="border-border bg-background text-foreground"
                     />
                   </label>
-                  <label className="min-w-0 flex-1 space-y-1 text-[11px] text-slate-400">
+                  <label className="min-w-0 flex-1 space-y-1 text-[11px] text-muted-foreground">
                     <span>End datetime</span>
                     <Input
                       type="datetime-local"
                       value={toDateTimeLocalValue(selectedDraft.endTime)}
                       onChange={(event) => handleSelectedDraftEndChange(event.target.value)}
-                      className="border-slate-700 bg-slate-950 text-slate-100"
+                      className="border-border bg-background text-foreground"
                     />
                   </label>
                 </div>
-                <div className="mt-1 text-xs text-slate-400">
+                <div className="mt-1 text-xs text-muted-foreground">
                   {formatDateTime(selectedDraft.startTime)} → {formatDateTime(selectedDraft.endTime)} · {selectedDraft.id}
                 </div>
               </div>
 
-              <div className="rounded-md border border-slate-800 bg-slate-900/60 p-3">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Summary</div>
-                <div className="mt-2 grid gap-2 text-sm text-slate-100">
+              <div className="rounded-md border border-border bg-muted/40 p-3">
+                <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Summary</div>
+                <div className="mt-2 grid gap-2 text-sm text-foreground">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-slate-400">Events</span>
+                    <span className="text-muted-foreground">Events</span>
                     <span>{selectedDraft.count}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-slate-400">Density score</span>
+                    <span className="text-muted-foreground">Density score</span>
                     <span>{formatCoefficient(selectedDraft.burstScore) ?? '—'}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-slate-400">Burstiness</span>
+                    <span className="text-muted-foreground">Burstiness</span>
                     <span>{formatCoefficient(selectedDraft.burstinessCoefficient) ?? '—'}</span>
                   </div>
                 </div>

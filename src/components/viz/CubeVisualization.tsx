@@ -115,20 +115,20 @@ export default function CubeVisualization({
 
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-hidden relative">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-background">
       <div className="h-2" />
-      
+
       <div className="absolute top-16 right-4 z-10">
         <button
           onClick={handleReset}
-          className="p-2 bg-background/80 backdrop-blur border rounded-md hover:bg-accent transition-colors shadow-sm"
+          className="rounded-md border border-border bg-background/85 p-2 shadow-sm backdrop-blur transition-colors hover:bg-accent"
           title="Reset View"
         >
           <RefreshCcw className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="flex-1 w-full relative bg-muted/20 flex items-center justify-center overflow-hidden">
+      <div className="relative flex w-full flex-1 items-center justify-center overflow-hidden bg-muted/20">
         <MainScene
           showMapBackground={false}
           filterStoreOverride={filterStore}
@@ -140,19 +140,19 @@ export default function CubeVisualization({
 
         {isLoading && (
           <div
-            className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm pointer-events-none"
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm"
             role="status"
             aria-live="polite"
             aria-label="Loading crime records"
           >
             <div className="flex flex-col items-center gap-3 px-6 text-center">
-              <Loader2 className="size-8 animate-spin text-slate-200" />
-              <p className="text-sm font-medium text-slate-100">Loading crime records</p>
-              <p className="text-[11px] text-slate-300">
+              <Loader2 className="size-8 animate-spin text-foreground" />
+              <p className="text-sm font-medium text-foreground">Loading crime records</p>
+              <p className="text-[11px] text-muted-foreground">
                 Streaming 8.5M+ incidents from DuckDB…
               </p>
               {dataCount !== null && dataCount > 0 && (
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-muted-foreground">
                   {dataCount.toLocaleString()} records loaded
                 </p>
               )}
@@ -161,15 +161,15 @@ export default function CubeVisualization({
         )}
 
         {isMock && !isLoading && (
-          <div className="absolute top-4 left-4 z-30 max-w-md rounded-md border border-red-500/40 bg-red-950/85 px-3 py-2 text-[11px] text-red-100 shadow-sm backdrop-blur">
+          <div className="absolute top-4 left-4 z-30 max-w-md rounded-md border border-red-200 bg-red-50/95 px-3 py-2 text-[11px] text-red-900 shadow-sm backdrop-blur">
             <p className="text-xs font-semibold">⚠️ Using demo data (mock)</p>
-            <p className="mt-1 text-red-200">
+            <p className="mt-1 text-red-800">
               Real DuckDB connection failed. Showing 1,000 mock points at y=0. Check the server console.
             </p>
           </div>
         )}
 
-        <div className="absolute top-4 right-4 z-10 rounded-md border border-slate-500/50 bg-slate-950/60 px-3 py-2 text-[10px] text-slate-100 shadow-sm backdrop-blur">
+        <div className="absolute top-4 right-4 z-10 rounded-md border border-border/70 bg-background/85 px-3 py-2 text-[10px] text-foreground shadow-sm backdrop-blur">
           <p>Relational mode: {warpSource} · warp {effectiveWarpFactor.toFixed(2)}</p>
           <p>Active structure: {activeConstraintLabel}</p>
           <p>Linked selection: {selectedInterval?.label ?? appliedIntervalLabel}</p>
@@ -185,7 +185,7 @@ export default function CubeVisualization({
             {(appliedInterval ?? selectedInterval)?.isEdited ? 'Edited' : 'Original'}
           </p>
           {activeCluster ? (
-            <div className="mt-2 rounded border border-violet-300/25 bg-violet-500/10 px-2 py-1 text-violet-100">
+            <div className="mt-2 rounded border border-violet-200 bg-violet-50 px-2 py-1 text-violet-950">
               <p>State: {activeClusterState}</p>
               <p>Cluster context: {activeCluster.dominantType}</p>
               <p>Members: {activeCluster.count}</p>
@@ -193,7 +193,7 @@ export default function CubeVisualization({
             </div>
           ) : null}
           {selectionStory ? (
-            <div className="mt-2 rounded border border-cyan-300/25 bg-cyan-500/10 px-2 py-1 text-cyan-100">
+            <div className="mt-2 rounded border border-cyan-200 bg-cyan-50 px-2 py-1 text-cyan-950">
               <p>Window: {selectionStory.activeWindowLabel}</p>
               <p>Linked: {selectionStory.linkedHighlightLabel}</p>
               <p>{selectionStory.explanationLabel}</p>
@@ -206,9 +206,9 @@ export default function CubeVisualization({
         </div>
         {!isLoading && slices.length === 0 && clusters.length === 0 && (
           <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-            <div className="rounded-md border border-dashed border-slate-300/30 bg-slate-950/60 backdrop-blur px-4 py-3 text-xs text-slate-300 text-center">
-              <p className="font-medium text-slate-200">No slices active</p>
-              <p className="mt-1 text-[10px] text-slate-400">Create slices to see cluster analysis</p>
+            <div className="rounded-md border border-dashed border-border/70 bg-background/80 px-4 py-3 text-center text-xs text-muted-foreground backdrop-blur">
+              <p className="font-medium text-foreground">No slices active</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">Create slices to see cluster analysis</p>
             </div>
           </div>
         )}
@@ -226,7 +226,7 @@ export default function CubeVisualization({
         )}
 
           {stkdeResponse ? (
-          <div className="absolute top-4 left-4 z-10 max-w-sm rounded-md border bg-background/85 px-3 py-2 text-[10px] text-muted-foreground shadow-sm backdrop-blur">
+          <div className="absolute top-4 left-4 z-10 max-w-sm rounded-md border border-border/70 bg-background/85 px-3 py-2 text-[10px] text-muted-foreground shadow-sm backdrop-blur">
             <div className="text-xs font-semibold text-foreground">Relational context</div>
             {selectedHotspot ? (
               <>

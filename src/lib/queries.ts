@@ -69,10 +69,7 @@ interface AdaptiveCacheRow {
   generated_at: string;
 }
 
-type DbLike = {
-  all: (sql: string, ...args: any[]) => void;
-  run: (sql: string, ...args: any[]) => void;
-};
+type DbLike = Awaited<ReturnType<typeof getDb>>;
 
 const normalizeRange = (start: number, end: number) => {
   if (start <= end) return { start, end };

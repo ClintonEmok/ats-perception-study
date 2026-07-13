@@ -66,7 +66,7 @@ const BURST_TAXONOMY_LEGEND = [
   { label: 'prolonged-peak', tone: 'bg-amber-500/15 text-amber-200 border-amber-500/30' },
   { label: 'isolated-spike', tone: 'bg-rose-500/15 text-rose-200 border-rose-500/30' },
   { label: 'valley', tone: 'bg-sky-500/15 text-sky-200 border-sky-500/30' },
-  { label: 'neutral', tone: 'bg-slate-500/15 text-slate-200 border-slate-500/30' },
+  { label: 'neutral', tone: 'bg-muted/70 text-muted-foreground border-border' },
 ];
 
 const isFixedIntervalStrategy = (strategy: BinningStrategy) =>
@@ -277,12 +277,12 @@ export function BinningControls({
   ]);
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+    <div className="flex flex-col gap-4 rounded-xl border border-border bg-card/80 p-4 text-card-foreground shadow-sm">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-slate-100">Generate slices from investigation intent</h3>
-            <p className="text-xs text-slate-400">
+            <h3 className="text-sm font-semibold text-foreground">Generate slices from investigation intent</h3>
+            <p className="text-xs text-muted-foreground">
               Choose what happened, where, when, and at what granularity. Generation creates reviewable draft bins first.
             </p>
           </div>
@@ -293,7 +293,7 @@ export function BinningControls({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px]">
-          <span className="uppercase tracking-[0.18em] text-slate-500">Burst taxonomy</span>
+          <span className="uppercase tracking-[0.18em] text-muted-foreground">Burst taxonomy</span>
           {BURST_TAXONOMY_LEGEND.map((item) => (
             <span key={item.label} className={`rounded-full border px-2 py-1 ${item.tone}`}>
               {item.label}
@@ -302,12 +302,12 @@ export function BinningControls({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <label className="space-y-1 text-xs text-slate-300">
+          <label className="space-y-1 text-xs text-muted-foreground">
             <span>Neighbourhood</span>
             <select
               value={generationInputs.neighbourhood ?? ''}
               onChange={(event) => setGenerationInputs({ neighbourhood: event.target.value || null })}
-              className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100"
+              className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
             >
               <option value="">All neighbourhoods</option>
               {availableNeighbourhoods.map((district) => (
@@ -318,7 +318,7 @@ export function BinningControls({
             </select>
           </label>
 
-          <label className="space-y-1 text-xs text-slate-300">
+          <label className="space-y-1 text-xs text-muted-foreground">
             <span>Time window start</span>
             <Input
               type="datetime-local"
@@ -329,11 +329,11 @@ export function BinningControls({
                   end: generationInputs.timeWindow.end,
                 },
               })}
-              className="border-slate-700 bg-slate-900 text-slate-100"
+              className="border-border bg-background text-foreground"
             />
           </label>
 
-          <label className="space-y-1 text-xs text-slate-300">
+          <label className="space-y-1 text-xs text-muted-foreground">
             <span>Time window end</span>
             <Input
               type="datetime-local"
@@ -344,16 +344,16 @@ export function BinningControls({
                   end: parseDateTimeLocalValue(event.target.value),
                 },
               })}
-              className="border-slate-700 bg-slate-900 text-slate-100"
+              className="border-border bg-background text-foreground"
             />
           </label>
 
-          <div className="space-y-1 text-xs text-slate-300">
+          <div className="space-y-1 text-xs text-muted-foreground">
             <span>Generation strategy</span>
             <select
               value={strategy}
               onChange={(event) => onStrategyChange(event.target.value as BinningStrategy)}
-              className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100"
+              className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
             >
               {STRATEGIES.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -365,7 +365,7 @@ export function BinningControls({
         </div>
 
         <div className="space-y-2">
-          <span className="text-xs text-slate-300">Granularity</span>
+          <span className="text-xs text-muted-foreground">Granularity</span>
           <div className="grid gap-2 md:grid-cols-3">
             {GENERATION_GRANULARITIES.map((option) => {
               const isActive = generationInputs.granularity === option.value;
@@ -377,11 +377,11 @@ export function BinningControls({
                   className={`rounded-lg border px-3 py-2 text-left transition ${
                     isActive
                       ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-100'
-                      : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500'
+                      : 'border-border bg-background text-muted-foreground hover:border-ring/40 hover:text-foreground'
                   }`}
                 >
                   <div className="text-sm font-medium">{option.label}</div>
-                  <div className="text-[11px] text-slate-400">{option.helper}</div>
+                  <div className="text-[11px] text-muted-foreground">{option.helper}</div>
                 </button>
               );
             })}
@@ -390,16 +390,16 @@ export function BinningControls({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-slate-300">Crime types</span>
+            <span className="text-xs text-muted-foreground">Crime types</span>
             <button
               type="button"
               onClick={() => setGenerationInputs({ crimeTypes: [] })}
-              className="text-[11px] text-slate-400 hover:text-slate-200"
+              className="text-[11px] text-muted-foreground hover:text-foreground"
             >
               Include all
             </button>
           </div>
-          <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900/60 p-2">
+          <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-lg border border-border bg-muted/30 p-2">
             {availableCrimeTypes.map((crimeType) => {
               const isActive = generationInputs.crimeTypes.includes(crimeType);
               return (
@@ -410,7 +410,7 @@ export function BinningControls({
                   className={`rounded-full border px-2.5 py-1 text-[11px] transition ${
                     isActive
                       ? 'border-violet-400/60 bg-violet-500/15 text-violet-100'
-                      : 'border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500'
+                      : 'border-border bg-background text-muted-foreground hover:border-ring/40 hover:text-foreground'
                   }`}
                 >
                   {crimeType}
@@ -426,7 +426,7 @@ export function BinningControls({
             {generationStatus === 'generating' ? 'Generating Draft Slices…' : 'Generate Draft Slices'}
           </Button>
           {generationInputs.timeWindow.start && generationInputs.timeWindow.end && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-muted-foreground">
               Window: {formatRange(generationInputs.timeWindow.start, generationInputs.timeWindow.end)}
             </span>
           )}
@@ -445,19 +445,19 @@ export function BinningControls({
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+        <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-medium text-slate-100">Generated draft bins</div>
-              <div className="text-xs text-slate-400">These are the slices users review before apply.</div>
+              <div className="text-sm font-medium text-foreground">Generated draft bins</div>
+              <div className="text-xs text-muted-foreground">These are the slices users review before apply.</div>
             </div>
-            <span className="rounded-full border border-slate-700 px-2 py-1 text-[11px] text-slate-300">
+            <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
               {bins.length} bins
             </span>
           </div>
 
           {bins.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-700 px-3 py-6 text-center text-xs text-slate-500">
+            <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
               No generated bins yet. Run generation to create the first reviewable result.
             </div>
           ) : (
@@ -470,41 +470,41 @@ export function BinningControls({
                   className={`w-full rounded-lg border px-3 py-2 text-left text-xs transition ${
                     selectedBinId === bin.id
                       ? 'border-violet-400/60 bg-violet-500/10 text-violet-50'
-                      : 'border-slate-800 bg-slate-950/70 text-slate-200 hover:border-slate-600'
+                       : 'border-border bg-background text-foreground hover:border-ring/40'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-medium">Draft slice {index + 1}</span>
-                    <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                    <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
                       {bin.count} events
                     </span>
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-400">{formatRange(bin.startTime, bin.endTime)}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">{formatRange(bin.startTime, bin.endTime)}</div>
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-300">
-          <div className="font-medium text-slate-100">Review stats</div>
+        <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          <div className="font-medium text-foreground">Review stats</div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-md border border-slate-800 bg-slate-950/70 p-2">
-              <div className="text-[11px] text-slate-500">Draft bins</div>
-              <div className="mt-1 text-lg font-semibold text-slate-100">{bins.length}</div>
+            <div className="rounded-md border border-border bg-background p-2">
+              <div className="text-[11px] text-muted-foreground">Draft bins</div>
+              <div className="mt-1 text-lg font-semibold text-foreground">{bins.length}</div>
             </div>
-            <div className="rounded-md border border-slate-800 bg-slate-950/70 p-2">
-              <div className="text-[11px] text-slate-500">Events covered</div>
-              <div className="mt-1 text-lg font-semibold text-slate-100">{stats.totalEvents}</div>
+            <div className="rounded-md border border-border bg-background p-2">
+              <div className="text-[11px] text-muted-foreground">Events covered</div>
+              <div className="mt-1 text-lg font-semibold text-foreground">{stats.totalEvents}</div>
             </div>
           </div>
-          <div className="rounded-md border border-slate-800 bg-slate-950/70 p-2 text-[11px] text-slate-400">
-            Average events per draft slice: <span className="font-medium text-slate-200">{stats.average.toFixed(1)}</span>
+          <div className="rounded-md border border-border bg-background p-2 text-[11px] text-muted-foreground">
+            Average events per draft slice: <span className="font-medium text-foreground">{stats.average.toFixed(1)}</span>
           </div>
 
           {!!selectedBinId && (
-            <div className="space-y-2 border-t border-slate-800 pt-3">
-              <div className="font-medium text-slate-100">Optional Phase 61 bin tools</div>
+            <div className="space-y-2 border-t border-border pt-3">
+              <div className="font-medium text-foreground">Optional Phase 61 bin tools</div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={handleMerge} disabled={!onMerge}>Merge</Button>
                 <Button variant="outline" size="sm" onClick={handleSplit} disabled={!onSplit}>Split</Button>
@@ -513,8 +513,8 @@ export function BinningControls({
             </div>
           )}
 
-          <div className="space-y-2 border-t border-slate-800 pt-3">
-            <div className="font-medium text-slate-100">Save / load strategy setup</div>
+          <div className="space-y-2 border-t border-border pt-3">
+            <div className="font-medium text-foreground">Save / load strategy setup</div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowSaveDialog(true)} disabled={!onSaveConfig}>
                 Save config
@@ -522,7 +522,7 @@ export function BinningControls({
               {savedConfigs.length > 0 && (
                 <select
                   onChange={(event) => onLoadConfig?.(event.target.value)}
-                  className="h-9 rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-100"
+                  className="h-9 rounded-md border border-border bg-background px-2 text-xs text-foreground"
                   defaultValue=""
                 >
                   <option value="" disabled>Load config</option>
@@ -538,7 +538,7 @@ export function BinningControls({
                   value={configName}
                   onChange={(event) => setConfigName(event.target.value)}
                   placeholder="Config name"
-                  className="border-slate-700 bg-slate-950 text-slate-100"
+                  className="border-border bg-background text-foreground"
                 />
                 <Button size="sm" onClick={handleSaveConfig}>Save</Button>
                 <Button size="sm" variant="ghost" onClick={() => setShowSaveDialog(false)}>Cancel</Button>
