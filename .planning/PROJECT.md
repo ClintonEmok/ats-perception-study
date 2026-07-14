@@ -2,93 +2,69 @@
 
 ## What This Is
 
-This is a Next.js prototype for bursty spatiotemporal crime analysis. It combines a 2D map, a 3D Space-Time Cube, and a staged workflow where users Detect bursts, review/apply slices in Slices, and Inspect them with immediate context and comparison controls — with the map, cube, and timeline staying synchronized around the active slice.
+A Next.js thesis prototype for exploring crime patterns through an adaptive space-time cube, a 2D map, and a dual timeline. The current milestone shifts the cube from a slice renderer into an analytical burst-volume model so the 3D view can explain how dense spatiotemporal periods evolve, not just display them.
 
 ## Core Value
 
-Help users understand dense vs sparse spatiotemporal crime patterns through a synchronized exploration tool.
-
-## Current Status
-
-**v3.4 Burstiness-First Adaptive Timeline** is the active milestone. The `dashboard-demo` route keeps burstiness as the primary adaptive signal, preserves density as a configurable fallback, and keeps the detail timeline histogram-based with clearer burst onset/ramp-up cues.
+Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
 
 ## Requirements
 
 ### Validated
 
-- ✓ **FLOW-07** — Detect is the obvious entry point for burst scanning and slice generation — v3.1
-- ✓ **FLOW-08** — Slices is the obvious review/apply surface for pending and manual slices — v3.1
-- ✓ **FLOW-09** — Inspect shows active slice state and comparison controls immediately — v3.1
-- ✓ **FLOW-10** — Map, cube, and timeline stay synchronized with the active slice while chrome stays minimal — v3.1
-- ✓ v3.0 Burstiness-Driven Adaptive Slicing — completed and validated
-- ✓ All prior milestones through MVP Finale — completed and validated
+- ✓ Cube, map, and timeline already synchronize around selected time ranges and adaptive warp state.
+- ✓ Local DuckDB + Arrow data loading keeps the prototype offline and analysis-oriented.
+- ✓ Existing burst detection, STKDE, cluster overlays, and selection interactions already provide the ingredients for a burst-aware cube.
 
 ### Active
 
-- **BFT-01/BFT-02** — adaptive warp can switch between burstiness and density through one shared parameterized signal contract.
-- **BFT-03/BFT-04/BFT-05** — the detail timeline stays histogram-based and reads adaptive change as bin spacing/aggregation, not a points-mode switch.
-- **BFT-06/BFT-07/BFT-08** — the overview stays a stable context frame while the detail view emphasizes burst onset and ramp-up cues.
-- **BFT-09/BFT-10/BFT-11/BFT-12** — the dashboard-demo timeline exposes a toggle/parameter for burstiness vs density weighting and keeps the density fallback available for comparison.
+- [ ] Derive burst volumes from existing burst windows, STKDE output, and cluster signals.
+- [ ] Render burst volumes as stacked temporal structures with boundaries, internal samples, and centroid paths.
+- [ ] Track cluster evolution across samples and expose persistence, movement, split, and merge behavior.
+- [ ] Refactor the cube so shared burst-model data feeds overlays instead of each overlay recomputing slice-local analysis.
 
 ### Out of Scope
 
-- Authentication and accounts — this is an internal research prototype
-- Real-time multi-user collaboration — not part of the exploration workflow
-- Mobile-native app support — current focus is desktop web visualization
-- Full case-management / incident workflow — not an operations system
-- Generic BI dashboard features — would dilute the domain-specific exploration model
-- Social sharing / public publishing — adds privacy and permissions complexity without core value
+- Map or timeline redesign - the control layer stays intact for this milestone.
+- Full rewrite of the adaptive scaling or data ingestion pipeline - the existing pipeline is the source of truth.
+- Direct burst-to-burst comparison - useful later, but not required to make the cube analytically distinct.
+- Temporal-gravity metaphor as a separate interaction system - keep the first milestone grounded in measurable burst structure.
 
 ## Context
 
-- Existing brownfield Next.js 16 App Router app with feature-based organization
-- The active planning surface is `dashboard-demo`
-- Core stack includes TypeScript, Zustand, Three.js, MapLibre, DuckDB, Apache Arrow, and Web Workers
-- v3.1 phases (72-75) complete: Workflow Clarity, Inspection Speed, Coordination Polish, Presentation Cleanup
-- v3.2 completed with visualization quality improvements inside the demo 3D STKDE widget rather than broad map/timeline animation
-- Known concerns include large components, excessive console logging, silent mock-data fallbacks, input validation gaps, and heavy data processing on the main thread
-- Codebase analysis exists in `.planning/codebase/`, milestone history in `.planning/milestones/`
+This milestone follows a design pivot: ATR should create vertical analytical capacity, and the cube should use that capacity to reveal spatial evolution through burst volumes. The current implementation already has the adaptive timeline as the control layer, plus slice planes, overlays, STKDE heatmaps, and cluster analysis. The missing piece is a shared analytical model that ties those pieces together.
 
 ## Constraints
 
-- **Tech stack**: Next.js 16, TypeScript, pnpm, and the existing visualization/data stack — avoid introducing a second frontend architecture
-- **Data layer**: Local DuckDB + Apache Arrow pipeline — preserve the current offline analytics model
-- **Performance**: Large crime datasets must not block the UI — keep heavy computation off the main thread where possible
-- **Product scope**: Desktop-first internal prototype — avoid adding unrelated consumer features
+- **Tech stack**: Next.js 16 + TypeScript + the existing Three.js/MapLibre/DuckDB stack - avoid introducing a second frontend architecture.
+- **Data layer**: Local DuckDB + Apache Arrow pipeline - preserve the offline analytics model.
+- **Performance**: Large crime datasets must not block the UI - keep heavy burst/cluster work off the main thread where possible.
+- **Scope**: Desktop-first internal thesis prototype - avoid unrelated consumer features.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Keep the App Router modular monolith structure | Matches the existing codebase and keeps feature boundaries clear | ✓ Good |
-| Pair 2D density with 3D STC views | Matches the paper's hybrid visualization design and supports overview + trace tasks | ✓ Good |
-| Use non-uniform temporal scaling for burst analysis | Preserves metric duration while making burst order legible | ✓ Good |
-| Use shared comparable-bin warp scoring for demo previews | Keeps same-granularity warp widths visible without reordering or collapsing bins | ✓ Good |
-| Keep hotspot and guidance features as support features | They help analysis without becoming the main task model | ✓ Good |
-| Run adaptive-time computation in Web Workers | Prevents expensive warp calculations from blocking interaction | ✓ Good |
-| Recenter planning on `dashboard-demo` | The demo route is the actual workflow surface | ✓ Good |
-| Detect-first workflow rail | Detect is the natural entry point for burst scanning and slice generation | ✓ Good |
-| Slices owns review/apply | Separates draft-state from applied-state actions; pending drafts before applied slices | ✓ Good |
-| Inspect immediacy | Active-slice context and comparison controls visible without extra clicks | ✓ Good |
-| Minimal chrome | Shell stays quiet enough to support the analysis loop; auto-switch on apply, no stepper | ✓ Good |
-| Parameterized adaptive signal | Burstiness becomes the default driver, but density stays available as a first-class fallback/compare path | ✓ New |
+| Burst volumes are derived from existing burst windows, STKDE, and cluster outputs | Keeps the milestone incremental and avoids rewriting the adaptive engine first | Pending |
+| The timeline remains the control layer; the cube becomes the analytical artifact | Matches the thesis framing and clarifies why the 3D view still matters | Pending |
+| Stage 1 should prioritize structural clarity over metaphor-heavy rendering | Delivers a usable first pass before adding richer behavior encodings | Pending |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? -> Move to Out of Scope with reason
-2. Requirements validated? -> Move to the appropriate phase or support section
-3. New requirements emerged? -> Add to the matching section
-4. Decisions to log? -> Add to Key Decisions
-5. "What This Is" still accurate? -> Update if drifted
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd-complete-milestone`):
 1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
+2. Core Value check - still the right priority?
+3. Audit Out of Scope - reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 for v3.4 Burstiness-First Adaptive Timeline*
+*Last updated: 2026-07-14 after starting milestone v1.0 Burst Volume Analytical Model*
