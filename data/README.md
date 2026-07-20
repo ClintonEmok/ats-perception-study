@@ -1,26 +1,28 @@
 # Data
 
-This directory contains the dataset for the Adaptive Space-Time Cube.
+This directory contains the dataset and cache used by the Adaptive Space-Time Cube application.
 
-## crime.parquet
+## sources/
 
-The main data file used by the application. It is an optimized Parquet file containing crime events.
+Raw CSV source files. The primary crime dataset lives here:
 
-**Schema:**
-- `id` (VARCHAR): Unique event identifier
-- `type` (VARCHAR): Crime type (Theft, Assault, etc.)
-- `lat` (DOUBLE): Latitude
-- `lon` (DOUBLE): Longitude
-- `timestamp` (TIMESTAMP): Event time
-- `x` (DOUBLE): WebMercator X projection (0-1)
-- `z` (DOUBLE): WebMercator Z projection (0-1) (Note: Maps to Y in WebMercator, but Z in our 3D space)
-- `y` (DOUBLE): Normalized Time (0-100)
+- `Crimes_-_2001_to_Present_20260114.csv` — Chicago crime records (2001 to present, ~8.5M rows). Columns include `ID`, `Date`, `Block`, `IUCR`, `Primary Type`, `Description`, `Location Description`, `Arrest`, `Domestic`, `Beat`, `District`, `Ward`, `Community Area`, `FBI Code`, `X Coordinate`, `Y Coordinate`, `Year`, `Updated On`, `Latitude`, `Longitude`, `Location`.
+- `Chicago_Police_Department_-_Illinois_Uniform_Crime_Reporting_(IUCR)_Codes_20260202.csv` — IUCR code lookup table.
+- `Police_Stations_20260202.csv` — Chicago police station POI data.
 
-## source.csv
+## cache/
 
-Raw source data. If this file exists, `scripts/setup-data.js` will use it to generate `crime.parquet`. If it's missing, the script generates synthetic data.
+DuckDB cache files generated on first request. Contains:
 
-**To use real data:**
-1. Place your CSV file here as `source.csv`.
-2. Ensure it has columns: `id`, `type`, `lat`, `lon`, `timestamp`.
-3. Run `node scripts/setup-data.js`.
+- `crime.duckdb` — Persistent DuckDB database with materialized tables:
+  - `crimes_sorted` — Zone-map-optimized copy of the source CSV, ordered by `Date` (enables row group skipping for time-range queries).
+  - `crime_dataset_meta` — Pre-aggregated metadata (min/max time, lat/lon bounds, count, distinct crime types).
+  - `crime_overview_bins_medium` — Pre-bucketed 120-bin summary for the overview histogram.
+
+The cache is invalidated automatically when the source CSV fingerprint changes (`size:mtime`).
+
+## Pipeline
+
+CSV in `sources/` → DuckDB auto-materializes `crimes_sorted` on first request → API routes query the table directly → responses stream as Apache Arrow IPC to the client.
+
+No pre-processing step is required; the application bootstraps its data on first load.

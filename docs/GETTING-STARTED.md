@@ -64,17 +64,9 @@ On first request, DuckDB creates a cached database at `data/cache/crime.duckdb` 
 
 The database is zone-map optimized: data is sorted by date into a `crimes_sorted` table, which lets DuckDB skip irrelevant row groups when querying date ranges.
 
-**Synthetic data (for development):**
+**Mock data (for development without the real CSV):**
 
-If the CSV source file is not present, the project includes a setup script:
-
-```bash
-node scripts/setup-data.js
-```
-
-This generates 100,000 synthetic crime events into `data/source.csv`, then converts them to a Parquet file at `data/crime.parquet` with normalized coordinates (Web Mercator x/z and time y).
-
-The script reuses blocks for trajectory pillars and scatters points around Chicago West Loop coordinates.
+Set `USE_MOCK_DATA=true` in `.env` to disable DuckDB and serve the bundled mock data fixture. The mock data is generated in-memory by the API routes themselves — no separate file is required.
 
 ### 5. Post-installation check
 
@@ -141,9 +133,8 @@ pnpm run start
 │   ├── workers/          # Web Workers (adaptive time, STKDE)
 │   └── providers/        # React providers (QueryClient, etc.)
 ├── data/                 # Crime datasets
-│   ├── cache/            # DuckDB cached database
-│   ├── sources/          # Raw CSV source files
-│   └── crime.parquet     # Pre-processed Parquet data
+│   ├── cache/            # DuckDB cached database (auto-generated)
+│   └── sources/          # Raw CSV source files
 ├── scripts/              # Utility scripts
 └── docs/                 # Project documentation
 ```

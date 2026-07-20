@@ -272,7 +272,7 @@ The current Chicago crime data satisfies none of these: density is low, structur
 
 ### Pre-Integration Check
 
-Before committing to a candidate, run this against the new CSV and compare against the current `data/source.csv` baseline:
+Before committing to a candidate, run this against the new CSV and compare against the current `data/sources/Crimes_-_2001_to_Present_20260114.csv` baseline:
 
 ```bash
 python scripts/burstiness_sweep.py NEW.csv --json /tmp/new_burst.json
@@ -281,7 +281,7 @@ python scripts/spatial_concentration_sweep.py NEW.csv --json /tmp/new_spatial.js
 
 **Acceptance threshold:** the new dataset's per-window CV (coefficient of variation across windows) should be ≥ 2× the current values at the same (metric, window_size) cells. On the current data, the daily-scale CV is 2–7% across all metrics; the new dataset should push at least one daily-scale metric to ≥ 14%. If it does not, the candidate has the same sparsity problem and won't help.
 
-For reference, the current baseline (data/source.csv) shows:
+For reference, the current baseline (`data/sources/Crimes_-_2001_to_Present_20260114.csv`) shows:
 
 | Metric | 1h | 6h | 1d | 1w |
 |---|---:|---:|---:|---:|
