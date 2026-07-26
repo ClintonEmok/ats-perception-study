@@ -17,6 +17,8 @@ import { AdaptiveWarpAxis } from './AdaptiveWarpAxis';
 import { HotspotTrajectoryOverlay } from './HotspotTrajectoryOverlay';
 import { StkdeIntensityLegend } from './StkdeIntensityLegend';
 import { StkdeSliceStack } from './StkdeSliceStack';
+import { BurstVolumeRenderer } from './BurstVolumeRenderer';
+import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { CHICAGO_BOUNDS } from '../lib/chicago-bounds';
 
@@ -143,6 +145,7 @@ interface Stkde3DSceneProps {
   onCreateDraftAtPoint?: (payload: { y: number; clientX: number; clientY: number }) => void;
   yOffset?: number;
   heightScale?: number;
+  burstVolumeModel?: BurstVolumeModel;
 }
 
 function RawEventPoints({
@@ -210,10 +213,13 @@ function SceneContent({
   overrideWarpDomain,
   onCreateDraftAtPoint,
   resolveSliceY,
+  resolveEpochY,
   yOffset = 0,
   heightScale = 1,
+  burstVolumeModel,
 }: Stkde3DSceneProps & {
   resolveSliceY: (slice: EvolvingSlice & { sourceSliceId?: string }) => number;
+  resolveEpochY: (epochSec: number) => number;
 }) {
   const controlsRef = useRef<CameraControls>(null);
   const focusedSlice = slices[activeIndex]
@@ -275,6 +281,14 @@ function SceneContent({
         overrideWarpDomain={overrideWarpDomain}
       />
 
+      {burstVolumeModel ? (
+        <BurstVolumeRenderer
+          model={burstVolumeModel}
+          resolveEpochY={resolveEpochY}
+          active={!burstVolumeModel.isNeutral}
+        />
+      ) : null}
+
       <HotspotTrajectoryOverlay
         slices={viewMode === 'focus' ? focusedSlices : slices}
         sliceResults={hotspotSliceResults}
@@ -318,6 +332,7 @@ export function Stkde3DScene({
   overrideWarpDomain,
   yOffset = 0,
   heightScale = 1,
+  burstVolumeModel,
 }: Stkde3DSceneProps) {
   const [mapTexture, setMapTexture] = useState<THREE.CanvasTexture | null>(null);
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
@@ -342,6 +357,17 @@ export function Stkde3DScene({
   ), [displayDomain, mapDomain]);
   const resolveSliceY = useCallback((slice: EvolvingSlice & { sourceSliceId?: string }): number => {
     return resolveWarpedEpochY(slice.startEpoch, START_Y, {
+      timeScaleMode,
+      warpBlend,
+      warpMap,
+      displayDomain,
+      warpDomain,
+      yOffset,
+    });
+  }, [displayDomain, timeScaleMode, warpBlend, warpMap, warpDomain, yOffset]);
+
+  const resolveEpochY = useCallback((epochSec: number): number => {
+    return resolveWarpedEpochY(epochSec, START_Y, {
       timeScaleMode,
       warpBlend,
       warpMap,
@@ -428,10 +454,23 @@ export function Stkde3DScene({
             onCreateDraftAtPoint={handleCreateDraftAtPoint}
             yOffset={yOffset}
             heightScale={heightScale}
+            burstVolumeModel={burstVolumeModel}
+            resolveEpochY={resolveEpochY}
           />
 
           {mapTexture ? (
             <group position={[0, MAP_PLANE_Y, 0]} renderOrder={-20}>
+              <mesh position={[0, -0.72, 0]}>
+                <boxGeometry args={[98.4, 1.25, 98.4]} />
+                <meshStandardMaterial
+                  color="#081120"
+                  roughness={1}
+                  metalness={0}
+                  transparent
+                  opacity={0.82}
+                  depthWrite={false}
+                />
+              </mesh>
               <mesh rotation={[-Math.PI / 2, 0, 0]}>
                 <planeGeometry args={[96, 96]} />
                 <meshBasicMaterial

@@ -98,9 +98,9 @@ export function buildDurationVolumeProfile(
       1,
     );
     const eased = normalizedDuration ** 0.9;
-    const thickness = clamp(lerp(0.85, 5.8, eased) * resolvedSettings.exaggeration, 0.6, 8.5);
-    const opacity = clamp(lerp(0.28, 0.12, eased), 0.08, 0.34);
-    const falloff = clamp(lerp(0.1, 0.28, 1 - eased), 0.06, 0.28);
+    const thickness = clamp(lerp(0.95, 6.2, eased) * resolvedSettings.exaggeration, 0.65, 8.5);
+    const opacity = clamp(lerp(0.32, 0.11, eased), 0.08, 0.35);
+    const falloff = clamp(lerp(0.12, 0.3, 1 - eased), 0.06, 0.3);
 
     return {
       index: slice.index,

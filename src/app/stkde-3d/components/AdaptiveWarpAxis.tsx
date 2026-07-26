@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { Html } from '@react-three/drei';
 import { ADAPTIVE_BIN_COUNT } from '@/lib/adaptive-utils';
 import { useViewportStore } from '@/lib/stores/viewportStore';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
@@ -14,9 +15,16 @@ const AXIS_WIDTH = 100;
 const AXIS_DEPTH = 1.8;
 const AXIS_BOTTOM_Y = START_Y;
 const AXIS_Z = -50.6;
+const AXIS_LABEL_OFFSET_X = AXIS_WIDTH / 2 + 8;
 const LINEAR_COLOR = new THREE.Color('#4f7fa8');
 const MIN_BIN_HEIGHT = AXIS_HEIGHT / ADAPTIVE_BIN_COUNT / 3;
 const normalizeWarpBlend = (warpFactor: number): number => Math.min(1, Math.max(0, warpFactor / 3));
+const AXIS_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
 
 const COLOR_STOPS: Array<{ stop: number; color: [number, number, number] }> = [
   { stop: 0, color: [30, 58, 95] },
@@ -26,6 +34,8 @@ const COLOR_STOPS: Array<{ stop: number; color: [number, number, number] }> = [
 ];
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+
+const formatAxisLabel = (epochSec: number): string => AXIS_LABEL_FORMATTER.format(new Date(epochSec * 1000));
 
 const interpolateColor = (t: number): THREE.Color => {
   const normalized = clamp01(t);
@@ -73,6 +83,27 @@ export function AdaptiveWarpAxis({
   const displayDomain = displayDomainProp ?? viewportDomain;
   const warpMap = overrideWarpMap ?? storeWarpMap;
   const warpDomain: [number, number] = overrideWarpDomain ?? (storeMapDomain[1] > storeMapDomain[0] ? storeMapDomain : displayDomain);
+  const labelTicks = useMemo(() => {
+    const span = Math.max(1, displayDomain[1] - displayDomain[0]);
+    const positions = [0, 0.25, 0.5, 0.75, 1];
+
+    return positions.map((fraction) => {
+      const epochSec = displayDomain[0] + span * fraction;
+      const y = resolveWarpedEpochY(epochSec, AXIS_BOTTOM_Y, {
+        timeScaleMode,
+        warpBlend,
+        warpMap,
+        displayDomain,
+        warpDomain,
+      });
+
+      return {
+        epochSec,
+        y,
+        label: formatAxisLabel(epochSec),
+      };
+    });
+  }, [displayDomain, timeScaleMode, warpBlend, warpDomain, warpMap]);
   const bins = useMemo(() => {
     const domain: [number, number] = displayDomain;
     const domainSpan = Math.max(1e-9, domain[1] - domain[0]);
@@ -151,19 +182,35 @@ export function AdaptiveWarpAxis({
   }, [bins]);
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[undefined, undefined, ADAPTIVE_BIN_COUNT]}
-      renderOrder={-10}
-      frustumCulled={false}
-    >
-      <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial
-        transparent
-        opacity={warpBlend > 0 ? 0.15 : 0.08}
-        vertexColors
-        depthWrite={false}
-      />
-    </instancedMesh>
+    <>
+      <instancedMesh
+        ref={meshRef}
+        args={[undefined, undefined, ADAPTIVE_BIN_COUNT]}
+        renderOrder={-10}
+        frustumCulled={false}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial
+          transparent
+          opacity={warpBlend > 0 ? 0.15 : 0.08}
+          vertexColors
+          depthWrite={false}
+        />
+      </instancedMesh>
+
+      {labelTicks.map((tick, index) => (
+        <group key={`${tick.epochSec}-${index}`}>
+          <mesh position={[AXIS_LABEL_OFFSET_X - 3.2, tick.y, AXIS_Z + 0.05]}>
+            <boxGeometry args={[2.4, 0.18, 0.45]} />
+            <meshBasicMaterial color="#93c5fd" transparent opacity={0.5} depthWrite={false} />
+          </mesh>
+          <Html position={[AXIS_LABEL_OFFSET_X, tick.y, AXIS_Z]} center className="pointer-events-none select-none">
+            <div className="rounded-md border border-sky-300/15 bg-slate-950/88 px-2 py-0.5 text-[9px] font-medium tracking-[0.08em] text-slate-100 shadow-[0_10px_25px_-14px_rgba(15,23,42,0.95)] backdrop-blur-sm">
+              {tick.label}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </>
   );
 }

@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: planning
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -16,14 +16,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14)
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Burst Volume Analytical Model
+**Current focus:** Burst Volume Rendering
 
 ## Current Position
 
-Phase: 1 of 4 (Burst Model Foundation)
+Phase: 2 of 4 (Burst Volume Rendering)
 Plan: 1 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-07-14 — Milestone v1.0 started
+Last activity: 2026-07-14 — Phase 1 burst-volume implementation verified
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -53,6 +53,7 @@ Recent decisions affecting current work:
 - [Milestone v1.0] Burst volumes are derived from existing burst windows, STKDE output, and cluster signals.
 - [Milestone v1.0] The adaptive timeline stays the control layer while the cube becomes the analytical artifact.
 - [Milestone v1.0] Stage 1 should prioritize structural clarity before richer metaphor layers.
+- [Milestone v1.0] Phase 1 delivered the shared BurstVolumeModel and live hook; the next step is rendering the analytical cube volume.
 
 ### Pending Todos
 

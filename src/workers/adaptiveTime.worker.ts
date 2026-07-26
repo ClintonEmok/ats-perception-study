@@ -66,6 +66,8 @@ export const computeAdaptiveMaps = (
   config: WorkerConfig
 ): Omit<WorkerOutput, 'requestId'> => {
   const { binCount, kernelWidth = 1, binningMode = 'uniform-time', burstInfluence = 0 } = config;
+  // burstInfluence: 0 = pure density (matches thesis Ch5), 1 = pure burstiness.
+  // Overridden by ADAPTIVE_BURST_INFLUENCE from useAdaptiveStore.
   const safeBinCount = Math.max(1, Math.floor(binCount));
   const tStart = domain[0];
   const tEnd = domain[1];

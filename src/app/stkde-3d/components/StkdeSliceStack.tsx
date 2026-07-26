@@ -506,16 +506,16 @@ export function StkdeSliceStack({
         const volume = volumeProfile?.[i];
         const hasVolume = Boolean(volume);
         const thickness = (volume?.thickness ?? 0.3) * heightScale;
-        const surfaceY = hasVolume ? thickness / 2 + 0.05 : 0;
+        const surfaceY = hasVolume ? thickness / 2 + 0.1 : 0;
         const baseMultiplier = opacityMultiplier * sliceOpacity;
         const slabOpacity = hasVolume
-          ? Math.min(0.26, Math.max(0.08, (volume?.opacity ?? 0.18) * baseMultiplier))
+          ? Math.min(0.3, Math.max(0.1, (volume?.opacity ?? 0.18) * baseMultiplier))
           : 0;
         const surfaceOpacity = hasVolume
-          ? Math.min(0.82, Math.max(0.16, ((volume?.opacity ?? 0.18) + 0.18) * baseMultiplier))
+          ? Math.min(0.88, Math.max(0.18, ((volume?.opacity ?? 0.18) + 0.2) * baseMultiplier))
           : Math.min(0.85, 0.3 * baseMultiplier);
         const underlayOpacity = hasVolume
-          ? Math.max(0.04, surfaceOpacity * (0.22 + (volume?.falloff ?? 0.1)))
+          ? Math.max(0.05, surfaceOpacity * (0.26 + (volume?.falloff ?? 0.1)))
           : 0;
         const texture = textures.get(i) ?? undefined;
 
@@ -555,7 +555,7 @@ export function StkdeSliceStack({
                 {texture ? (
                   <>
                     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, surfaceY + 0.01, 0]}>
-                      <planeGeometry args={[100 - (volume?.falloff ?? 0.1) * 6, 100 - (volume?.falloff ?? 0.1) * 6]} />
+                      <planeGeometry args={[100 - (volume?.falloff ?? 0.1) * 5, 100 - (volume?.falloff ?? 0.1) * 5]} />
                       <meshBasicMaterial
                         map={texture}
                         transparent
@@ -566,7 +566,7 @@ export function StkdeSliceStack({
                     </mesh>
 
                     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, surfaceY - 0.03, 0]}>
-                      <planeGeometry args={[96 - (volume?.falloff ?? 0.1) * 8, 96 - (volume?.falloff ?? 0.1) * 8]} />
+                      <planeGeometry args={[96 - (volume?.falloff ?? 0.1) * 7, 96 - (volume?.falloff ?? 0.1) * 7]} />
                       <meshBasicMaterial
                         map={texture}
                         transparent

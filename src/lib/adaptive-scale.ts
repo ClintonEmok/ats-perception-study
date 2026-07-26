@@ -1,3 +1,9 @@
+/**
+ * @deprecated This module is not used by the main dashboard views.
+ * The active density-based implementation is in adaptive-warp-utils.ts
+ * (buildDensityWarpMap). This file is retained for the algorithms page
+ * and useAdaptiveStore ablation experiments only.
+ */
 import { max } from 'd3-array';
 import { ADAPTIVE_BURST_INFLUENCE } from './adaptive-utils';
 

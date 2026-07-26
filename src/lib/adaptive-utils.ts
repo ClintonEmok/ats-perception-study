@@ -1,8 +1,7 @@
 export const ADAPTIVE_BIN_COUNT = 1024;
 export const ADAPTIVE_KERNEL_WIDTH = 3; // Smoothing kernel width in bins
-// Burstiness-driven temporal scaling: weight is taken from the Goh-Barabasi
-// burstiness signal B in [-1, 1] remapped to [0, 1]. Density is no longer
-// part of the weight construction; the default lambda=1.0 makes the scaling
-// purely burstiness-driven. The constant is kept as a parameter so the
-// hybrid mode remains available for ablation and reporting.
-export const ADAPTIVE_BURST_INFLUENCE = 1.0;
+// Density-based temporal scaling: the active code path (adaptive-warp-utils.ts)
+// uses pure density. This constant controls the density/burstiness blend in
+// adaptiveTime.worker.ts, which is used by useAdaptiveStore for ablation studies.
+// Set to 0 for pure density (matches thesis), 1 for pure burstiness.
+export const ADAPTIVE_BURST_INFLUENCE = 0;

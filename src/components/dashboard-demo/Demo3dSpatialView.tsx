@@ -12,6 +12,7 @@ import { buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
 import { computeDensityMap } from '@/components/timeline/hooks/useDensityStripDerivation';
 import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import { ADAPTIVE_BIN_COUNT, ADAPTIVE_KERNEL_WIDTH } from '@/lib/adaptive-utils';
+import { useBurstVolumeModel } from '@/hooks/useBurstVolumeModel';
 import type { KdeCell } from '@/lib/kde';
 import type { CrimeRecord } from '@/types/crime';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
@@ -80,6 +81,9 @@ export function Demo3dSpatialView() {
   const volumeScaleSeconds = useDashboardDemoCoordinationStore((state) => state.volumeScaleSeconds);
   const volumeExaggeration = useDashboardDemoCoordinationStore((state) => state.volumeExaggeration);
   const volumeNormalizationMode = useDashboardDemoCoordinationStore((state) => state.volumeNormalizationMode);
+  // The cube intentionally renders only the active selected burst. The hook
+  // returns a neutral model when the timeline has no selected burst window.
+  const burstVolumeModel = useBurstVolumeModel();
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
   const setSliceCrimeCounts = useDashboardDemoCoordinationStore((state) => state.setSliceCrimeCounts);
   const setCrimeFetchStatus = useDashboardDemoCoordinationStore((state) => state.setCrimeFetchStatus);
@@ -475,6 +479,7 @@ export function Demo3dSpatialView() {
         timeDomain={cubeTimeDomain}
         overrideWarpMap={scopedWarpMap}
         overrideWarpDomain={cubeScopeMode === 'brushed' ? cubeTimeDomain : undefined}
+        burstVolumeModel={burstVolumeModel}
       />
     </div>
   );

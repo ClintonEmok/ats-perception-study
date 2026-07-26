@@ -466,19 +466,27 @@ def step3_interevent_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
         next((l for l in subsets if l.startswith('Single district')), None),
     ]
     key_labels = [k for k in key_labels if k]
-    fig, axes = plt.subplots(1, 4, figsize=(10, 2.4))
-    for ax, label in zip(axes, key_labels):
+    hist_files: list[str] = []
+    hist_names = {
+        'Entire dataset': 'step3_interevent_hist_full.png',
+        'Single year (2025)': 'step3_interevent_hist_year.png',
+        'Single month (2025-07)': 'step3_interevent_hist_month.png',
+        'Single district (012)': 'step3_interevent_hist_district.png',
+    }
+    for label in key_labels:
+        fig, ax = plt.subplots(figsize=(3.5, 2.4))
         gaps = gap_data[label]
         log_gaps = np.log10(gaps[gaps > 0])
         ax.hist(log_gaps, bins=80, color=PALETTE[0], alpha=0.85, edgecolor='none')
         ax.set_title(_short(label))
-        ax.set_xlabel('log10 gap (s)')
-        if ax is axes[0]:
-            ax.set_ylabel('Frequency')
+        ax.set_xlabel('log10 positive inter-event gap (s)')
+        ax.set_ylabel('Frequency')
         ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):,}'))
-    fig.tight_layout()
-    fig.savefig(output_dir / 'step3_interevent_histograms.png', dpi=DPI)
-    plt.close(fig)
+        fig.tight_layout()
+        out_name = hist_names.get(label, f"step3_interevent_hist_{label.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('+', 'plus')}.png")
+        fig.savefig(output_dir / out_name, dpi=DPI)
+        plt.close(fig)
+        hist_files.append(out_name)
 
     # Figure: boxplot across subsets
     plot_labels, plot_data = [], []
@@ -493,13 +501,12 @@ def step3_interevent_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
     for patch, color in zip(bp['boxes'], PALETTE[:len(plot_labels)]):
         patch.set_facecolor(color)
         patch.set_alpha(0.5)
-    ax.set_ylabel('log10 gap (s)')
+    ax.set_ylabel('log10 positive inter-event gap (s)')
     ax.grid(True, axis='y', alpha=0.3)
     fig.tight_layout()
     fig.savefig(output_dir / 'step3_interevent_boxplot.png', dpi=DPI)
     plt.close(fig)
-    print(f'\n  Figures → step3_interevent_histograms.png, '
-          f'step3_interevent_boxplot.png')
+    print(f"\n  Figures → {', '.join(hist_files)}, step3_interevent_boxplot.png")
 
     return results
 
