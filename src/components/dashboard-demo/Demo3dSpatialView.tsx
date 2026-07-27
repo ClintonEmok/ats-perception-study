@@ -354,7 +354,9 @@ export function Demo3dSpatialView() {
   const cubeSlices = useMemo(() => {
     if (cubeScopeMode !== 'brushed') return countedSlices;
     const [scopeStart, scopeEnd] = cubeTimeDomain;
-    return countedSlices.filter((slice) => slice.endEpoch >= scopeStart && slice.startEpoch <= scopeEnd);
+    return countedSlices
+      .filter((slice) => slice.endEpoch >= scopeStart && slice.startEpoch <= scopeEnd)
+      .map((slice, index) => ({ ...slice, index }));
   }, [countedSlices, cubeScopeMode, cubeTimeDomain]);
 
   const cubeSliceKdes = useMemo(() => {
@@ -362,11 +364,10 @@ export function Demo3dSpatialView() {
       return sliceKdes;
     }
 
-    const visibleIndexes = new Set(
-      cubeSlices.map((slice) => countedSlices.findIndex((candidate) => candidate.sourceSliceId === slice.sourceSliceId)),
-    );
-
-    return sliceKdes.filter((_, index) => visibleIndexes.has(index));
+    return cubeSlices.map((slice) => {
+      const sourceIndex = countedSlices.findIndex((candidate) => candidate.sourceSliceId === slice.sourceSliceId);
+      return sliceKdes[sourceIndex] ?? [];
+    });
   }, [countedSlices, cubeScopeMode, cubeSlices, sliceKdes]);
 
   const cubeVolumeProfile = useMemo(() => {
@@ -375,12 +376,12 @@ export function Demo3dSpatialView() {
     const [domainStart, domainEnd] = cubeTimeDomain;
     const domainDuration = Math.max(1, domainEnd - domainStart);
 
-    return cubeSlices.map((slice) => {
+    return cubeSlices.map((slice, index) => {
       const sliceDuration = Math.max(0, slice.endEpoch - slice.startEpoch);
       const percentage = sliceDuration / domainDuration;
       const thickness = Math.max(0.6, percentage * 100);
       return {
-        index: slice.index,
+        index,
         durationSeconds: sliceDuration,
         normalizedDuration: Math.min(1, percentage),
         thickness,
