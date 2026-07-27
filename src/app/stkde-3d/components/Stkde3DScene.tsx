@@ -329,6 +329,7 @@ export function Stkde3DScene({
             camera={{ position: CAMERA_POSITION, fov: 38 }}
             gl={{ alpha: true, antialias: true }}
             style={{ background: 'transparent' }}
+            onPointerDown={(event) => sceneRuntime.onCanvasPointerDown({ clientX: event.clientX, clientY: event.clientY })}
             onPointerMissed={sceneRuntime.onCanvasPointerMissed}
           >
             <SceneContent

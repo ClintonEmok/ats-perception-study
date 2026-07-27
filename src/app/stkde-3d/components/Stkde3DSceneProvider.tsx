@@ -28,6 +28,7 @@ export interface Stkde3DSceneRuntime {
     endEpoch: number;
   }) => void;
   onCreateDraftAtPoint: (payload: { y: number; clientX: number; clientY: number }) => void;
+  onCanvasPointerDown: (payload: { clientX: number; clientY: number }) => void;
   onCanvasPointerMissed: () => void;
 }
 
@@ -54,6 +55,7 @@ export interface Stkde3DSceneRuntimeOptions {
     endEpoch: number;
   }) => void;
   onCreateDraftAtPoint?: (payload: { y: number; clientX: number; clientY: number }) => void;
+  onCanvasPointerDown?: (payload: { clientX: number; clientY: number }) => void;
   onCanvasPointerMissed?: () => void;
 }
 
@@ -111,6 +113,7 @@ export function createStkde3DSceneRuntime(options: Stkde3DSceneRuntimeOptions = 
     onSliceSelect: options.onSliceSelect ?? (() => undefined),
     onSliceResize: options.onSliceResize ?? (() => undefined),
     onCreateDraftAtPoint: options.onCreateDraftAtPoint ?? (() => undefined),
+    onCanvasPointerDown: options.onCanvasPointerDown ?? (() => undefined),
     onCanvasPointerMissed: options.onCanvasPointerMissed ?? (() => undefined),
   };
 }
