@@ -15,7 +15,7 @@ import { resolveEpochFromWarpedY } from '@/app/stkde-3d/lib/timeline-axis';
 import { computeDensityMap } from '@/components/timeline/hooks/useDensityStripDerivation';
 import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import { ADAPTIVE_BIN_COUNT, ADAPTIVE_KERNEL_WIDTH } from '@/lib/adaptive-utils';
-import { useBurstVolumeModel } from '@/hooks/useBurstVolumeModel';
+import { buildBurstVolumeModel } from '@/lib/stkde/burst-volume';
 import { buildDemoSliceAuthoredWarpMap } from '@/components/dashboard-demo/lib/demo-warp-map';
 import { useDashboardDemo3d } from '@/components/dashboard-demo/DashboardDemo3dProvider';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
@@ -122,7 +122,7 @@ export function Demo3dSpatialView() {
   const warpSource = useDashboardDemoCoordinationStore((state) => state.warpSource);
   // The cube intentionally renders only the active selected burst. The hook
   // returns a neutral model when the timeline has no selected burst window.
-  const burstVolumeModel = useBurstVolumeModel();
+  const selectedBurstWindows = useDashboardDemoCoordinationStore((state) => state.selectedBurstWindows);
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
   const setSliceCrimeCounts = useDashboardDemoCoordinationStore((state) => state.setSliceCrimeCounts);
   const setCrimeFetchStatus = useDashboardDemoCoordinationStore((state) => state.setCrimeFetchStatus);
@@ -244,6 +244,25 @@ export function Demo3dSpatialView() {
     () => crimesBySlice.map((events) => events.map((event) => ({ x: event.x, z: event.z, type: event.type }))),
     [crimesBySlice],
   );
+
+  const burstVolumeModel = useMemo(() => {
+    const selectedBurstWindow = selectedBurstWindows[0];
+    return buildBurstVolumeModel({
+      burstWindow: selectedBurstWindow
+        ? {
+            id: selectedBurstWindow.id,
+            startEpochSec: selectedBurstWindow.start,
+            peakEpochSec: selectedBurstWindow.peak,
+            endEpochSec: selectedBurstWindow.end,
+            count: selectedBurstWindow.count,
+            burstScore: selectedBurstWindow.burstScore,
+            burstClass: selectedBurstWindow.burstClass,
+            label: selectedBurstWindow.burstRationale,
+          }
+        : null,
+      sliceResults: stkdeResponse?.sliceResults,
+    });
+  }, [selectedBurstWindows, stkdeResponse]);
 
   const fullTimeDomain = useMemo<[number, number]>(() => (
     minTimestampSec !== null && maxTimestampSec !== null && maxTimestampSec > minTimestampSec
