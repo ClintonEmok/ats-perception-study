@@ -206,7 +206,9 @@ export function StkdeSliceStack({
       startEpoch,
       endEpoch,
     });
-    onActiveIndexChange(compact ? 0 : state.sliceIndex);
+    if (!compact) {
+      onActiveIndexChange(state.sliceIndex);
+    }
   }, [compact, onActiveIndexChange, onSliceResize]);
 
   const handleSliceSelect = useCallback((sliceIndex: number) => {
@@ -215,7 +217,9 @@ export function StkdeSliceStack({
       index: compact ? 0 : sliceIndex,
       sourceSliceId,
     });
-    onActiveIndexChange(compact ? 0 : sliceIndex);
+    if (!compact) {
+      onActiveIndexChange(sliceIndex);
+    }
   }, [compact, onActiveIndexChange, onSliceSelect, resolveSourceSliceId]);
 
   const handleHandlePointerDown = useCallback((e: ThreeEvent<PointerEvent>, sliceIndex: number, handle: ResizeHandle, centerY: number) => {
