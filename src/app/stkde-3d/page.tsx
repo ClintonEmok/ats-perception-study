@@ -5,6 +5,7 @@ import { Focus, Pause, Play } from 'lucide-react';
 import { generateStkde3dMockData, generateStkde3dRealData } from './lib/mock-data';
 import { computeSliceKde } from '@/lib/kde';
 import { Stkde3DScene } from './components/Stkde3DScene';
+import { createStkde3DSceneRuntime } from './components/Stkde3DSceneProvider';
 import { SliceScrubber } from './components/SliceScrubber';
 import { SliceInspector } from './components/SliceInspector';
 import { KdeTuningPanel } from './components/KdeTuningPanel';
@@ -91,6 +92,26 @@ export default function Stkde3DPage() {
 
   const slices = useMemo(() => dataset?.slices ?? [], [dataset]);
   const sliceEvents = useMemo(() => dataset?.sliceEvents ?? [], [dataset]);
+  const sceneSlices = useMemo(
+    () => slices.map((slice, index) => ({
+      ...slice,
+      index,
+      sourceSliceId: `standalone-${index}-${slice.startEpoch}-${slice.endEpoch}`,
+    })),
+    [slices],
+  );
+  const timeDomain = useMemo<[number, number]>(() => {
+    if (sceneSlices.length === 0) {
+      return [REAL_DATA_RANGE.startEpoch, REAL_DATA_RANGE.endEpoch];
+    }
+
+    const start = Math.min(...sceneSlices.map((slice) => slice.startEpoch));
+    const end = Math.max(...sceneSlices.map((slice) => slice.endEpoch));
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      return [REAL_DATA_RANGE.startEpoch, REAL_DATA_RANGE.endEpoch];
+    }
+    return end > start ? [start, end] : [start, start + 1];
+  }, [sceneSlices]);
   const isRealData = dataset?.source === 'real';
 
   const sliceKdeResults = useMemo(
@@ -114,6 +135,30 @@ export default function Stkde3DPage() {
   const activeSliceRange = activeSlice
     ? `${DATE_FORMATTER.format(new Date(activeSlice.startEpoch * 1000))} - ${DATE_FORMATTER.format(new Date(activeSlice.endEpoch * 1000))}`
     : 'No active range';
+
+  const sceneRuntime = useMemo(
+    () => createStkde3DSceneRuntime({
+      displayDomain: timeDomain,
+      warpDomain: timeDomain,
+      timeScaleMode: 'linear',
+      warpBlend: 0,
+      sourceSliceIds: sceneSlices.map((slice) => slice.sourceSliceId),
+      isPlaying,
+      isInterpolated: true,
+      onActiveIndexChange: setActiveIndex,
+      onSliceSelect: ({ index, sourceSliceId }) => {
+        const selectedIndex = sourceSliceId
+          ? sceneSlices.findIndex((slice) => slice.sourceSliceId === sourceSliceId)
+          : index;
+        setActiveIndex(selectedIndex >= 0 ? selectedIndex : index);
+      },
+      onSliceResize: () => undefined,
+      onCreateDraftAtPoint: () => undefined,
+      onCanvasPointerDown: () => undefined,
+      onCanvasPointerMissed: () => setActiveIndex(-1),
+    }),
+    [isPlaying, sceneSlices, timeDomain],
+  );
 
   useEffect(() => {
     if (!isPlaying || slices.length === 0) return undefined;
@@ -248,12 +293,14 @@ export default function Stkde3DPage() {
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-h-0 rounded-3xl border border-sky-500/15 bg-slate-950/40 p-2 shadow-[0_30px_100px_-44px_rgba(14,165,233,0.35)] backdrop-blur-sm">
             <Stkde3DScene
-              slices={slices}
+              slices={sceneSlices}
               sliceKdes={sliceKdes}
               sliceEvents={sliceEvents}
               activeIndex={activeIndex}
               viewMode={isFocusedView ? 'focus' : 'stack'}
               showRawEvents={showRawEvents}
+              timeDomain={timeDomain}
+              runtime={sceneRuntime}
             />
           </div>
 
