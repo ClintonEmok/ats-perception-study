@@ -4,9 +4,8 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { ADAPTIVE_BIN_COUNT } from '@/lib/adaptive-utils';
-import { useViewportStore } from '@/lib/stores/viewportStore';
-import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
-import { AXIS_HEIGHT, START_Y, resolveWarpedEpochY } from '../lib/timeline-axis';
+import { AXIS_HEIGHT, START_Y } from '../lib/timeline-axis';
+import { useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
 
 const tempObject = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -18,7 +17,6 @@ const AXIS_Z = -50.6;
 const AXIS_LABEL_OFFSET_X = AXIS_WIDTH / 2 + 8;
 const LINEAR_COLOR = new THREE.Color('#4f7fa8');
 const MIN_BIN_HEIGHT = AXIS_HEIGHT / ADAPTIVE_BIN_COUNT / 3;
-const normalizeWarpBlend = (warpFactor: number): number => Math.min(1, Math.max(0, warpFactor / 3));
 const AXIS_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
@@ -60,42 +58,23 @@ const interpolateColor = (t: number): THREE.Color => {
   return new THREE.Color(r / 255, g / 255, b / 255);
 };
 
-export function AdaptiveWarpAxis({
-  displayDomain: displayDomainProp,
-  overrideWarpMap,
-  overrideWarpDomain,
-}: {
-  displayDomain?: [number, number];
-  overrideWarpMap?: Float32Array | null;
-  overrideWarpDomain?: [number, number];
-} = {}) {
+export function AdaptiveWarpAxis() {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const densityMap = useDashboardDemoCoordinationStore((state) => state.densityMap);
-  const storeWarpMap = useDashboardDemoCoordinationStore((state) => state.warpMap);
-  const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
-  const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
-  const warpBlend = useMemo(() => normalizeWarpBlend(warpFactor), [warpFactor]);
-  const storeMapDomain = useDashboardDemoCoordinationStore((state) => state.mapDomain);
-  const viewportStart = useViewportStore((state) => state.startDate);
-  const viewportEnd = useViewportStore((state) => state.endDate);
-  const hasViewport = Number.isFinite(viewportStart) && Number.isFinite(viewportEnd) && viewportEnd > viewportStart;
-  const viewportDomain: [number, number] = hasViewport ? [viewportStart, viewportEnd] : [0, 1];
-  const displayDomain = displayDomainProp ?? viewportDomain;
-  const warpMap = overrideWarpMap ?? storeWarpMap;
-  const warpDomain: [number, number] = overrideWarpDomain ?? (storeMapDomain[1] > storeMapDomain[0] ? storeMapDomain : displayDomain);
+  const {
+    densityMap,
+    displayDomain,
+    timeScaleMode,
+    warpBlend,
+    warpMap,
+    resolveEpochY,
+  } = useStkde3DSceneRuntime();
   const labelTicks = useMemo(() => {
     const span = Math.max(1, displayDomain[1] - displayDomain[0]);
     const positions = [0, 0.25, 0.5, 0.75, 1];
 
     return positions.map((fraction) => {
       const epochSec = displayDomain[0] + span * fraction;
-      const y = resolveWarpedEpochY(epochSec, AXIS_BOTTOM_Y, {
-        timeScaleMode,
-        warpBlend,
-        warpMap,
-        displayDomain,
-        warpDomain,
-      });
+      const y = resolveEpochY(epochSec);
 
       return {
         epochSec,
@@ -103,7 +82,7 @@ export function AdaptiveWarpAxis({
         label: formatAxisLabel(epochSec),
       };
     });
-  }, [displayDomain, timeScaleMode, warpBlend, warpDomain, warpMap]);
+  }, [displayDomain, resolveEpochY]);
   const bins = useMemo(() => {
     const domain: [number, number] = displayDomain;
     const domainSpan = Math.max(1e-9, domain[1] - domain[0]);
@@ -120,22 +99,10 @@ export function AdaptiveWarpAxis({
         const densityValue = densityIndex >= 0 ? densityMap?.[densityIndex] ?? 0 : 0;
 
         const displayedStart = adaptiveEnabled
-          ? resolveWarpedEpochY(boundaryStart, AXIS_BOTTOM_Y, {
-              timeScaleMode,
-              warpBlend,
-              warpMap,
-              displayDomain,
-              warpDomain,
-            })
+          ? resolveEpochY(boundaryStart)
           : AXIS_BOTTOM_Y + ((boundaryStart - domain[0]) / domainSpan) * AXIS_HEIGHT;
         const displayedEnd = adaptiveEnabled
-          ? resolveWarpedEpochY(boundaryEnd, AXIS_BOTTOM_Y, {
-              timeScaleMode,
-              warpBlend,
-              warpMap,
-              displayDomain,
-              warpDomain,
-            })
+          ? resolveEpochY(boundaryEnd)
           : AXIS_BOTTOM_Y + ((boundaryEnd - domain[0]) / domainSpan) * AXIS_HEIGHT;
 
         const binHeight = adaptiveEnabled
@@ -155,7 +122,7 @@ export function AdaptiveWarpAxis({
       },
       [],
     );
-  }, [densityMap, displayDomain, timeScaleMode, warpBlend, warpDomain, warpMap]);
+  }, [densityMap, displayDomain, resolveEpochY, timeScaleMode, warpBlend, warpMap]);
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;

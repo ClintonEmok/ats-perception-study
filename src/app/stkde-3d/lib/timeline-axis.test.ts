@@ -6,6 +6,7 @@ import {
   resolveEpochFromWarpedY,
   resolveWarpedEpochY,
 } from './timeline-axis';
+import { createStkde3DSceneRuntime } from '../components/Stkde3DSceneProvider';
 
 describe('timeline-axis vertical mapping', () => {
   it('anchors linear epochs to the full axis height', () => {
@@ -34,5 +35,39 @@ describe('timeline-axis vertical mapping', () => {
     expect(midY).toBeGreaterThan(START_Y);
     expect(midY).toBeLessThan(START_Y + AXIS_HEIGHT);
     expect(resolveEpochFromWarpedY(midY, START_Y, settings)).toBeCloseTo(150, 0);
+  });
+
+  it('uses an explicit display domain instead of an implicit viewport domain', () => {
+    const settings = {
+      timeScaleMode: 'linear' as const,
+      warpBlend: 0,
+      warpMap: null,
+      displayDomain: [1_700_000_000, 1_700_086_400] as [number, number],
+      warpDomain: [0, 1] as [number, number],
+    };
+
+    expect(resolveWarpedEpochY(1_700_000_000, START_Y, settings)).toBeCloseTo(START_Y, 6);
+    expect(resolveWarpedEpochY(1_700_086_400, START_Y, settings)).toBeCloseTo(START_Y + AXIS_HEIGHT, 6);
+  });
+
+  it('shares adaptive slice and epoch resolvers and keeps inverse mapping aligned', () => {
+    const runtime = createStkde3DSceneRuntime({
+      displayDomain: [100, 200],
+      warpDomain: [100, 200],
+      timeScaleMode: 'adaptive',
+      warpBlend: 1,
+      warpMap: Float32Array.from([100, 110, 190, 200]),
+    });
+    const slice = {
+      index: 1,
+      label: 'midpoint',
+      startEpoch: 150,
+      endEpoch: 160,
+      burstScore: 0,
+      crimeCount: 0,
+    };
+
+    expect(runtime.resolveSliceY(slice)).toBeCloseTo(runtime.resolveEpochY(slice.startEpoch), 6);
+    expect(runtime.yToEpoch(runtime.resolveSliceY(slice))).toBeCloseTo(slice.startEpoch, 0);
   });
 });

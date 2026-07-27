@@ -4,23 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import { ThreeEvent, useThree } from '@react-three/fiber';
-import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
-import { useSliceDomainStore } from '@/store/useSliceDomainStore';
-import { useTimelineDataStore } from '@/store/useTimelineDataStore';
-import { useViewportStore } from '@/lib/stores/viewportStore';
 import { easeInOutCubic, interpolateKdeCells } from '@/lib/motion/easing';
-import { epochSecondsToNormalized, normalizedToEpochSeconds } from '@/lib/time-domain';
-import { START_Y, SLICE_SPACING, resolveEpochFromWarpedY, resolveWarpedEpochY } from '../lib/timeline-axis';
+import { START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 import { getStkdeIntensityColor } from '../lib/palette';
 import type { KdeCell, EvolvingSlice } from '../lib/types';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
-import type { TimeSlice } from '@/store/slice-domain/types';
+import { useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
 
 export { AXIS_HEIGHT, START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 const TEXTURE_SIZE = 256;
 const TRANSITION_DURATION_MS = 240;
 const MIN_RESIZE_DURATION_SEC = 3600;
-const normalizeWarpBlend = (warpFactor: number): number => Math.min(1, Math.max(0, warpFactor / 3));
 
 export function yForIndex(index: number): number {
   return START_Y + index * SLICE_SPACING;
@@ -39,29 +33,6 @@ function formatRangeLabel(startEpoch: number, endEpoch: number): string {
   });
 
   return `${formatter.format(new Date(startEpoch * 1000))} → ${formatter.format(new Date(endEpoch * 1000))}`;
-}
-
-function resolveSliceEpochRange(
-  slice: TimeSlice,
-  minTimestampSec: number,
-  maxTimestampSec: number,
-): [number, number] {
-  if (slice.startDateTimeMs !== undefined || slice.endDateTimeMs !== undefined) {
-    const startMs = slice.startDateTimeMs ?? slice.endDateTimeMs ?? 0;
-    const endMs = slice.endDateTimeMs ?? slice.startDateTimeMs ?? startMs;
-    const start = startMs / 1000;
-    const end = endMs / 1000;
-    return start <= end ? [start, end] : [end, start];
-  }
-
-  if (slice.type === 'range' && slice.range) {
-    const start = normalizedToEpochSeconds(slice.range[0], minTimestampSec, maxTimestampSec);
-    const end = normalizedToEpochSeconds(slice.range[1], minTimestampSec, maxTimestampSec);
-    return start <= end ? [start, end] : [end, start];
-  }
-
-  const time = normalizedToEpochSeconds(slice.time, minTimestampSec, maxTimestampSec);
-  return [time, time];
 }
 
 function buildHeatmapTexture(cells: KdeCell[]): THREE.CanvasTexture | null {
@@ -141,17 +112,13 @@ function buildInterpolatedTexture(
 }
 
 interface StkdeSliceStackProps {
-  slices: EvolvingSlice[];
+  slices: Array<EvolvingSlice & { sourceSliceId?: string }>;
   sliceKdes: KdeCell[][];
   volumeProfile?: DurationVolumeProfileEntry[];
   activeIndex: number;
   compact?: boolean;
-  displayDomain?: [number, number];
   sliceOpacity?: number;
-  yOffset?: number;
   heightScale?: number;
-  overrideWarpMap?: Float32Array | null;
-  overrideWarpDomain?: [number, number];
 }
 
 type ResizeHandle = 'start' | 'end';
@@ -174,124 +141,35 @@ interface SliceTransition {
   startedAt: number;
 }
 
-interface OrderedSourceSlice {
-  sourceSliceId: string;
-  index: number;
-  startEpoch: number;
-  endEpoch: number;
-}
-
-function buildOrderedSourceSlices(
-  sourceSlices: TimeSlice[],
-  minTimestampSec: number | null,
-  maxTimestampSec: number | null,
-): OrderedSourceSlice[] {
-  if (minTimestampSec === null || maxTimestampSec === null) return [];
-
-  return sourceSlices
-    .filter((slice) => slice.isVisible && slice.type === 'range')
-    .map((slice, originalIndex) => {
-      const [startEpoch, endEpoch] = resolveSliceEpochRange(slice, minTimestampSec, maxTimestampSec);
-      return {
-        sourceSliceId: slice.id,
-        index: originalIndex,
-        startEpoch,
-        endEpoch,
-      };
-    })
-    .sort((left, right) => {
-      const startDelta = left.startEpoch - right.startEpoch;
-      if (startDelta !== 0) return startDelta;
-      const endDelta = left.endEpoch - right.endEpoch;
-      if (endDelta !== 0) return endDelta;
-      return left.sourceSliceId.localeCompare(right.sourceSliceId);
-    });
-}
-
 export function StkdeSliceStack({
   slices,
   sliceKdes,
   volumeProfile,
   activeIndex,
   compact = false,
-  displayDomain: displayDomainProp,
   sliceOpacity = 1,
-  yOffset = 0,
   heightScale = 1,
-  overrideWarpMap,
-  overrideWarpDomain,
 }: StkdeSliceStackProps) {
-  const isPlaying = useDashboardDemoCoordinationStore((state) => state.inspectIsPlaying);
-  const isInterpolated = useDashboardDemoCoordinationStore((state) => state.inspectInterpolation);
-  const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
-  const storeWarpMap = useDashboardDemoCoordinationStore((state) => state.warpMap);
-  const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
-  const warpBlend = useMemo(() => normalizeWarpBlend(warpFactor), [warpFactor]);
-  const storeMapDomain = useDashboardDemoCoordinationStore((state) => state.mapDomain);
-  const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
-  const updateSlice = useSliceDomainStore((state) => state.updateSlice);
-  const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
-  const activeSliceId = useSliceDomainStore((state) => state.activeSliceId);
-  const sourceSlices = useSliceDomainStore((state) => state.slices);
-  const minTimestampSec = useTimelineDataStore((state) => state.minTimestampSec);
-  const maxTimestampSec = useTimelineDataStore((state) => state.maxTimestampSec);
-  const viewportStart = useViewportStore((state) => state.startDate);
-  const viewportEnd = useViewportStore((state) => state.endDate);
+  const {
+    isPlaying,
+    isInterpolated,
+    sourceSliceIds,
+    resolveSliceY,
+    yToEpoch,
+    onActiveIndexChange,
+    onSliceSelect,
+    onSliceResize,
+  } = useStkde3DSceneRuntime();
   const { camera, gl } = useThree();
 
   const [dragState, setDragState] = useState<DragState | null>(null);
 
-  const orderedSourceSliceIds = useMemo(() => {
-    return buildOrderedSourceSlices(sourceSlices, minTimestampSec, maxTimestampSec).map((slice) => slice.sourceSliceId);
-  }, [maxTimestampSec, minTimestampSec, sourceSlices]);
-
-  const viewportDomain = useMemo<[number, number]>(() => {
-    if (!Number.isFinite(viewportStart) || !Number.isFinite(viewportEnd) || viewportEnd <= viewportStart) {
-      return [0, 1];
-    }
-    return [viewportStart, viewportEnd];
-  }, [viewportEnd, viewportStart]);
-  const displayDomain = displayDomainProp ?? viewportDomain;
-  const warpMap = overrideWarpMap ?? storeWarpMap;
-  const warpDomain = useMemo<[number, number]>(() => (
-    overrideWarpDomain ?? (storeMapDomain[1] > storeMapDomain[0] ? storeMapDomain : displayDomain)
-  ), [displayDomain, overrideWarpDomain, storeMapDomain]);
-  const resolveSliceY = useMemo(
-    () => (slice: EvolvingSlice): number => {
-      return resolveWarpedEpochY(slice.startEpoch, START_Y, {
-        timeScaleMode,
-        warpBlend,
-        warpMap,
-        displayDomain,
-        warpDomain,
-        yOffset,
-      });
-    },
-    [displayDomain, timeScaleMode, warpBlend, warpMap, warpDomain, yOffset]
-  );
-
   const resolveSourceSliceId = useCallback(
     (sliceIndex: number): string | null => {
-      if (compact) {
-        return activeSliceId ?? orderedSourceSliceIds[0] ?? null;
-      }
-
-      return orderedSourceSliceIds[sliceIndex] ?? null;
+      const slice = slices[sliceIndex];
+      return slice?.sourceSliceId ?? sourceSliceIds[sliceIndex] ?? null;
     },
-    [activeSliceId, compact, orderedSourceSliceIds]
-  );
-
-  const yToEpoch = useCallback(
-    (y: number): number => {
-      return resolveEpochFromWarpedY(y, START_Y, {
-        timeScaleMode,
-        warpBlend,
-        warpMap,
-        displayDomain,
-        warpDomain,
-      });
-    },
-    [displayDomain, timeScaleMode, warpBlend, warpMap, warpDomain]
+    [slices, sourceSliceIds]
   );
 
   const resolvePointerY = useCallback(
@@ -322,42 +200,23 @@ export function StkdeSliceStack({
   const commitResize = useCallback((state: DragState) => {
     const startEpoch = Math.min(state.previewStartEpoch, state.previewEndEpoch);
     const endEpoch = Math.max(state.previewStartEpoch, state.previewEndEpoch);
-    const midpointEpoch = (startEpoch + endEpoch) / 2;
-    const normalizedStart = minTimestampSec !== null && maxTimestampSec !== null
-      ? epochSecondsToNormalized(startEpoch, minTimestampSec, maxTimestampSec)
-      : null;
-    const normalizedEnd = minTimestampSec !== null && maxTimestampSec !== null
-      ? epochSecondsToNormalized(endEpoch, minTimestampSec, maxTimestampSec)
-      : null;
-
-    updateSlice(state.sliceId, {
-      startDateTimeMs: startEpoch * 1000,
-      endDateTimeMs: endEpoch * 1000,
-      time: normalizedStart !== null && normalizedEnd !== null
-        ? (normalizedStart + normalizedEnd) / 2
-        : midpointEpoch,
-      ...(normalizedStart !== null && normalizedEnd !== null ? { range: [normalizedStart, normalizedEnd] as [number, number] } : {}),
+    onSliceResize({
+      index: state.sliceIndex,
+      sourceSliceId: state.sliceId,
+      startEpoch,
+      endEpoch,
     });
-
-    setActiveSlice(state.sliceId);
-    const nextOrderedSliceIds = buildOrderedSourceSlices(
-      useSliceDomainStore.getState().slices,
-      minTimestampSec,
-      maxTimestampSec,
-    ).map((slice) => slice.sourceSliceId);
-    const nextIndex = nextOrderedSliceIds.indexOf(state.sliceId);
-    if (nextIndex >= 0) {
-      setActiveSliceIndex(compact ? 0 : nextIndex);
-    }
-  }, [compact, maxTimestampSec, minTimestampSec, setActiveSlice, setActiveSliceIndex, updateSlice]);
+    onActiveIndexChange(compact ? 0 : state.sliceIndex);
+  }, [compact, onActiveIndexChange, onSliceResize]);
 
   const handleSliceSelect = useCallback((sliceIndex: number) => {
     const sourceSliceId = resolveSourceSliceId(sliceIndex);
-    if (sourceSliceId) {
-      setActiveSlice(sourceSliceId);
-    }
-    setActiveSliceIndex(compact ? 0 : sliceIndex);
-  }, [compact, resolveSourceSliceId, setActiveSlice, setActiveSliceIndex]);
+    onSliceSelect({
+      index: compact ? 0 : sliceIndex,
+      sourceSliceId,
+    });
+    onActiveIndexChange(compact ? 0 : sliceIndex);
+  }, [compact, onActiveIndexChange, onSliceSelect, resolveSourceSliceId]);
 
   const handleHandlePointerDown = useCallback((e: ThreeEvent<PointerEvent>, sliceIndex: number, handle: ResizeHandle, centerY: number) => {
     e.stopPropagation();

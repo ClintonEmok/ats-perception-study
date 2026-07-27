@@ -6,13 +6,8 @@ import { CameraControls } from '@react-three/drei';
 import * as THREE from 'three';
 import Map, { MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
-import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
-import { useSliceDomainStore } from '@/store/useSliceDomainStore';
-import { useViewportStore } from '@/lib/stores/viewportStore';
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
-import { START_Y, resolveEpochFromWarpedY, resolveWarpedEpochY } from '../lib/timeline-axis';
-import type { KdeCell, EvolvingSlice, MockCrimeEvent } from '../lib/types';
+import type { KdeCell, MockCrimeEvent } from '../lib/types';
 import { AdaptiveWarpAxis } from './AdaptiveWarpAxis';
 import { HotspotTrajectoryOverlay } from './HotspotTrajectoryOverlay';
 import { StkdeIntensityLegend } from './StkdeIntensityLegend';
@@ -21,10 +16,16 @@ import { BurstVolumeRenderer } from './BurstVolumeRenderer';
 import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { CHICAGO_BOUNDS } from '../lib/chicago-bounds';
+import {
+  createStkde3DSceneRuntime,
+  Stkde3DSceneProvider,
+  useStkde3DSceneRuntime,
+  type Stkde3DSceneRuntime,
+  type Stkde3DSceneSlice,
+} from './Stkde3DSceneProvider';
 
 const CAMERA_POSITION: [number, number, number] = [105, 175, 105];
 const CAMERA_TARGET: [number, number, number] = [0, 0, 0];
-const normalizeWarpBlend = (warpFactor: number): number => clamp(warpFactor / 3, 0, 1);
 
 const MAP_VIEW_STATE = {
   longitude: -87.649,
@@ -36,39 +37,6 @@ const MAP_VIEW_STATE = {
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const MAP_PLANE_Y = -38;
-
-const MIN_DRAFT_WINDOW_SEC = 6 * 60 * 60;
-
-const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
-
-const buildDraftWindow = (
-  centerEpoch: number,
-  viewportStart: number,
-  viewportEnd: number,
-): { startEpoch: number; endEpoch: number } | null => {
-  if (!Number.isFinite(centerEpoch) || !Number.isFinite(viewportStart) || !Number.isFinite(viewportEnd) || viewportEnd <= viewportStart) {
-    return null;
-  }
-
-  const windowDuration = Math.min(viewportEnd - viewportStart, MIN_DRAFT_WINDOW_SEC * 2);
-  if (windowDuration <= 0) return null;
-
-  const halfWindow = windowDuration / 2;
-  let startEpoch = centerEpoch - halfWindow;
-  let endEpoch = centerEpoch + halfWindow;
-
-  if (startEpoch < viewportStart) {
-    endEpoch = Math.min(viewportEnd, endEpoch + (viewportStart - startEpoch));
-    startEpoch = viewportStart;
-  }
-
-  if (endEpoch > viewportEnd) {
-    startEpoch = Math.max(viewportStart, startEpoch - (endEpoch - viewportEnd));
-    endEpoch = viewportEnd;
-  }
-
-  return endEpoch > startEpoch ? { startEpoch, endEpoch } : null;
-};
 
 function MapTileSource({
   onTextureReady,
@@ -130,7 +98,7 @@ function MapTileSource({
 }
 
 interface Stkde3DSceneProps {
-  slices: Array<EvolvingSlice & { sourceSliceId?: string }>;
+  slices: Array<Stkde3DSceneSlice>;
   sliceKdes: KdeCell[][];
   volumeProfile?: DurationVolumeProfileEntry[];
   sliceEvents?: MockCrimeEvent[][];
@@ -146,6 +114,7 @@ interface Stkde3DSceneProps {
   yOffset?: number;
   heightScale?: number;
   burstVolumeModel?: BurstVolumeModel;
+  runtime?: Stkde3DSceneRuntime;
 }
 
 function RawEventPoints({
@@ -154,7 +123,7 @@ function RawEventPoints({
   activeIndex,
   resolveSliceY,
 }: Pick<Stkde3DSceneProps, 'slices' | 'sliceEvents' | 'activeIndex'> & {
-  resolveSliceY: (slice: EvolvingSlice & { sourceSliceId?: string }) => number;
+  resolveSliceY: (slice: Stkde3DSceneSlice) => number;
 }) {
   const positions = useMemo(() => {
     if (sliceEvents.length === 0 || slices.length === 0) {
@@ -208,20 +177,19 @@ function SceneContent({
   viewMode = 'stack',
   showRawEvents = false,
   sliceOpacity = 1,
-  timeDomain,
-  overrideWarpMap,
-  overrideWarpDomain,
-  onCreateDraftAtPoint,
-  resolveSliceY,
-  resolveEpochY,
-  yOffset = 0,
   heightScale = 1,
   burstVolumeModel,
-}: Stkde3DSceneProps & {
-  resolveSliceY: (slice: EvolvingSlice & { sourceSliceId?: string }) => number;
-  resolveEpochY: (epochSec: number) => number;
-}) {
+}: Pick<
+  Stkde3DSceneProps,
+  'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'activeIndex' | 'viewMode' |
+    'showRawEvents' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel'
+>) {
   const controlsRef = useRef<CameraControls>(null);
+  const {
+    resolveSliceY,
+    resolveEpochY,
+    onCreateDraftAtPoint,
+  } = useStkde3DSceneRuntime();
   const focusedSlice = slices[activeIndex]
     ? { ...slices[activeIndex], index: 0 }
     : undefined;
@@ -265,7 +233,7 @@ function SceneContent({
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      <AdaptiveWarpAxis displayDomain={timeDomain} overrideWarpMap={overrideWarpMap} overrideWarpDomain={overrideWarpDomain} />
+      <AdaptiveWarpAxis />
 
       <StkdeSliceStack
         slices={viewMode === 'focus' ? focusedSlices : slices}
@@ -273,12 +241,8 @@ function SceneContent({
         volumeProfile={viewMode === 'focus' ? focusedVolumeProfile : volumeProfile}
         activeIndex={viewMode === 'focus' ? 0 : activeIndex}
         compact={viewMode === 'focus'}
-        displayDomain={timeDomain}
         sliceOpacity={sliceOpacity}
-        yOffset={yOffset}
         heightScale={heightScale}
-        overrideWarpMap={overrideWarpMap}
-        overrideWarpDomain={overrideWarpDomain}
       />
 
       {burstVolumeModel ? (
@@ -294,7 +258,6 @@ function SceneContent({
         sliceResults={hotspotSliceResults}
         viewMode={viewMode}
         resolveSliceY={resolveSliceY}
-        yOffset={yOffset}
       />
 
       {showRawEvents ? (
@@ -333,89 +296,20 @@ export function Stkde3DScene({
   yOffset = 0,
   heightScale = 1,
   burstVolumeModel,
+  runtime,
+  onCreateDraftAtPoint,
 }: Stkde3DSceneProps) {
   const [mapTexture, setMapTexture] = useState<THREE.CanvasTexture | null>(null);
-  const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
-  const setActiveRailTab = useDashboardDemoCoordinationStore((state) => state.setActiveRailTab);
-  const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
-  const warpMap = useDashboardDemoCoordinationStore((state) => state.warpMap);
-  const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
-  const warpBlend = useMemo(() => normalizeWarpBlend(warpFactor), [warpFactor]);
-  const mapDomain = useDashboardDemoCoordinationStore((state) => state.mapDomain);
-  const viewportStart = useViewportStore((state) => state.startDate);
-  const viewportEnd = useViewportStore((state) => state.endDate);
-  const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
-  const addManualDraftRange = useDashboardDemoTimeslicingModeStore((state) => state.addManualDraftRange);
-  const computeManualDraftBin = useDashboardDemoTimeslicingModeStore((state) => state.computeManualDraftBin);
-  const canvasPointerRef = useRef<{ x: number; y: number } | null>(null);
-  const viewportDomain = useMemo<[number, number]>(() => (
-    viewportEnd > viewportStart ? [viewportStart, viewportEnd] : [0, 1]
-  ), [viewportEnd, viewportStart]);
-  const displayDomain = timeDomain ?? viewportDomain;
-  const warpDomain = useMemo<[number, number]>(() => (
-    mapDomain[1] > mapDomain[0] ? mapDomain : displayDomain
-  ), [displayDomain, mapDomain]);
-  const resolveSliceY = useCallback((slice: EvolvingSlice & { sourceSliceId?: string }): number => {
-    return resolveWarpedEpochY(slice.startEpoch, START_Y, {
-      timeScaleMode,
-      warpBlend,
-      warpMap,
-      displayDomain,
-      warpDomain,
+  const sceneRuntime = useMemo(
+    () => runtime ?? createStkde3DSceneRuntime({
+      displayDomain: timeDomain,
+      warpDomain: overrideWarpDomain ?? timeDomain,
+      warpMap: overrideWarpMap,
       yOffset,
-    });
-  }, [displayDomain, timeScaleMode, warpBlend, warpMap, warpDomain, yOffset]);
-
-  const resolveEpochY = useCallback((epochSec: number): number => {
-    return resolveWarpedEpochY(epochSec, START_Y, {
-      timeScaleMode,
-      warpBlend,
-      warpMap,
-      displayDomain,
-      warpDomain,
-      yOffset,
-    });
-  }, [displayDomain, timeScaleMode, warpBlend, warpMap, warpDomain, yOffset]);
-
-  const yToEpoch = useCallback((y: number): number => {
-    return resolveEpochFromWarpedY(y, START_Y, {
-      timeScaleMode,
-      warpBlend,
-      warpMap,
-      displayDomain,
-      warpDomain,
-    });
-  }, [displayDomain, timeScaleMode, warpBlend, warpMap, warpDomain]);
-
-  const clearActiveSlice = useCallback(() => {
-    setActiveSliceIndex(-1);
-    setActiveSlice(null);
-  }, [setActiveSlice, setActiveSliceIndex]);
-
-  const handleCreateDraftAtPoint = useCallback(({ y, clientX, clientY }: { y: number; clientX: number; clientY: number }) => {
-    const pointer = canvasPointerRef.current;
-    const movedTooFar = pointer ? Math.hypot(clientX - pointer.x, clientY - pointer.y) > 8 : false;
-    if (movedTooFar) return;
-
-    const clickEpoch = yToEpoch(y);
-    const draftWindow = buildDraftWindow(clickEpoch, displayDomain[0], displayDomain[1]);
-    if (!draftWindow) return;
-
-    const draftId = addManualDraftRange({
-      startMs: draftWindow.startEpoch * 1000,
-      endMs: draftWindow.endEpoch * 1000,
-    });
-    setActiveRailTab('slices');
-    void computeManualDraftBin(draftId);
-  }, [addManualDraftRange, computeManualDraftBin, displayDomain, setActiveRailTab, yToEpoch]);
-
-  const handleCanvasPointerDown = useCallback((event: { clientX: number; clientY: number }) => {
-    canvasPointerRef.current = { x: event.clientX, y: event.clientY };
-  }, []);
-
-  const handleCanvasPointerMissed = useCallback(() => {
-    clearActiveSlice();
-  }, [clearActiveSlice]);
+      onCreateDraftAtPoint,
+    }),
+    [onCreateDraftAtPoint, overrideWarpDomain, overrideWarpMap, runtime, timeDomain, yOffset],
+  );
 
   useEffect(() => {
     return () => {
@@ -424,67 +318,61 @@ export function Stkde3DScene({
   }, [mapTexture]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-transparent">
-      <MapTileSource onTextureReady={setMapTexture} />
-      <div className="absolute left-4 top-4 z-20">
-        <StkdeIntensityLegend />
-      </div>
-      <div className="absolute inset-0 z-10">
-        <Canvas
-          camera={{ position: CAMERA_POSITION, fov: 38 }}
-          gl={{ alpha: true, antialias: true }}
-          style={{ background: 'transparent' }}
-          onPointerDown={handleCanvasPointerDown}
-          onPointerMissed={handleCanvasPointerMissed}
-        >
-          <SceneContent
-            slices={slices}
-            sliceKdes={sliceKdes}
-            volumeProfile={volumeProfile}
-            sliceEvents={sliceEvents}
-            hotspotSliceResults={hotspotSliceResults}
-            activeIndex={activeIndex}
-            viewMode={viewMode}
-            showRawEvents={showRawEvents}
-            sliceOpacity={sliceOpacity}
-            timeDomain={displayDomain}
-            overrideWarpMap={overrideWarpMap}
-            overrideWarpDomain={overrideWarpDomain}
-            resolveSliceY={resolveSliceY}
-            onCreateDraftAtPoint={handleCreateDraftAtPoint}
-            yOffset={yOffset}
-            heightScale={heightScale}
-            burstVolumeModel={burstVolumeModel}
-            resolveEpochY={resolveEpochY}
-          />
+    <Stkde3DSceneProvider runtime={sceneRuntime}>
+      <div className="relative h-full w-full overflow-hidden bg-transparent">
+        <MapTileSource onTextureReady={setMapTexture} />
+        <div className="absolute left-4 top-4 z-20">
+          <StkdeIntensityLegend />
+        </div>
+        <div className="absolute inset-0 z-10">
+          <Canvas
+            camera={{ position: CAMERA_POSITION, fov: 38 }}
+            gl={{ alpha: true, antialias: true }}
+            style={{ background: 'transparent' }}
+            onPointerMissed={sceneRuntime.onCanvasPointerMissed}
+          >
+            <SceneContent
+              slices={slices}
+              sliceKdes={sliceKdes}
+              volumeProfile={volumeProfile}
+              sliceEvents={sliceEvents}
+              hotspotSliceResults={hotspotSliceResults}
+              activeIndex={activeIndex}
+              viewMode={viewMode}
+              showRawEvents={showRawEvents}
+              sliceOpacity={sliceOpacity}
+              heightScale={heightScale}
+              burstVolumeModel={burstVolumeModel}
+            />
 
-          {mapTexture ? (
-            <group position={[0, MAP_PLANE_Y, 0]} renderOrder={-20}>
-              <mesh position={[0, -0.72, 0]}>
-                <boxGeometry args={[98.4, 1.25, 98.4]} />
-                <meshStandardMaterial
-                  color="#081120"
-                  roughness={1}
-                  metalness={0}
-                  transparent
-                  opacity={0.82}
-                  depthWrite={false}
-                />
-              </mesh>
-              <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[96, 96]} />
-                <meshBasicMaterial
-                  map={mapTexture}
-                  transparent
-                  opacity={0.92}
-                  depthWrite={false}
-                  side={THREE.DoubleSide}
-                />
-              </mesh>
-            </group>
-          ) : null}
-        </Canvas>
+            {mapTexture ? (
+              <group position={[0, MAP_PLANE_Y, 0]} renderOrder={-20}>
+                <mesh position={[0, -0.72, 0]}>
+                  <boxGeometry args={[98.4, 1.25, 98.4]} />
+                  <meshStandardMaterial
+                    color="#081120"
+                    roughness={1}
+                    metalness={0}
+                    transparent
+                    opacity={0.82}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                  <planeGeometry args={[96, 96]} />
+                  <meshBasicMaterial
+                    map={mapTexture}
+                    transparent
+                    opacity={0.92}
+                    depthWrite={false}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+              </group>
+            ) : null}
+          </Canvas>
+        </div>
       </div>
-    </div>
+    </Stkde3DSceneProvider>
   );
 }
