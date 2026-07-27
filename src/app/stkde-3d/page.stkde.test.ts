@@ -19,6 +19,8 @@ describe('/stkde-3d route focus mode', () => {
     expect(pageSource).toMatch(/createStkde3DSceneRuntime/);
     expect(pageSource).toMatch(/sourceSliceId/);
     expect(pageSource).toMatch(/timeDomain/);
+    expect(pageSource).toMatch(/StandaloneSliceScrubber/);
+    expect(pageSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);
     expect(sceneSource).toMatch(/viewMode\?: 'stack' \| 'focus'/);
     expect(sceneSource).toMatch(/showRawEvents\?: boolean/);
     expect(sceneSource).toMatch(/sliceEvents\?: MockCrimeEvent\[\]\[]/);
