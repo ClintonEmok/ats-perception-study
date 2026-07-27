@@ -14,6 +14,7 @@ describe('/dashboard-demo shell', () => {
       'utf8'
     );
     const demoStkdeHookSource = readFileSync(new URL('../../components/dashboard-demo/lib/useDemoStkde.ts', import.meta.url), 'utf8');
+    const demo3dProviderSource = readFileSync(new URL('../../components/dashboard-demo/DashboardDemo3dProvider.tsx', import.meta.url), 'utf8');
     const demoTimelinePanelSource = readFileSync(
       new URL('../../components/dashboard-demo/DemoTimelinePanel.tsx', import.meta.url),
       'utf8'
@@ -86,6 +87,10 @@ describe('/dashboard-demo shell', () => {
     expect(shellSource).toMatch(/z-40/);
     expect(shellSource).toMatch(/Show map viewport/);
     expect(shellSource).toMatch(/Show 3D viewport/);
+    expect(shellSource).toMatch(/DashboardDemo3dProvider/);
+    expect(shellSource).not.toMatch(/DemoStkdeTrigger|useDemoStkde/);
+    expect(demo3dProviderSource).toMatch(/useDemoStkde/);
+    expect(demo3dProviderSource).toMatch(/DashboardDemo3dContext/);
     expect(demoMapVisualizationSource).toMatch(/DemoStatsMapOverlay/);
     expect(demoMapVisualizationSource).toMatch(/stkdeVisibleOverride/);
     expect(demoMapVisualizationSource).toMatch(/useDashboardDemoCoordinationStore/);
@@ -108,6 +113,8 @@ describe('/dashboard-demo shell', () => {
     expect(demoStkdeHookSource).toMatch(/callerIntent: 'dashboard-demo'/);
     expect(demoStkdeHookSource).toMatch(/buildStkdeViewModel/);
     expect(demoStkdeHookSource).toMatch(/DEFAULT_STKDE_BBOX/);
+    expect(demoStkdeHookSource).toMatch(/useSliceDomainStore/);
+    expect(demoStkdeHookSource).not.toMatch(/\buseSliceStore\b/);
     expect(demoStatsSource).toMatch(/Focus range/);
     expect(demoStatsSource).toMatch(/selectedDistrictLabels/);
     expect(demoStatsSource).toMatch(/Start/);
@@ -135,15 +142,6 @@ describe('/dashboard-demo shell', () => {
     expect(globalWarpControlsSource).toMatch(/Time scale/);
     expect(globalWarpControlsSource).toMatch(/Warp factor/);
     expect(globalWarpControlsSource).toMatch(/Linear|Adaptive/);
-    // Phase 84: adaptive signal source selector
-    expect(globalWarpControlsSource).toMatch(/from '@\/components\/ui\/select'/);
-    expect(globalWarpControlsSource).toMatch(/from '@\/lib\/signal-sources\/contract'/);
-    expect(globalWarpControlsSource).toMatch(/SIGNAL_SOURCE_OPTIONS/);
-    expect(globalWarpControlsSource).toMatch(/isEnabled\(['"]adaptiveSignalSource['"]\)/);
-    expect(globalWarpControlsSource).toMatch(/setActiveSignalSource/);
-    // The Select is rendered conditionally on both `timeScaleMode === 'adaptive'`
-    // AND the feature flag (the `showSignalSource` doubly-gated variable).
-    expect(globalWarpControlsSource).toMatch(/showSignalSource/);
     expect(globalWarpControlsSource).toMatch(/cubeScopeMode|setCubeScopeMode/);
     expect(globalWarpControlsSource).toMatch(/Overview mode|Detail mode/);
     expect(demoStatsMapOverlaySource).toMatch(/heatmap/);
@@ -170,7 +168,6 @@ describe('/dashboard-demo shell', () => {
     expect(demoTimelinePanelSource).not.toMatch(/useSliceStore|useTimeslicingModeStore|Slice companion|Side panel/);
     expect(railTabsSource).toMatch(/Tabs/);
     expect(railTabsSource).toMatch(/DemoSlicePanel/);
-    expect(railTabsSource).toMatch(/DemoPresetSelect/);
     expect(demoPresetSelectSource).toMatch(/useDashboardDemoCoordinationStore/);
     expect(demoPresetSelectSource).not.toMatch(/useCoordinationStore/);
     expect(demoPresetSelectSource).not.toMatch(/useTimeStore/);

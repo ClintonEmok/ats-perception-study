@@ -10,18 +10,13 @@ import { useTimelineDataStore } from '@/store/useTimelineDataStore';
 import { useViewportStore } from '@/lib/stores/viewportStore';
 import { DemoMapVisualization } from '@/components/dashboard-demo/DemoMapVisualization';
 import { Demo3dSpatialView } from '@/components/dashboard-demo/Demo3dSpatialView';
-import { useDemoStkde } from '@/components/dashboard-demo/lib/useDemoStkde';
+import { DashboardDemo3dProvider } from '@/components/dashboard-demo/DashboardDemo3dProvider';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
 import { useDashboardDemoMapLayerStore } from '@/store/useDashboardDemoMapLayerStore';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 
 type DemoViewport = 'map' | '3d' | 'compare';
-
-function DemoStkdeTrigger() {
-  useDemoStkde();
-  return null;
-}
 
 export function DashboardDemoShell() {
   const [activeViewport, setActiveViewport] = useState<DemoViewport>('map');
@@ -76,12 +71,12 @@ export function DashboardDemoShell() {
   }, [appliedSliceCount, lastAppliedAt, setActiveRailTab]);
 
   return (
-    <main
-      className="relative h-screen w-screen overflow-hidden bg-background text-foreground"
-      aria-label="dashboard demo workspace"
-    >
-      <DemoStkdeTrigger />
-      <div className={`flex h-full min-w-0 flex-col transition-[padding] duration-200 ${railCollapsed ? 'pr-12' : 'pr-80'}`}>
+    <DashboardDemo3dProvider>
+      <main
+        className="relative h-screen w-screen overflow-hidden bg-background text-foreground"
+        aria-label="dashboard demo workspace"
+      >
+        <div className={`flex h-full min-w-0 flex-col transition-[padding] duration-200 ${railCollapsed ? 'pr-12' : 'pr-80'}`}>
         <section className="relative min-h-0 flex-1 overflow-hidden bg-background" aria-label="dashboard demo shared viewport">
           <div className="absolute right-4 top-4 z-40 flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1 shadow-sm backdrop-blur">
             <Button
@@ -171,12 +166,13 @@ export function DashboardDemoShell() {
         <div className="shrink-0 border-t border-border bg-card/65">
           <DemoTimelinePanel />
         </div>
-      </div>
+        </div>
 
-      <DashboardDemoRailTabs
-        collapsed={railCollapsed}
-        onToggleCollapse={() => setRailCollapsed((value) => !value)}
-      />
-    </main>
+        <DashboardDemoRailTabs
+          collapsed={railCollapsed}
+          onToggleCollapse={() => setRailCollapsed((value) => !value)}
+        />
+      </main>
+    </DashboardDemo3dProvider>
   );
 }

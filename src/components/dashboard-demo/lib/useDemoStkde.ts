@@ -6,8 +6,8 @@ import { padDistrict } from '@/lib/stats/aggregation';
 import { getDistrictDisplayName } from '@/app/stats/lib/stats-view-model';
 import type { StkdeParams } from '@/store/useStkdeStore';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
-import { useSliceStore } from '@/store/useSliceStore';
-import type { TimeSlice } from '@/store/useSliceStore';
+import { useSliceDomainStore } from '@/store/useSliceDomainStore';
+import type { TimeSlice } from '@/store/useSliceDomainStore';
 
 interface DemoStkdeResult {
   rows: StkdeHotspotRowModel[];
@@ -94,7 +94,7 @@ export function useDemoStkde(): DemoStkdeResult {
   const [error, setError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  const slices = useSliceStore((state) => state.slices);
+  const slices = useSliceDomainStore((state) => state.slices);
   const timeRange = useDashboardDemoCoordinationStore((state) => state.timeRange);
   const stkdeScopeMode = useDashboardDemoCoordinationStore((state) => state.stkdeScopeMode);
   const stkdeParams = useDashboardDemoCoordinationStore((state) => state.stkdeParams);

@@ -1,18 +1,25 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 import { useTimelineDataStore } from '@/store/useTimelineDataStore';
 import { useDashboardDemoFilterStore } from '@/store/useDashboardDemoFilterStore';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { normalizedToEpochSeconds } from '@/lib/time-domain';
+import { epochSecondsToNormalized } from '@/lib/time-domain';
 import { normalizeTimeRange } from '@/lib/time-range';
 import { Stkde3DScene } from '@/app/stkde-3d/components/Stkde3DScene';
+import { createStkde3DSceneRuntime } from '@/app/stkde-3d/components/Stkde3DSceneProvider';
 import { buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
+import { resolveEpochFromWarpedY } from '@/app/stkde-3d/lib/timeline-axis';
 import { computeDensityMap } from '@/components/timeline/hooks/useDensityStripDerivation';
 import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import { ADAPTIVE_BIN_COUNT, ADAPTIVE_KERNEL_WIDTH } from '@/lib/adaptive-utils';
 import { useBurstVolumeModel } from '@/hooks/useBurstVolumeModel';
+import { buildDemoSliceAuthoredWarpMap } from '@/components/dashboard-demo/lib/demo-warp-map';
+import { useDashboardDemo3d } from '@/components/dashboard-demo/DashboardDemo3dProvider';
+import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
+import { START_Y } from '@/app/stkde-3d/lib/timeline-axis';
 import type { KdeCell } from '@/lib/kde';
 import type { CrimeRecord } from '@/types/crime';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
@@ -35,6 +42,35 @@ function normalizeBurstScore(score: number): number {
 }
 
 const normalizeWarpBlend = (warpFactor: number): number => Math.min(1, Math.max(0, warpFactor / 3));
+
+const MIN_DRAFT_WINDOW_SEC = 6 * 60 * 60;
+
+function buildDraftWindow(
+  centerEpoch: number,
+  viewportStart: number,
+  viewportEnd: number,
+): { startEpoch: number; endEpoch: number } | null {
+  if (!Number.isFinite(centerEpoch) || !Number.isFinite(viewportStart) || !Number.isFinite(viewportEnd) || viewportEnd <= viewportStart) {
+    return null;
+  }
+
+  const windowDuration = Math.min(viewportEnd - viewportStart, MIN_DRAFT_WINDOW_SEC * 2);
+  const halfWindow = windowDuration / 2;
+  let startEpoch = centerEpoch - halfWindow;
+  let endEpoch = centerEpoch + halfWindow;
+
+  if (startEpoch < viewportStart) {
+    endEpoch = Math.min(viewportEnd, endEpoch + (viewportStart - startEpoch));
+    startEpoch = viewportStart;
+  }
+
+  if (endEpoch > viewportEnd) {
+    startEpoch = Math.max(viewportStart, startEpoch - (endEpoch - viewportEnd));
+    endEpoch = viewportEnd;
+  }
+
+  return endEpoch > startEpoch ? { startEpoch, endEpoch } : null;
+}
 
 function resolveSliceEpochRange(
   slice: TimeSlice,
@@ -60,33 +96,41 @@ function resolveSliceEpochRange(
 }
 
 export function Demo3dSpatialView() {
+  const { response: stkdeResponse } = useDashboardDemo3d();
   const slices = useSliceDomainStore((state) => state.slices);
   const minTimestampSec = useTimelineDataStore((state) => state.minTimestampSec);
   const maxTimestampSec = useTimelineDataStore((state) => state.maxTimestampSec);
   const overviewTimestampSec = useTimelineDataStore((state) => state.overviewTimestampSec);
   const selectedTimeRange = useDashboardDemoFilterStore((state) => state.selectedTimeRange);
-  const stkdeResponse = useDashboardDemoCoordinationStore((state) => state.stkdeResponse);
   const activeIndex = useDashboardDemoCoordinationStore((state) => state.activeSliceIndex);
   const viewMode = useDashboardDemoCoordinationStore((state) => state.viewMode);
   const brushRange = useDashboardDemoCoordinationStore((state) => state.brushRange);
   const isPlaying = useDashboardDemoCoordinationStore((state) => state.inspectIsPlaying);
+  const isInterpolated = useDashboardDemoCoordinationStore((state) => state.inspectInterpolation);
   const playbackSpeed = useDashboardDemoCoordinationStore((state) => state.inspectPlaybackSpeed);
   const isScrubbing = useDashboardDemoCoordinationStore((state) => state.inspectIsScrubbing);
   const sliceOpacity = useDashboardDemoCoordinationStore((state) => state.inspectSliceOpacity);
   const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
   const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
+  const densityMap = useDashboardDemoCoordinationStore((state) => state.densityMap);
   const warpMap = useDashboardDemoCoordinationStore((state) => state.warpMap);
   const mapDomain = useDashboardDemoCoordinationStore((state) => state.mapDomain);
   const cubeScopeMode = useDashboardDemoCoordinationStore((state) => state.cubeScopeMode);
   const volumeScaleSeconds = useDashboardDemoCoordinationStore((state) => state.volumeScaleSeconds);
   const volumeExaggeration = useDashboardDemoCoordinationStore((state) => state.volumeExaggeration);
   const volumeNormalizationMode = useDashboardDemoCoordinationStore((state) => state.volumeNormalizationMode);
+  const warpSource = useDashboardDemoCoordinationStore((state) => state.warpSource);
   // The cube intentionally renders only the active selected burst. The hook
   // returns a neutral model when the timeline has no selected burst window.
   const burstVolumeModel = useBurstVolumeModel();
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
   const setSliceCrimeCounts = useDashboardDemoCoordinationStore((state) => state.setSliceCrimeCounts);
   const setCrimeFetchStatus = useDashboardDemoCoordinationStore((state) => state.setCrimeFetchStatus);
+  const setActiveRailTab = useDashboardDemoCoordinationStore((state) => state.setActiveRailTab);
+  const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
+  const updateSlice = useSliceDomainStore((state) => state.updateSlice);
+  const addManualDraftRange = useDashboardDemoTimeslicingModeStore((state) => state.addManualDraftRange);
+  const computeManualDraftBin = useDashboardDemoTimeslicingModeStore((state) => state.computeManualDraftBin);
   const [crimesBySlice, setCrimesBySlice] = useState<CrimeRecord[][]>([]);
   const [crimesError, setCrimesError] = useState<string | null>(null);
   const [sliceKdes, setSliceKdes] = useState<KdeCell[][]>([]);
@@ -94,6 +138,7 @@ export function Demo3dSpatialView() {
   const kdeWorkerRef = useRef<Worker | null>(null);
   const kdeRequestIdRef = useRef(0);
   const playbackTimeoutRef = useRef<number | null>(null);
+  const [canvasPointer, setCanvasPointer] = useState<{ x: number; y: number } | null>(null);
 
   const orderedSlices = useMemo(() => {
     if (minTimestampSec === null || maxTimestampSec === null) return [];
@@ -195,6 +240,11 @@ export function Demo3dSpatialView() {
     }));
   }, [crimesBySlice, orderedSlices]);
 
+  const sliceEvents = useMemo(
+    () => crimesBySlice.map((events) => events.map((event) => ({ x: event.x, z: event.z, type: event.type }))),
+    [crimesBySlice],
+  );
+
   const fullTimeDomain = useMemo<[number, number]>(() => (
     minTimestampSec !== null && maxTimestampSec !== null && maxTimestampSec > minTimestampSec
       ? [minTimestampSec, maxTimestampSec]
@@ -249,20 +299,37 @@ export function Demo3dSpatialView() {
     [cubeScopeMode, scopedDensityMap, cubeTimeDomain],
   );
 
-  const activeWarpMap = scopedWarpMap ?? warpMap;
-  const activeWarpDomain = cubeScopeMode === 'brushed' ? cubeTimeDomain : (mapDomain[1] > mapDomain[0] ? mapDomain : cubeTimeDomain);
+  const hasVisibleWarpSlices = useMemo(
+    () => slices.some((slice) => slice.isVisible && (slice.warpEnabled ?? true)),
+    [slices],
+  );
+
+  const authoredWarpMap = useMemo(
+    () => buildDemoSliceAuthoredWarpMap(slices, fullTimeDomain, Math.max(96, slices.length * 8 || 0)),
+    [fullTimeDomain, slices],
+  );
+
+  const usingDensitySource = warpSource === 'density';
+  const shouldForceAdaptiveFromSlices = warpSource === 'slice-authored' && hasVisibleWarpSlices;
+  const activeWarpMap = scopedWarpMap ?? (usingDensitySource ? warpMap : authoredWarpMap);
+  const activeWarpDomain = cubeScopeMode === 'brushed'
+    ? cubeTimeDomain
+    : (usingDensitySource && mapDomain[1] > mapDomain[0] ? mapDomain : fullTimeDomain);
+  const effectiveWarpFactor = shouldForceAdaptiveFromSlices ? (warpFactor > 0 ? warpFactor : 1) : warpFactor;
+  const effectiveWarpBlend = normalizeWarpBlend(effectiveWarpFactor);
+  const effectiveTimeScaleMode = shouldForceAdaptiveFromSlices ? 'adaptive' : timeScaleMode;
 
   const volumeProfile = useMemo(
     () => buildDurationVolumeProfile(countedSlices, {
       scaleSeconds: volumeScaleSeconds,
       exaggeration: volumeExaggeration,
       normalizationMode: volumeNormalizationMode,
-      timeScaleMode,
-      warpBlend: normalizeWarpBlend(warpFactor),
+      timeScaleMode: effectiveTimeScaleMode,
+      warpBlend: effectiveWarpBlend,
       warpMap: activeWarpMap,
       warpDomain: activeWarpDomain,
     }),
-    [countedSlices, activeWarpDomain, activeWarpMap, volumeScaleSeconds, volumeExaggeration, volumeNormalizationMode, timeScaleMode, warpFactor],
+    [countedSlices, activeWarpDomain, activeWarpMap, effectiveTimeScaleMode, effectiveWarpBlend, volumeScaleSeconds, volumeExaggeration, volumeNormalizationMode],
   );
 
   const cubeSlices = useMemo(() => {
@@ -317,6 +384,87 @@ export function Demo3dSpatialView() {
     const nextIndex = cubeSlices.findIndex((slice) => slice.sourceSliceId === activeSliceId);
     return nextIndex;
   }, [activeIndex, countedSlices, cubeSlices]);
+
+  const sceneYToEpoch = useCallback((y: number): number => resolveEpochFromWarpedY(y, START_Y, {
+    timeScaleMode: effectiveTimeScaleMode,
+    warpBlend: effectiveWarpBlend,
+    warpMap: activeWarpMap,
+    displayDomain: cubeTimeDomain,
+    warpDomain: activeWarpDomain,
+  }), [activeWarpDomain, activeWarpMap, cubeTimeDomain, effectiveTimeScaleMode, effectiveWarpBlend]);
+
+  const handleCreateDraftAtPoint = useCallback(({ y, clientX, clientY }: { y: number; clientX: number; clientY: number }) => {
+    const pointer = canvasPointer;
+    const movedTooFar = pointer ? Math.hypot(clientX - pointer.x, clientY - pointer.y) > 8 : false;
+    if (movedTooFar) return;
+
+    const draftWindow = buildDraftWindow(sceneYToEpoch(y), cubeTimeDomain[0], cubeTimeDomain[1]);
+    if (!draftWindow) return;
+
+    const draftId = addManualDraftRange({
+      startMs: draftWindow.startEpoch * 1000,
+      endMs: draftWindow.endEpoch * 1000,
+    });
+    setActiveRailTab('slices');
+    void computeManualDraftBin(draftId);
+  }, [addManualDraftRange, canvasPointer, computeManualDraftBin, cubeTimeDomain, sceneYToEpoch, setActiveRailTab]);
+
+  const handleCanvasPointerDown = useCallback(({ clientX, clientY }: { clientX: number; clientY: number }) => {
+    setCanvasPointer({ x: clientX, y: clientY });
+  }, []);
+
+  const sceneRuntime = useMemo(
+    () => createStkde3DSceneRuntime({
+      displayDomain: cubeTimeDomain,
+      warpDomain: activeWarpDomain,
+      timeScaleMode: effectiveTimeScaleMode,
+      warpBlend: effectiveWarpBlend,
+      densityMap: scopedDensityMap ?? densityMap,
+      warpMap: activeWarpMap,
+      isPlaying,
+      isInterpolated,
+      sourceSliceIds: cubeSlices.map((slice) => slice.sourceSliceId),
+      yToEpoch: sceneYToEpoch,
+      onActiveIndexChange: (nextIndex) => {
+        const nextSlice = cubeSlices[nextIndex];
+        const nextGlobalIndex = nextSlice
+          ? countedSlices.findIndex((slice) => slice.sourceSliceId === nextSlice.sourceSliceId)
+          : -1;
+        setActiveSliceIndex(nextGlobalIndex);
+      },
+      onSliceSelect: ({ index, sourceSliceId }) => {
+        const selectedSlice = sourceSliceId
+          ? cubeSlices.find((slice) => slice.sourceSliceId === sourceSliceId)
+          : cubeSlices[index];
+        if (!selectedSlice) return;
+        setActiveSlice(selectedSlice.sourceSliceId);
+        const nextGlobalIndex = countedSlices.findIndex((slice) => slice.sourceSliceId === selectedSlice.sourceSliceId);
+        setActiveSliceIndex(nextGlobalIndex >= 0 ? nextGlobalIndex : index);
+      },
+      onSliceResize: ({ index, sourceSliceId, startEpoch, endEpoch }) => {
+        const start = Math.min(startEpoch, endEpoch);
+        const end = Math.max(startEpoch, endEpoch);
+        const normalizedStart = epochSecondsToNormalized(start, fullTimeDomain[0], fullTimeDomain[1]);
+        const normalizedEnd = epochSecondsToNormalized(end, fullTimeDomain[0], fullTimeDomain[1]);
+        updateSlice(sourceSliceId, {
+          startDateTimeMs: start * 1000,
+          endDateTimeMs: end * 1000,
+          time: (normalizedStart + normalizedEnd) / 2,
+          range: [normalizedStart, normalizedEnd],
+        });
+        setActiveSlice(sourceSliceId);
+        const nextGlobalIndex = countedSlices.findIndex((slice) => slice.sourceSliceId === sourceSliceId);
+        setActiveSliceIndex(nextGlobalIndex >= 0 ? nextGlobalIndex : index);
+      },
+      onCreateDraftAtPoint: handleCreateDraftAtPoint,
+      onCanvasPointerDown: handleCanvasPointerDown,
+      onCanvasPointerMissed: () => {
+        setActiveSliceIndex(-1);
+        setActiveSlice(null);
+      },
+    }),
+    [activeWarpDomain, activeWarpMap, countedSlices, cubeSlices, cubeTimeDomain, densityMap, effectiveTimeScaleMode, effectiveWarpBlend, fullTimeDomain, handleCanvasPointerDown, handleCreateDraftAtPoint, isInterpolated, isPlaying, sceneYToEpoch, scopedDensityMap, setActiveSlice, setActiveSliceIndex, updateSlice],
+  );
 
   const detailChip = useMemo(() => {
     if (cubeScopeMode !== 'brushed') return null;
@@ -472,6 +620,7 @@ export function Demo3dSpatialView() {
         slices={cubeSlices}
         sliceKdes={cubeSliceKdes}
         volumeProfile={cubeVolumeProfile}
+        sliceEvents={sliceEvents}
         hotspotSliceResults={stkdeResponse?.sliceResults ?? null}
         activeIndex={cubeActiveIndex}
         viewMode={viewMode}
@@ -480,6 +629,7 @@ export function Demo3dSpatialView() {
         overrideWarpMap={scopedWarpMap}
         overrideWarpDomain={cubeScopeMode === 'brushed' ? cubeTimeDomain : undefined}
         burstVolumeModel={burstVolumeModel}
+        runtime={sceneRuntime}
       />
     </div>
   );

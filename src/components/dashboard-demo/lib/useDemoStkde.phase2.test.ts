@@ -3,7 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDemoStkde } from './useDemoStkde';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
-import { useSliceStore } from '@/store/useSliceStore';
+import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 
 type HookSnapshot = ReturnType<typeof useDemoStkde>;
 
@@ -42,7 +42,7 @@ describe('useDemoStkde', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    useSliceStore.getState().clearSlices();
+    useSliceDomainStore.getState().clearSlices();
     useDashboardDemoCoordinationStore.getState().resetAnalysis();
     useDashboardDemoCoordinationStore.getState().setSelectedDistricts(['1']);
   });
@@ -92,8 +92,8 @@ describe('useDemoStkde', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     useDashboardDemoCoordinationStore.getState().setTimeRange(1_700_000_000, 1_700_086_400);
-    useSliceStore.getState().addSlice({ time: 40, name: 'Window A' });
-    const initialSliceId = useSliceStore.getState().slices[0]?.id;
+    useSliceDomainStore.getState().addSlice({ time: 45, name: 'Window A', type: 'range', range: [40, 50] });
+    const initialSliceId = useSliceDomainStore.getState().slices[0]?.id;
     expect(initialSliceId).toBeDefined();
 
     await mountHarness();
@@ -106,12 +106,17 @@ describe('useDemoStkde', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(latestSnapshot?.isLoading).toBe(true);
     expect(pendingRequests[0]?.body.filters.slices).toHaveLength(1);
+    expect(pendingRequests[0]?.body.filters.slices?.[0]).toEqual({
+      id: initialSliceId,
+      startEpochSec: 1_700_034_560,
+      endEpochSec: 1_700_043_200,
+    });
     expect(pendingRequests[0]?.body.domain.startEpochSec).toBe(1_700_000_000);
 
     await act(async () => {
-      useSliceStore.getState().updateSlice(initialSliceId as string, { time: 58 });
+      useSliceDomainStore.getState().updateSlice(initialSliceId as string, { time: 58, range: [55, 65] });
       useDashboardDemoCoordinationStore.getState().setTimeRange(1_700_086_400, 1_700_172_800);
-      useSliceStore.getState().updateSlice(initialSliceId as string, { time: 62 });
+      useSliceDomainStore.getState().updateSlice(initialSliceId as string, { time: 62 });
     });
 
     await act(async () => {
@@ -133,6 +138,11 @@ describe('useDemoStkde', () => {
       endEpochSec: 1_700_172_800,
     });
     expect(pendingRequests[1].body.filters.slices).toHaveLength(1);
+    expect(pendingRequests[1].body.filters.slices?.[0]).toEqual({
+      id: initialSliceId,
+      startEpochSec: 1_700_133_920,
+      endEpochSec: 1_700_142_560,
+    });
 
     const stalePayload = {
       meta: {
@@ -220,7 +230,14 @@ describe('useDemoStkde', () => {
 
     expect(useDashboardDemoCoordinationStore.getState().stkdeResponse).toBeNull();
 
-  // ... other expects ...
+    await act(async () => {
+      pendingRequests[1].resolve({
+        ok: true,
+        json: async () => freshPayload,
+      });
+      await flushMicrotasks();
+    });
+
     expect(useDashboardDemoCoordinationStore.getState().stkdeResponse?.meta.eventCount).toBe(2);
     expect(useDashboardDemoCoordinationStore.getState().stkdeResponse?.sliceResults[initialSliceId as string].meta.eventCount).toBe(2);
     expect(latestSnapshot?.isLoading).toBe(false);
