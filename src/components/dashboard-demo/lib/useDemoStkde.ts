@@ -112,7 +112,20 @@ export function useDemoStkde(): DemoStkdeResult {
   const setStkdeParams = useDashboardDemoCoordinationStore((state) => state.setStkdeParams);
   const setScopeMode = useDashboardDemoCoordinationStore((state) => state.setStkdeScopeMode);
   const setStkdeResponse = useDashboardDemoCoordinationStore((state) => state.setStkdeResponse);
-  const visibleSlices = useMemo(() => slices.filter((slice) => slice.isVisible), [slices]);
+  const visibleSlices = useMemo(
+    () => slices
+      .filter((slice) => slice.isVisible && slice.type === 'range')
+      .sort((left, right) => {
+        const leftDescriptor = toStkdeSliceDescriptor(left, timeRange.startEpoch, timeRange.endEpoch);
+        const rightDescriptor = toStkdeSliceDescriptor(right, timeRange.startEpoch, timeRange.endEpoch);
+        const startDelta = leftDescriptor.startEpochSec - rightDescriptor.startEpochSec;
+        if (startDelta !== 0) return startDelta;
+        const endDelta = leftDescriptor.endEpochSec - rightDescriptor.endEpochSec;
+        if (endDelta !== 0) return endDelta;
+        return leftDescriptor.id.localeCompare(rightDescriptor.id);
+      }),
+    [slices, timeRange.endEpoch, timeRange.startEpoch],
+  );
   const sliceSignature = useMemo(() => buildSliceSignature(visibleSlices), [visibleSlices]);
   const sliceDescriptors = useMemo(
     () => visibleSlices.map((slice) => toStkdeSliceDescriptor(slice, timeRange.startEpoch, timeRange.endEpoch)),
