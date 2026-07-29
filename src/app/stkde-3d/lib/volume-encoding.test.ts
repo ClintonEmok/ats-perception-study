@@ -117,6 +117,20 @@ describe('buildDurationVolumeProfile', () => {
     expect(metrics.visualThickness).toBeNull();
   });
 
+  test('preserves signed signal values while rejecting invalid signal inputs', () => {
+    const signed = buildAllocationMetrics({
+      slice: { index: 0, startEpoch: 0, endEpoch: 60, signal: -0.25 },
+      slices: [{ index: 0, startEpoch: 0, endEpoch: 60, signal: -0.25 }],
+    });
+    const invalid = buildAllocationMetrics({
+      slice: { index: 0, startEpoch: 0, endEpoch: 60, signal: Number.NaN },
+      slices: [{ index: 0, startEpoch: 0, endEpoch: 60, signal: Number.NaN }],
+    });
+
+    expect(signed.signal).toBe(-0.25);
+    expect(invalid.signal).toBeNull();
+  });
+
   test('clamps a fixed-duration window at both domain edges', () => {
     expect(buildFixedDurationWindow(10, 20, [0, 100])).toEqual([0, 20]);
     expect(buildFixedDurationWindow(90, 20, [0, 100])).toEqual([80, 100]);

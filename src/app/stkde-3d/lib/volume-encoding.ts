@@ -77,6 +77,10 @@ function finiteNonNegative(value: number | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+function finiteValue(value: number | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function resolveProfileEntry(
   slice: AllocationMetricsSourceSlice,
   profile: readonly DurationVolumeProfileEntry[] | undefined,
@@ -163,7 +167,7 @@ export function buildAllocationMetrics({ slice, slices, profile }: AllocationMet
     ? (eventCount / clockDurationSeconds) * 86_400
     : null;
   const adaptiveWeight = finiteNonNegative(slice.warpWeight);
-  const signal = finiteNonNegative(slice.signal);
+  const signal = finiteValue(slice.signal);
   const profileEntry = resolveProfileEntry(slice, profile);
   const displayDurationSeconds = finiteNonNegative(profileEntry?.durationSeconds);
   const visualThickness = finiteNonNegative(profileEntry?.thickness);
