@@ -9,7 +9,7 @@ import { START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 import { getStkdeIntensityColor } from '../lib/palette';
 import type { KdeCell, EvolvingSlice } from '../lib/types';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
-import { useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
+import { createCameraFocusTarget, useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
 
 export { AXIS_HEIGHT, START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 const TEXTURE_SIZE = 256;
@@ -157,8 +157,10 @@ export function StkdeSliceStack({
     resolveSliceY,
     yToEpoch,
     onActiveIndexChange,
+    onSliceHover,
     onSliceSelect,
     onSliceResize,
+    cameraFocus,
   } = useStkde3DSceneRuntime();
   const { camera, gl } = useThree();
 
@@ -212,15 +214,36 @@ export function StkdeSliceStack({
   }, [compact, onActiveIndexChange, onSliceResize]);
 
   const handleSliceSelect = useCallback((sliceIndex: number) => {
+    const slice = slices[sliceIndex];
+    if (!slice) return;
     const sourceSliceId = resolveSourceSliceId(sliceIndex);
-    onSliceSelect({
+    const payload = {
       index: compact ? 0 : sliceIndex,
+      renderedIndex: compact ? 0 : sliceIndex,
       sourceSliceId,
-    });
+      startEpoch: slice.startEpoch,
+      endEpoch: slice.endEpoch,
+      focusPoint: [0, resolveSliceY(slice), 0] as [number, number, number],
+    };
+    onSliceSelect(payload);
+    cameraFocus(createCameraFocusTarget(payload.focusPoint));
     if (!compact) {
       onActiveIndexChange(sliceIndex);
     }
-  }, [compact, onActiveIndexChange, onSliceSelect, resolveSourceSliceId]);
+  }, [cameraFocus, compact, onActiveIndexChange, onSliceSelect, resolveSliceY, resolveSourceSliceId, slices]);
+
+  const buildSliceHoverPayload = useCallback((sliceIndex: number) => {
+    const slice = slices[sliceIndex];
+    if (!slice) return null;
+    return {
+      index: compact ? 0 : sliceIndex,
+      renderedIndex: compact ? 0 : sliceIndex,
+      sourceSliceId: resolveSourceSliceId(sliceIndex),
+      startEpoch: slice.startEpoch,
+      endEpoch: slice.endEpoch,
+      focusPoint: [0, resolveSliceY(slice), 0] as [number, number, number],
+    };
+  }, [compact, resolveSliceY, resolveSourceSliceId, slices]);
 
   const handleHandlePointerDown = useCallback((e: ThreeEvent<PointerEvent>, sliceIndex: number, handle: ResizeHandle, centerY: number) => {
     e.stopPropagation();
@@ -395,6 +418,15 @@ export function StkdeSliceStack({
           <group
             key={slice.index}
             position={[0, y, 0]}
+            onPointerEnter={(event) => {
+              event.stopPropagation();
+              onSliceHover(buildSliceHoverPayload(i));
+            }}
+            onPointerLeave={(event) => {
+              event.stopPropagation();
+              onSliceHover(null);
+            }}
+            onPointerMissed={() => onSliceHover(null)}
             onClick={(event) => {
               event.stopPropagation();
               handleSliceSelect(i);

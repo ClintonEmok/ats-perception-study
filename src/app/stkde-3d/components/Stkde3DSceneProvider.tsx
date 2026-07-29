@@ -5,6 +5,59 @@ import { START_Y, resolveEpochFromWarpedY, resolveWarpedEpochY } from '../lib/ti
 import type { EvolvingSlice } from '../lib/types';
 
 export type Stkde3DSceneSlice = EvolvingSlice & { sourceSliceId?: string };
+export type Stkde3DWorldPoint = [number, number, number];
+
+export interface Stkde3DCameraFocusTarget {
+  target: Stkde3DWorldPoint;
+  position: Stkde3DWorldPoint;
+}
+
+export interface Stkde3DSliceInteractionPayload {
+  index: number;
+  renderedIndex: number;
+  sourceSliceId: string | null;
+  startEpoch: number;
+  endEpoch: number;
+  focusPoint: Stkde3DWorldPoint;
+}
+
+export interface Stkde3DBurstInteractionPayload {
+  burstId: string;
+  sampleId: string;
+  sampleIndex: number;
+  sourceSliceId: string | null;
+  sourceSliceIndex?: number;
+  startEpoch: number;
+  endEpoch: number;
+  sampleEpoch: number;
+  supportCount: number | null;
+  intensityScore: number | null;
+  spreadMeters: number | null;
+  adaptiveHeight: number | null;
+  durationSeconds: number | null;
+  focusPoint: Stkde3DWorldPoint;
+}
+
+export interface Stkde3DClusterInteractionPayload {
+  hotspotId: string;
+  trackId: string;
+  snapshotIndex: number;
+  sourceSliceId: string;
+  sourceSliceIndex?: number;
+  startEpoch: number;
+  endEpoch: number;
+  centroidLat: number;
+  centroidLng: number;
+  radiusMeters: number | null;
+  focusPoint: Stkde3DWorldPoint;
+}
+
+export interface Stkde3DTemporalWindowPayload {
+  startEpoch: number;
+  endEpoch: number;
+  durationSeconds: number;
+  scanY: number;
+}
 
 export interface Stkde3DSceneRuntime {
   displayDomain: [number, number];
@@ -20,13 +73,22 @@ export interface Stkde3DSceneRuntime {
   resolveEpochY: (epochSec: number) => number;
   yToEpoch: (y: number) => number;
   onActiveIndexChange: (index: number) => void;
-  onSliceSelect: (payload: { index: number; sourceSliceId: string | null }) => void;
+  onSliceHover: (payload: Stkde3DSliceInteractionPayload | null) => void;
+  onSliceSelect: (payload: Stkde3DSliceInteractionPayload) => void;
   onSliceResize: (payload: {
     index: number;
     sourceSliceId: string;
     startEpoch: number;
     endEpoch: number;
   }) => void;
+  onBurstHover: (payload: Stkde3DBurstInteractionPayload | null) => void;
+  onBurstSelect: (payload: Stkde3DBurstInteractionPayload) => void;
+  onClusterHover: (payload: Stkde3DClusterInteractionPayload | null) => void;
+  onClusterSelect: (payload: Stkde3DClusterInteractionPayload) => void;
+  cameraFocus: (target: Stkde3DCameraFocusTarget | null) => void;
+  onTemporalWindowPropose: (payload: Stkde3DTemporalWindowPayload | null) => void;
+  onTemporalWindowCommit: (payload: Stkde3DTemporalWindowPayload) => void;
+  temporalWindowEnabled: boolean;
   onCreateDraftAtPoint: (payload: { y: number; clientX: number; clientY: number }) => void;
   onCanvasPointerDown: (payload: { clientX: number; clientY: number }) => void;
   onCanvasPointerMissed: () => void;
@@ -47,13 +109,21 @@ export interface Stkde3DSceneRuntimeOptions {
   resolveEpochY?: (epochSec: number) => number;
   yToEpoch?: (y: number) => number;
   onActiveIndexChange?: (index: number) => void;
-  onSliceSelect?: (payload: { index: number; sourceSliceId: string | null }) => void;
+  onSliceHover?: (payload: Stkde3DSliceInteractionPayload | null) => void;
+  onSliceSelect?: (payload: Stkde3DSliceInteractionPayload) => void;
   onSliceResize?: (payload: {
     index: number;
     sourceSliceId: string;
     startEpoch: number;
     endEpoch: number;
   }) => void;
+  onBurstHover?: (payload: Stkde3DBurstInteractionPayload | null) => void;
+  onBurstSelect?: (payload: Stkde3DBurstInteractionPayload) => void;
+  onClusterHover?: (payload: Stkde3DClusterInteractionPayload | null) => void;
+  onClusterSelect?: (payload: Stkde3DClusterInteractionPayload) => void;
+  onCameraFocus?: (target: Stkde3DCameraFocusTarget | null) => void;
+  onTemporalWindowPropose?: (payload: Stkde3DTemporalWindowPayload | null) => void;
+  onTemporalWindowCommit?: (payload: Stkde3DTemporalWindowPayload) => void;
   onCreateDraftAtPoint?: (payload: { y: number; clientX: number; clientY: number }) => void;
   onCanvasPointerDown?: (payload: { clientX: number; clientY: number }) => void;
   onCanvasPointerMissed?: () => void;
@@ -110,11 +180,27 @@ export function createStkde3DSceneRuntime(options: Stkde3DSceneRuntimeOptions = 
     resolveEpochY,
     yToEpoch,
     onActiveIndexChange: options.onActiveIndexChange ?? (() => undefined),
+    onSliceHover: options.onSliceHover ?? (() => undefined),
     onSliceSelect: options.onSliceSelect ?? (() => undefined),
     onSliceResize: options.onSliceResize ?? (() => undefined),
+    onBurstHover: options.onBurstHover ?? (() => undefined),
+    onBurstSelect: options.onBurstSelect ?? (() => undefined),
+    onClusterHover: options.onClusterHover ?? (() => undefined),
+    onClusterSelect: options.onClusterSelect ?? (() => undefined),
+    cameraFocus: options.onCameraFocus ?? (() => undefined),
+    onTemporalWindowPropose: options.onTemporalWindowPropose ?? (() => undefined),
+    onTemporalWindowCommit: options.onTemporalWindowCommit ?? (() => undefined),
+    temporalWindowEnabled: Boolean(options.onTemporalWindowPropose && options.onTemporalWindowCommit),
     onCreateDraftAtPoint: options.onCreateDraftAtPoint ?? (() => undefined),
     onCanvasPointerDown: options.onCanvasPointerDown ?? (() => undefined),
     onCanvasPointerMissed: options.onCanvasPointerMissed ?? (() => undefined),
+  };
+}
+
+export function createCameraFocusTarget(focusPoint: Stkde3DWorldPoint): Stkde3DCameraFocusTarget {
+  return {
+    target: focusPoint,
+    position: [focusPoint[0] + 28, focusPoint[1] + 20, focusPoint[2] + 28],
   };
 }
 

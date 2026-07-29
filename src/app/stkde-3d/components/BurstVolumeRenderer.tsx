@@ -2,6 +2,7 @@
 
 import { Html, Line } from '@react-three/drei';
 import type { BurstVolumeModel, BurstVolumeSample } from '@/lib/stkde';
+import { createCameraFocusTarget, useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
 
 const CONTOUR_COLORS = ['#22d3ee', '#38bdf8', '#818cf8', '#c084fc', '#f0abfc'];
 
@@ -37,6 +38,7 @@ function sampleY(model: BurstVolumeModel, sample: BurstVolumeSample, resolveEpoc
 }
 
 export function BurstVolumeRenderer({ model, resolveEpochY, active = true }: BurstVolumeRendererProps) {
+  const { onBurstHover, onBurstSelect, cameraFocus } = useStkde3DSceneRuntime();
   if (model.isNeutral || model.samples.length === 0) return null;
 
   const opacity = active ? 0.78 : 0.28;
@@ -56,8 +58,41 @@ export function BurstVolumeRenderer({ model, resolveEpochY, active = true }: Bur
         const y = sampleY(model, sample, resolveEpochY);
         const radius = footprintRadius(sample);
         const color = CONTOUR_COLORS[index % CONTOUR_COLORS.length] ?? CONTOUR_COLORS[0];
+        const focusPoint = [sample.projectedX, y + 0.55, sample.projectedZ] as [number, number, number];
+        const payload = {
+          burstId: model.id,
+          sampleId: sample.sampleId,
+          sampleIndex: sample.index,
+          sourceSliceId: sample.sliceId || null,
+          startEpoch: model.startEpochSec,
+          endEpoch: model.endEpochSec,
+          sampleEpoch: sample.timeEpochSec,
+          supportCount: Number.isFinite(sample.supportCount) ? sample.supportCount : null,
+          intensityScore: Number.isFinite(sample.intensityScore) ? sample.intensityScore : null,
+          spreadMeters: Number.isFinite(sample.spreadMeters) ? sample.spreadMeters : null,
+          adaptiveHeight: Number.isFinite(model.adaptiveHeight) ? model.adaptiveHeight : null,
+          durationSeconds: Number.isFinite(model.durationSec) ? model.durationSec : null,
+          focusPoint,
+        };
         return (
-          <group key={sample.sampleId} position={[sample.projectedX, y, sample.projectedZ]}>
+          <group
+            key={sample.sampleId}
+            position={[sample.projectedX, y, sample.projectedZ]}
+            onPointerEnter={(event) => {
+              event.stopPropagation();
+              onBurstHover(payload);
+            }}
+            onPointerLeave={(event) => {
+              event.stopPropagation();
+              onBurstHover(null);
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onBurstSelect(payload);
+              cameraFocus(createCameraFocusTarget(focusPoint));
+            }}
+            onPointerMissed={() => onBurstHover(null)}
+          >
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
               <circleGeometry args={[radius, 32]} />
               <meshBasicMaterial color={color} transparent opacity={opacity * 0.16} depthWrite={false} />
@@ -71,7 +106,56 @@ export function BurstVolumeRenderer({ model, resolveEpochY, active = true }: Bur
       })}
       {path.length > 1 ? <Line points={path} color="#fef08a" lineWidth={active ? 3 : 1.5} transparent opacity={active ? 0.98 : 0.35} depthWrite={false} /> : null}
       {path.map((point, index) => (
-        <mesh key={`${model.id}-centroid-${index}`} position={point}>
+        <mesh
+          key={`${model.id}-centroid-${index}`}
+          position={point}
+          onPointerEnter={(event) => {
+            event.stopPropagation();
+            const sample = model.samples[index];
+            if (!sample) return;
+            onBurstHover({
+              burstId: model.id,
+              sampleId: sample.sampleId,
+              sampleIndex: sample.index,
+              sourceSliceId: sample.sliceId || null,
+              startEpoch: model.startEpochSec,
+              endEpoch: model.endEpochSec,
+              sampleEpoch: sample.timeEpochSec,
+              supportCount: Number.isFinite(sample.supportCount) ? sample.supportCount : null,
+              intensityScore: Number.isFinite(sample.intensityScore) ? sample.intensityScore : null,
+              spreadMeters: Number.isFinite(sample.spreadMeters) ? sample.spreadMeters : null,
+              adaptiveHeight: Number.isFinite(model.adaptiveHeight) ? model.adaptiveHeight : null,
+              durationSeconds: Number.isFinite(model.durationSec) ? model.durationSec : null,
+              focusPoint: point,
+            });
+          }}
+          onPointerLeave={(event) => {
+            event.stopPropagation();
+            onBurstHover(null);
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            const sample = model.samples[index];
+            if (!sample) return;
+            onBurstSelect({
+              burstId: model.id,
+              sampleId: sample.sampleId,
+              sampleIndex: sample.index,
+              sourceSliceId: sample.sliceId || null,
+              startEpoch: model.startEpochSec,
+              endEpoch: model.endEpochSec,
+              sampleEpoch: sample.timeEpochSec,
+              supportCount: Number.isFinite(sample.supportCount) ? sample.supportCount : null,
+              intensityScore: Number.isFinite(sample.intensityScore) ? sample.intensityScore : null,
+              spreadMeters: Number.isFinite(sample.spreadMeters) ? sample.spreadMeters : null,
+              adaptiveHeight: Number.isFinite(model.adaptiveHeight) ? model.adaptiveHeight : null,
+              durationSeconds: Number.isFinite(model.durationSec) ? model.durationSec : null,
+              focusPoint: point,
+            });
+            cameraFocus(createCameraFocusTarget(point));
+          }}
+          onPointerMissed={() => onBurstHover(null)}
+        >
           <sphereGeometry args={[active ? 0.7 : 0.42, 12, 12]} />
           <meshBasicMaterial color="#fef08a" transparent opacity={active ? 0.96 : 0.4} depthWrite={false} />
         </mesh>
