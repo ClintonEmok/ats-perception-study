@@ -59,6 +59,10 @@ describe('buildHotspotEvolution', () => {
     const result = buildHotspotEvolution({ 'slice-a': sliceA, 'slice-b': sliceB });
     expect(result.tracks).toHaveLength(1);
     expect(result.tracks[0].snapshots).toHaveLength(2);
+    expect(result.tracks[0].snapshots.map((snapshot) => snapshot.hotspotId)).toEqual([
+      'hs--87.63-41.88',
+      'hs--87.631-41.881',
+    ]);
     expect(result.tracks[0].status).toBe('stable');
     expect(result.tracks[0].supportTrend).toBe('increasing');
   });

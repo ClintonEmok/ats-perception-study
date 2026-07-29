@@ -1,6 +1,7 @@
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
 
 export interface TrackedHotspotSnapshot {
+  hotspotId: string;
   sliceId: string;
   sliceLabel: string;
   centroidLng: number;
@@ -59,6 +60,7 @@ function buildSliceEntries(
       .sort((a, b) => b.intensityScore - a.intensityScore)
       .slice(0, 5)
       .map((h) => ({
+        hotspotId: h.id,
         sliceId,
         sliceLabel: sliceId,
         centroidLng: h.centroidLng,

@@ -28,6 +28,33 @@ export interface DurationVolumeProfileEntry {
   falloff: number;
 }
 
+export interface AllocationMetricsSourceSlice extends DurationVolumeSourceSlice {
+  crimeCount?: number;
+  eventCount?: number;
+  warpWeight?: number;
+  signal?: number;
+}
+
+export interface AllocationMetricsInput {
+  slice: AllocationMetricsSourceSlice;
+  slices: readonly AllocationMetricsSourceSlice[];
+  profile?: readonly DurationVolumeProfileEntry[];
+}
+
+export interface AllocationMetrics {
+  clockDurationSeconds: number | null;
+  eventCount: number | null;
+  eventDensityPerDay: number | null;
+  adaptiveWeight: number | null;
+  signal: number | null;
+  displayDurationSeconds: number | null;
+  linearShare: number | null;
+  visualShare: number | null;
+  expansionCompressionRatio: number | null;
+  expansionCompressionPercent: number | null;
+  visualThickness: number | null;
+}
+
 export const DEFAULT_DURATION_VOLUME_SETTINGS: DurationVolumeSettings = {
   scaleSeconds: 12 * 60 * 60,
   exaggeration: 1.15,
@@ -44,6 +71,18 @@ function lerp(start: number, end: number, t: number): number {
 
 function resolveDuration(slice: Pick<DurationVolumeSourceSlice, 'startEpoch' | 'endEpoch'>): number {
   return Math.max(0, slice.endEpoch - slice.startEpoch);
+}
+
+function finiteNonNegative(value: number | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function resolveProfileEntry(
+  slice: AllocationMetricsSourceSlice,
+  profile: readonly DurationVolumeProfileEntry[] | undefined,
+): DurationVolumeProfileEntry | undefined {
+  if (!profile) return undefined;
+  return profile.find((entry) => entry.index === slice.index) ?? profile[slice.index];
 }
 
 function resolveWarpAdjustedDuration(
@@ -111,4 +150,58 @@ export function buildDurationVolumeProfile(
       falloff,
     } satisfies DurationVolumeProfileEntry;
   });
+}
+
+export function buildAllocationMetrics({ slice, slices, profile }: AllocationMetricsInput): AllocationMetrics {
+  const startEpoch = Number.isFinite(slice.startEpoch) ? slice.startEpoch : null;
+  const endEpoch = Number.isFinite(slice.endEpoch) ? slice.endEpoch : null;
+  const clockDurationSeconds = startEpoch !== null && endEpoch !== null
+    ? Math.max(0, endEpoch - startEpoch)
+    : null;
+  const eventCount = finiteNonNegative(slice.eventCount ?? slice.crimeCount);
+  const eventDensityPerDay = clockDurationSeconds !== null && clockDurationSeconds > 0 && eventCount !== null
+    ? (eventCount / clockDurationSeconds) * 86_400
+    : null;
+  const adaptiveWeight = finiteNonNegative(slice.warpWeight);
+  const signal = finiteNonNegative(slice.signal);
+  const profileEntry = resolveProfileEntry(slice, profile);
+  const displayDurationSeconds = finiteNonNegative(profileEntry?.durationSeconds);
+  const visualThickness = finiteNonNegative(profileEntry?.thickness);
+
+  const clockDurationTotal = slices.reduce((total, entry) => {
+    const duration = Number.isFinite(entry.startEpoch) && Number.isFinite(entry.endEpoch)
+      ? Math.max(0, entry.endEpoch - entry.startEpoch)
+      : 0;
+    return total + duration;
+  }, 0);
+  const displayDurationTotal = profile
+    ? profile.reduce((total, entry) => total + (finiteNonNegative(entry.durationSeconds) ?? 0), 0)
+    : 0;
+  const linearShare = clockDurationSeconds !== null && clockDurationTotal > 0
+    ? clockDurationSeconds / clockDurationTotal
+    : null;
+  const visualShare = displayDurationSeconds !== null && displayDurationTotal > 0
+    ? displayDurationSeconds / displayDurationTotal
+    : null;
+  const expansionCompressionRatio = clockDurationSeconds !== null
+    && clockDurationSeconds > 0
+    && displayDurationSeconds !== null
+    ? displayDurationSeconds / clockDurationSeconds
+    : null;
+
+  return {
+    clockDurationSeconds,
+    eventCount,
+    eventDensityPerDay,
+    adaptiveWeight,
+    signal,
+    displayDurationSeconds,
+    linearShare,
+    visualShare,
+    expansionCompressionRatio,
+    expansionCompressionPercent: expansionCompressionRatio === null
+      ? null
+      : (expansionCompressionRatio - 1) * 100,
+    visualThickness,
+  };
 }

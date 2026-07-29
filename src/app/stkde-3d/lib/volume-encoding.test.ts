@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { buildDurationVolumeProfile, DEFAULT_DURATION_VOLUME_SETTINGS } from './volume-encoding';
+import {
+  buildAllocationMetrics,
+  buildDurationVolumeProfile,
+  DEFAULT_DURATION_VOLUME_SETTINGS,
+} from './volume-encoding';
+import { buildFixedDurationWindow, proposeFixedDurationWindowAtY } from './temporal-interactions';
 
 describe('buildDurationVolumeProfile', () => {
   const slices = [
@@ -69,5 +74,58 @@ describe('buildDurationVolumeProfile', () => {
     expect(profile[0]?.durationSeconds).toBeCloseTo(10, 5);
     expect(profile[1]?.durationSeconds).toBeCloseTo(90, 5);
     expect(profile[1]?.thickness).toBeGreaterThan(profile[0]?.thickness ?? 0);
+  });
+
+  test('recovers clock duration separately from warped display allocation', () => {
+    const sourceSlices = [
+      { index: 0, startEpoch: 0, endEpoch: 3_600, crimeCount: 12, warpWeight: 1.5, signal: 0.8 },
+      { index: 1, startEpoch: 3_600, endEpoch: 10_800, crimeCount: 24 },
+    ];
+    const profile = [
+      { index: 0, durationSeconds: 7_200, normalizedDuration: 0.4, thickness: 2.5, opacity: 0.2, falloff: 0.1 },
+      { index: 1, durationSeconds: 3_600, normalizedDuration: 0.2, thickness: 1.5, opacity: 0.2, falloff: 0.1 },
+    ];
+
+    expect(buildAllocationMetrics({ slice: sourceSlices[0]!, slices: sourceSlices, profile })).toEqual({
+      clockDurationSeconds: 3_600,
+      eventCount: 12,
+      eventDensityPerDay: 288,
+      adaptiveWeight: 1.5,
+      signal: 0.8,
+      displayDurationSeconds: 7_200,
+      linearShare: 1 / 3,
+      visualShare: 2 / 3,
+      expansionCompressionRatio: 2,
+      expansionCompressionPercent: 100,
+      visualThickness: 2.5,
+    });
+  });
+
+  test('keeps unavailable allocation inputs unavailable', () => {
+    const metrics = buildAllocationMetrics({
+      slice: { index: 0, startEpoch: 100, endEpoch: 100 },
+      slices: [{ index: 0, startEpoch: 100, endEpoch: 100 }],
+    });
+
+    expect(metrics.eventCount).toBeNull();
+    expect(metrics.eventDensityPerDay).toBeNull();
+    expect(metrics.adaptiveWeight).toBeNull();
+    expect(metrics.signal).toBeNull();
+    expect(metrics.displayDurationSeconds).toBeNull();
+    expect(metrics.visualShare).toBeNull();
+    expect(metrics.expansionCompressionRatio).toBeNull();
+    expect(metrics.visualThickness).toBeNull();
+  });
+
+  test('clamps a fixed-duration window at both domain edges', () => {
+    expect(buildFixedDurationWindow(10, 20, [0, 100])).toEqual([0, 20]);
+    expect(buildFixedDurationWindow(90, 20, [0, 100])).toEqual([80, 100]);
+    expect(buildFixedDurationWindow(50, 20, [0, 100])).toEqual([40, 60]);
+    expect(buildFixedDurationWindow(50, 200, [0, 100])).toEqual([0, 100]);
+  });
+
+  test('proposes fixed-duration windows from adaptive-axis Y without mutating state', () => {
+    const proposal = proposeFixedDurationWindowAtY(75, (y) => y * 2, 20, [0, 200]);
+    expect(proposal).toEqual([140, 160]);
   });
 });
