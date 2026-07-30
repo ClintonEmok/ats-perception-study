@@ -11,6 +11,8 @@ Outputs are intentionally written to the ignored scripts/output directory:
     selected_intervals.csv
     parameter_sweep_*.png
     recommended_contact_sheet.png
+    evolution_*.png
+    evolution_sequence.csv
 
 Usage:
     python scripts/kde_2week_parameter_sweep.py
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -124,7 +127,11 @@ def load_two_week_supports(input_csv: Path, grid_size: int) -> tuple[dict[int, n
     return supports, latest_day
 
 
-def compute_field(support: np.ndarray, smoothing_meters: float, grid_size: int) -> tuple[np.ndarray, float]:
+def compute_field(
+    support: np.ndarray,
+    smoothing_meters: float,
+    grid_size: int,
+) -> tuple[np.ndarray, float, np.ndarray]:
     sigma_cells = smoothing_meters_to_sigma_cells(smoothing_meters, grid_size)
     smoothed = gaussian_filter(
         support,
@@ -135,7 +142,7 @@ def compute_field(support: np.ndarray, smoothing_meters: float, grid_size: int) 
     )
     max_value = float(smoothed.max())
     normalized = smoothed / max(1.0, max_value)
-    return normalized, sigma_cells
+    return normalized, sigma_cells, smoothed
 
 
 def interval_metrics(support: np.ndarray, grid_size: int) -> dict[str, float | int]:
@@ -224,9 +231,52 @@ def select_intervals(
     ]
 
 
-def render_panel(ax, interval: Interval, grid_size: int, smoothing_meters: int, cutoff: float, title_prefix: str = '') -> dict[str, float | int]:
-    field, sigma_cells = compute_field(interval.support, smoothing_meters, grid_size)
-    masked = np.ma.masked_where(field <= cutoff, field)
+def select_evolution_sequence(
+    supports: dict[int, np.ndarray],
+    latest_day: np.datetime64 | None,
+    sequence_length: int,
+) -> list[Interval]:
+    """Select contiguous complete windows around the busiest complete interval."""
+    candidates = []
+    latest_timestamp = (
+        pd.Timestamp(latest_day.astype('datetime64[ns]'))
+        if latest_day is not None
+        else None
+    )
+    for index, support in supports.items():
+        start, end = interval_timestamp(index)
+        if latest_timestamp is not None and end > latest_timestamp + pd.Timedelta(days=1):
+            continue
+        candidates.append((index, support))
+    if not candidates:
+        return []
+
+    anchor = max(candidates, key=lambda item: item[1].sum())[0]
+    all_indices = {index for index, _ in candidates}
+    length = max(2, min(sequence_length, len(all_indices)))
+    min_index = min(all_indices)
+    max_index = max(all_indices)
+    start_index = max(min_index, min(anchor - length // 2, max_index - length + 1))
+    sequence_indices = [start_index + offset for offset in range(length)]
+    sequence_indices = [index for index in sequence_indices if index in supports and index in all_indices]
+    return [
+        Interval(index=index, start=interval_timestamp(index)[0], end=interval_timestamp(index)[1], support=supports[index])
+        for index in sequence_indices
+    ]
+
+
+def render_panel(
+    ax,
+    interval: Interval,
+    grid_size: int,
+    smoothing_meters: int,
+    cutoff: float,
+    title_prefix: str = '',
+    color_max: float | None = None,
+) -> dict[str, float | int]:
+    field, sigma_cells, raw_field = compute_field(interval.support, smoothing_meters, grid_size)
+    display_field = raw_field / max(1.0, color_max) if color_max is not None else field
+    masked = np.ma.masked_where(field <= cutoff, display_field)
     metrics = field_metrics(field, cutoff)
     ax.set_facecolor('#061123')
     ax.imshow(
@@ -290,6 +340,44 @@ def render_parameter_grid(interval: Interval, output_path: Path) -> None:
     plt.close(fig)
 
 
+def render_evolution_grid(
+    intervals: list[Interval],
+    grid_size: int,
+    smoothing_meters: int,
+    cutoff: float,
+    output_path: Path,
+) -> None:
+    """Render a contiguous sequence with one shared absolute color scale."""
+    raw_fields = [compute_field(interval.support, smoothing_meters, grid_size)[2] for interval in intervals]
+    color_max = max((float(field.max()) for field in raw_fields), default=1.0)
+    columns = 3
+    rows = math.ceil(len(intervals) / columns)
+    fig, axes = plt.subplots(rows, columns, figsize=(10.2, max(3.5, rows * 3.1)), facecolor='#030b18')
+    axes = np.atleast_1d(axes).ravel()
+    for index, interval in enumerate(intervals):
+        render_panel(
+            axes[index],
+            interval,
+            grid_size,
+            smoothing_meters,
+            cutoff,
+            title_prefix=f'{interval.start:%Y-%m-%d}',
+            color_max=color_max,
+        )
+    for ax in axes[len(intervals):]:
+        ax.axis('off')
+    fig.suptitle(
+        f'KDE evolution · {grid_size} grid / {smoothing_meters}m / {cutoff:.0%}\n'
+        'six contiguous two-week windows · shared absolute color scale · per-window cutoff',
+        color='#f5f9fc',
+        fontsize=13,
+        y=0.995,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.955), h_pad=1.0, w_pad=0.7)
+    fig.savefig(output_path, dpi=160, facecolor=fig.get_facecolor())
+    plt.close(fig)
+
+
 def render_recommended_contact_sheet(intervals: list[Interval], output_path: Path) -> None:
     combinations = [
         (48, 150, 0.20, 'coarse / balanced'),
@@ -318,12 +406,26 @@ def write_metrics(supports: dict[int, np.ndarray], output_path: Path) -> None:
     pd.DataFrame(rows).to_csv(output_path, index=False)
 
 
+def write_evolution_sequence(intervals: list[Interval], output_path: Path) -> None:
+    pd.DataFrame([
+        {
+            'sequence_position': position,
+            'interval_index': interval.index,
+            'start': interval.start.isoformat(),
+            'end': interval.end.isoformat(),
+            'events': interval.events,
+        }
+        for position, interval in enumerate(intervals, start=1)
+    ]).to_csv(output_path, index=False)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Render two-week KDE parameter comparison figures.')
     parser.add_argument('--input-csv', type=Path, default=DEFAULT_INPUT)
     parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument('--grid', type=int, default=104, help='Grid used for interval selection metrics.')
     parser.add_argument('--max-intervals', type=int, default=6, help='Number of representative intervals to render.')
+    parser.add_argument('--evolution-weeks', type=int, default=6, help='Number of contiguous two-week windows in each evolution image.')
     return parser.parse_args()
 
 
@@ -352,7 +454,22 @@ def main() -> None:
         render_parameter_grid(interval, args.output_dir / filename)
 
     render_recommended_contact_sheet(intervals, args.output_dir / 'recommended_contact_sheet.png')
+    evolution_intervals = select_evolution_sequence(supports, latest_day, args.evolution_weeks)
+    write_evolution_sequence(evolution_intervals, args.output_dir / 'evolution_sequence.csv')
+    for grid_size in [48, 104]:
+        for smoothing_meters in [100, 150, 250]:
+            for cutoff in [0.10, 0.20, 0.30]:
+                filename = f'evolution_{grid_size}g_{smoothing_meters}m_{int(cutoff * 100):02d}pct.png'
+                render_evolution_grid(
+                    evolution_intervals,
+                    grid_size,
+                    smoothing_meters,
+                    cutoff,
+                    args.output_dir / filename,
+                )
+
     print(f'Wrote {len(intervals)} interval sweep images to {args.output_dir}')
+    print(f'Wrote {len(evolution_intervals)} contiguous evolution windows and 18 evolution images')
     print(f'Wrote {args.output_dir / "recommended_contact_sheet.png"}')
 
 
