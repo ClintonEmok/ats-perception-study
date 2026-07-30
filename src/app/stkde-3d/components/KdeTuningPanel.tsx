@@ -14,7 +14,8 @@ function formatPercent(value: number): string {
 }
 
 export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
-  const isSelective = value.sigmaCells <= 1.5 || value.threshold >= 0.02;
+  const smoothingMeters = value.smoothingMeters ?? Math.round((value.sigmaCells * 10_000) / Math.max(4, value.gridSize));
+  const isSelective = smoothingMeters <= 250 || value.threshold >= 0.18;
 
   return (
     <section className="rounded-2xl border border-sky-500/15 bg-slate-950/60 p-4 text-xs text-slate-300 shadow-[0_24px_80px_-48px_rgba(14,165,233,0.45)]">
@@ -62,25 +63,25 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
             <Label className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
-              Sigma
+              Smoothing radius
             </Label>
-            <span className="tabular-nums text-slate-100">{value.sigmaCells.toFixed(2)}</span>
+            <span className="tabular-nums text-slate-100">{smoothingMeters}m</span>
           </div>
           <Slider
-            min={0.75}
-            max={3}
-            step={0.05}
-            value={[value.sigmaCells]}
+            min={75}
+            max={1000}
+            step={25}
+            value={[smoothingMeters]}
             onValueChange={([next]) =>
               onChange({
                 ...value,
-                sigmaCells: next ?? DEFAULT_KDE_PARAMS.sigmaCells,
+                smoothingMeters: next ?? value.smoothingMeters ?? 250,
               })
             }
             className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-sky-400 [&_[data-slot=slider-thumb]]:size-3.5"
           />
           <p className="text-[10px] leading-4 text-slate-500">
-            Lower values keep peaks tight. Higher values spread them out.
+            Smaller radii keep peaks tight. Larger radii merge nearby activity.
           </p>
         </div>
 
@@ -117,9 +118,9 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
             <span className="tabular-nums text-slate-100">{formatPercent(value.threshold)}</span>
           </div>
           <Slider
-            min={0.001}
-            max={0.05}
-            step={0.001}
+            min={0.02}
+            max={0.6}
+            step={0.01}
             value={[value.threshold]}
             onValueChange={([next]) =>
               onChange({
@@ -130,15 +131,15 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
             className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-sky-400 [&_[data-slot=slider-thumb]]:size-3.5"
           />
           <p className="text-[10px] leading-4 text-slate-500">
-            Higher cutoffs hide weaker cells so slices read more distinctly.
+            Higher cutoffs hide weaker cells so hotspots read more distinctly.
           </p>
         </div>
       </div>
 
       <div className="mt-4 rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-[10px] leading-5 text-slate-400">
         {isSelective
-          ? 'This setting favors tighter hotspots and less overlap between slices.'
-          : 'This setting keeps more context in each slice but can make textures look similar.'}
+          ? 'This setting favors tighter hotspots and less overlap between regions.'
+          : 'This setting keeps more context but may merge nearby hotspots.'}
       </div>
     </section>
   );

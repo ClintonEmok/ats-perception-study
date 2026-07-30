@@ -7,6 +7,7 @@ import { computeSliceKde } from '@/lib/kde';
 import { Stkde3DScene } from './components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from './components/Stkde3DSceneProvider';
 import { SliceInspector } from './components/SliceInspector';
+import type { StkdeHeatmapRenderer } from './components/StkdeSliceStack';
 import { KdeTuningPanel } from './components/KdeTuningPanel';
 import { buildAllocationMetrics, buildDurationVolumeProfile } from './lib/volume-encoding';
 import type { Stkde3DTemporalWindowPayload } from './components/Stkde3DSceneProvider';
@@ -29,8 +30,9 @@ const REAL_DATA_RANGE = {
 const EXPERIMENTAL_KDE_PARAMS: KdeParams = {
   gridSize: 48,
   sigmaCells: 1.35,
+  smoothingMeters: 150,
   kernelRadiusCells: 4,
-  threshold: 0.02,
+  threshold: 0.2,
 };
 
 type DatasetState = {
@@ -133,6 +135,7 @@ export default function Stkde3DPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isFocusedView, setIsFocusedView] = useState(false);
   const [showRawEvents, setShowRawEvents] = useState(false);
+  const [heatmapRenderer, setHeatmapRenderer] = useState<StkdeHeatmapRenderer>('field');
   const [hoveredSliceId, setHoveredSliceId] = useState<string | null>(null);
   const [scanProposal, setScanProposal] = useState<Stkde3DTemporalWindowPayload | null>(null);
   const [kdeParams, setKdeParams] = useState<KdeParams>(EXPERIMENTAL_KDE_PARAMS);
@@ -418,8 +421,10 @@ export default function Stkde3DPage() {
             <Stkde3DScene
               slices={sceneSlices}
               sliceKdes={sliceKdes}
-               sliceEvents={sliceEvents}
-               volumeProfile={volumeProfile}
+              sliceEvents={sliceEvents}
+              volumeProfile={volumeProfile}
+              heatmapRenderer={heatmapRenderer}
+              kdeGridSize={kdeParams.gridSize}
               activeIndex={activeIndex}
               viewMode={isFocusedView ? 'focus' : 'stack'}
               showRawEvents={showRawEvents}
@@ -430,6 +435,33 @@ export default function Stkde3DPage() {
 
           <aside className="min-h-0 space-y-4 overflow-y-auto rounded-3xl border border-slate-700/60 bg-slate-950/55 p-4 shadow-[0_30px_100px_-44px_rgba(14,165,233,0.35)] backdrop-blur-md">
             <KdeTuningPanel value={kdeParams} onChange={setKdeParams} />
+
+            <section className="rounded-2xl border border-slate-700/70 bg-slate-950/55 p-3 text-xs text-slate-300">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Heatmap renderer</span>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500">experiment</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-slate-900/70 p-1">
+                {([
+                  ['field', 'Grid field'],
+                  ['legacy', 'Legacy blobs'],
+                ] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={heatmapRenderer === mode}
+                    onClick={() => setHeatmapRenderer(mode)}
+                    className={`rounded-md px-2 py-1.5 text-[10px] transition ${
+                      heatmapRenderer === mode
+                        ? 'bg-sky-400/15 text-sky-100 shadow-sm'
+                        : 'text-slate-500 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </section>
 
             <div className="space-y-1 border-b border-slate-700/60 pb-3">
               <div className="text-[10px] uppercase tracking-[0.22em] text-slate-500">
@@ -446,14 +478,14 @@ export default function Stkde3DPage() {
               </div>
             ) : null}
 
-             {inspectedSlice && (
-               <SliceInspector
-                 slice={inspectedSlice}
-                 sliceKde={inspectedSliceKde}
-                 burstiness={inspectedSlice.burstScore}
-                 allocationMetrics={allocationMetrics}
-               />
-             )}
+            {inspectedSlice && (
+              <SliceInspector
+                slice={inspectedSlice}
+                sliceKde={inspectedSliceKde}
+                burstiness={inspectedSlice.burstScore}
+                allocationMetrics={allocationMetrics}
+              />
+            )}
 
             <StandaloneSliceScrubber
               slices={slices}

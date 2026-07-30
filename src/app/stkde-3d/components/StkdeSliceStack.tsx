@@ -6,7 +6,7 @@ import { Html } from '@react-three/drei';
 import { ThreeEvent, useThree } from '@react-three/fiber';
 import { easeInOutCubic, interpolateKdeCells } from '@/lib/motion/easing';
 import { START_Y, SLICE_SPACING } from '../lib/timeline-axis';
-import { getStkdeIntensityColor } from '../lib/palette';
+import { getLegacyStkdeIntensityColor, getStkdeIntensityColor } from '../lib/palette';
 import type { KdeCell, EvolvingSlice } from '../lib/types';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { createCameraFocusTarget, useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
@@ -15,6 +15,8 @@ export { AXIS_HEIGHT, START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 const TEXTURE_SIZE = 256;
 const TRANSITION_DURATION_MS = 240;
 const MIN_RESIZE_DURATION_SEC = 3600;
+
+export type StkdeHeatmapRenderer = 'field' | 'legacy';
 
 export function yForIndex(index: number): number {
   return START_Y + index * SLICE_SPACING;
@@ -35,7 +37,16 @@ function formatRangeLabel(startEpoch: number, endEpoch: number): string {
   return `${formatter.format(new Date(startEpoch * 1000))} → ${formatter.format(new Date(endEpoch * 1000))}`;
 }
 
-function buildHeatmapTexture(cells: KdeCell[]): THREE.CanvasTexture | null {
+function configureTexture(texture: THREE.CanvasTexture): THREE.CanvasTexture {
+  texture.needsUpdate = true;
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function buildLegacyHeatmapTexture(cells: KdeCell[]): THREE.CanvasTexture | null {
   if (cells.length === 0 || typeof document === 'undefined') return null;
 
   const canvas = document.createElement('canvas');
@@ -53,9 +64,9 @@ function buildHeatmapTexture(cells: KdeCell[]): THREE.CanvasTexture | null {
     const radius = Math.max(10, intensity * 44);
 
     const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    gradient.addColorStop(0, getStkdeIntensityColor(intensity, 0.98));
-    gradient.addColorStop(0.42, getStkdeIntensityColor(intensity * 0.72, 0.75));
-    gradient.addColorStop(0.78, getStkdeIntensityColor(intensity * 0.24, 0.4));
+    gradient.addColorStop(0, getLegacyStkdeIntensityColor(intensity, 0.98));
+    gradient.addColorStop(0.42, getLegacyStkdeIntensityColor(intensity * 0.72, 0.75));
+    gradient.addColorStop(0.78, getLegacyStkdeIntensityColor(intensity * 0.24, 0.4));
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -69,6 +80,40 @@ function buildHeatmapTexture(cells: KdeCell[]): THREE.CanvasTexture | null {
   texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;
   return texture;
+}
+
+function buildFieldHeatmapTexture(cells: KdeCell[], gridSize: number): THREE.CanvasTexture | null {
+  if (cells.length === 0 || typeof document === 'undefined') return null;
+
+  const safeGridSize = Math.max(4, Math.round(gridSize));
+  const canvas = document.createElement('canvas');
+  canvas.width = safeGridSize;
+  canvas.height = safeGridSize;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.clearRect(0, 0, safeGridSize, safeGridSize);
+
+  for (const cell of cells) {
+    const col = Math.min(safeGridSize - 1, Math.max(0, Math.floor(((cell.x + 50) / 100) * safeGridSize)));
+    const row = Math.min(safeGridSize - 1, Math.max(0, Math.floor(((cell.z + 50) / 100) * safeGridSize)));
+    const intensity = Math.min(1, Math.max(0, cell.intensity));
+    const alpha = Math.min(0.95, 0.14 + intensity * 0.86);
+    ctx.fillStyle = getStkdeIntensityColor(intensity, alpha);
+    ctx.fillRect(col, safeGridSize - row - 1, 1, 1);
+  }
+
+  return configureTexture(new THREE.CanvasTexture(canvas));
+}
+
+function buildHeatmapTexture(
+  cells: KdeCell[],
+  renderer: StkdeHeatmapRenderer,
+  gridSize: number,
+): THREE.CanvasTexture | null {
+  return renderer === 'field'
+    ? buildFieldHeatmapTexture(cells, gridSize)
+    : buildLegacyHeatmapTexture(cells);
 }
 
 function flattenKdeCells(cells: KdeCell[]): Float32Array {
@@ -100,15 +145,17 @@ function buildInterpolatedTexture(
   fromCells: KdeCell[] | undefined,
   toCells: KdeCell[] | undefined,
   t: number,
+  renderer: StkdeHeatmapRenderer,
+  gridSize: number,
 ): THREE.CanvasTexture | null {
   if (!fromCells || !toCells || fromCells.length === 0 || toCells.length === 0) return null;
 
   if (fromCells.length !== toCells.length) {
-    return buildHeatmapTexture(toCells);
+    return buildHeatmapTexture(toCells, renderer, gridSize);
   }
 
   const interpolated = interpolateKdeCells(flattenKdeCells(fromCells), flattenKdeCells(toCells), t);
-  return buildHeatmapTexture(unflattenKdeCells(interpolated));
+  return buildHeatmapTexture(unflattenKdeCells(interpolated), renderer, gridSize);
 }
 
 interface StkdeSliceStackProps {
@@ -119,6 +166,8 @@ interface StkdeSliceStackProps {
   compact?: boolean;
   sliceOpacity?: number;
   heightScale?: number;
+  heatmapRenderer?: StkdeHeatmapRenderer;
+  kdeGridSize?: number;
 }
 
 type ResizeHandle = 'start' | 'end';
@@ -149,6 +198,8 @@ export function StkdeSliceStack({
   compact = false,
   sliceOpacity = 1,
   heightScale = 1,
+  heatmapRenderer = 'legacy',
+  kdeGridSize = 32,
 }: StkdeSliceStackProps) {
   const {
     isPlaying,
@@ -311,13 +362,13 @@ export function StkdeSliceStack({
   const textures = useMemo(() => {
     const newTextures = new Map<number, THREE.CanvasTexture>();
     for (let i = 0; i < sliceKdes.length; i += 1) {
-      const tex = buildHeatmapTexture(sliceKdes[i] ?? []);
+       const tex = buildHeatmapTexture(sliceKdes[i] ?? [], heatmapRenderer, kdeGridSize);
       if (tex) {
         newTextures.set(i, tex);
       }
     }
     return newTextures;
-  }, [sliceKdes]);
+  }, [heatmapRenderer, kdeGridSize, sliceKdes]);
 
   const [transition, setTransition] = useState<SliceTransition | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -365,8 +416,14 @@ export function StkdeSliceStack({
     if (!transition || !isPlaying || !isInterpolated) return null;
     const fromCells = sliceKdes[transition.fromIndex];
     const toCells = sliceKdes[transition.toIndex];
-    return buildInterpolatedTexture(fromCells, toCells, easeInOutCubic(transitionProgress));
-  }, [isInterpolated, isPlaying, sliceKdes, transition, transitionProgress]);
+    return buildInterpolatedTexture(
+      fromCells,
+      toCells,
+      easeInOutCubic(transitionProgress),
+      heatmapRenderer,
+      kdeGridSize,
+    );
+  }, [heatmapRenderer, isInterpolated, isPlaying, kdeGridSize, sliceKdes, transition, transitionProgress]);
 
   useEffect(() => {
     return () => {

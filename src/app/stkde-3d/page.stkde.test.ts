@@ -11,6 +11,8 @@ describe('/stkde-3d route focus mode', () => {
     expect(pageSource).toMatch(/Single slice/);
     expect(pageSource).toMatch(/Stack view/);
     expect(pageSource).toMatch(/Raw points/);
+    expect(pageSource).toMatch(/Grid field/);
+    expect(pageSource).toMatch(/Legacy blobs/);
     expect(pageSource).toMatch(/SliceInspector/);
     expect(pageSource).toMatch(/viewMode={isFocusedView \? 'focus' : 'stack'}/);
     expect(pageSource).toMatch(/sliceEvents={sliceEvents}/);
@@ -27,7 +29,7 @@ describe('/stkde-3d route focus mode', () => {
     expect(sceneSource).toMatch(/compact={viewMode === 'focus'}/);
     expect(sceneSource).toMatch(/RawEventPoints/);
     expect(stackSource).toMatch(/compact\?: boolean/);
-    expect(inspectorSource).toMatch(/Time range/);
+    expect(inspectorSource).toMatch(/Clock range/);
     expect(inspectorSource).toMatch(/Burstiness/);
     expect(sceneSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);
   });

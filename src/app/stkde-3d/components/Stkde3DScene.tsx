@@ -26,6 +26,7 @@ import {
   type Stkde3DSceneRuntime,
   type Stkde3DSceneSlice,
 } from './Stkde3DSceneProvider';
+import type { StkdeHeatmapRenderer } from './StkdeSliceStack';
 
 const CAMERA_POSITION: [number, number, number] = [105, 175, 105];
 const CAMERA_TARGET: [number, number, number] = [0, 0, 0];
@@ -119,6 +120,8 @@ interface Stkde3DSceneProps {
   yOffset?: number;
   heightScale?: number;
   burstVolumeModel?: BurstVolumeModel;
+  heatmapRenderer?: StkdeHeatmapRenderer;
+  kdeGridSize?: number;
   runtime?: Stkde3DSceneRuntime;
 }
 
@@ -185,10 +188,12 @@ function SceneContent({
   heightScale = 1,
   burstVolumeModel,
   cameraFocusTarget,
+  heatmapRenderer = 'legacy',
+  kdeGridSize = 32,
 }: Pick<
   Stkde3DSceneProps,
   'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'activeIndex' | 'viewMode' |
-  'showRawEvents' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel'
+  'showRawEvents' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize'
 > & {
   cameraFocusTarget: Stkde3DCameraFocusTarget | null;
 }) {
@@ -263,6 +268,8 @@ function SceneContent({
         compact={viewMode === 'focus'}
         sliceOpacity={sliceOpacity}
         heightScale={heightScale}
+        heatmapRenderer={heatmapRenderer}
+        kdeGridSize={kdeGridSize}
       />
 
       {burstVolumeModel ? (
@@ -316,6 +323,8 @@ export function Stkde3DScene({
   yOffset = 0,
   heightScale = 1,
   burstVolumeModel,
+  heatmapRenderer = 'legacy',
+  kdeGridSize = 32,
   runtime,
   onCreateDraftAtPoint,
 }: Stkde3DSceneProps) {
@@ -379,7 +388,7 @@ export function Stkde3DScene({
       <div className="relative h-full w-full overflow-hidden bg-transparent">
         <MapTileSource onTextureReady={setMapTexture} />
         <div className="absolute left-4 top-4 z-20">
-          <StkdeIntensityLegend />
+          <StkdeIntensityLegend mode={heatmapRenderer} />
         </div>
         {interactiveRuntime.temporalWindowEnabled ? (
           <div className="absolute bottom-4 left-4 z-20 w-64 rounded-md border border-sky-400/25 bg-slate-950/90 p-2 text-[11px] text-slate-200 shadow-xl backdrop-blur">
@@ -447,6 +456,8 @@ export function Stkde3DScene({
               sliceOpacity={sliceOpacity}
               heightScale={heightScale}
               burstVolumeModel={burstVolumeModel}
+              heatmapRenderer={heatmapRenderer}
+              kdeGridSize={kdeGridSize}
               cameraFocusTarget={cameraFocusTarget}
             />
 
