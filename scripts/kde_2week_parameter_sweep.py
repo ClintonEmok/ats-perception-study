@@ -313,12 +313,22 @@ def render_panel(
     return {'sigma_cells': sigma_cells, **metrics}
 
 
-def render_parameter_grid(interval: Interval, output_path: Path) -> None:
-    grids = [48, 104]
-    smoothing_values = [100, 150, 250]
-    cutoffs = [0.10, 0.20, 0.30]
-    fig, axes = plt.subplots(6, 3, figsize=(9.6, 15.2), facecolor='#030b18')
-    axes = np.asarray(axes)
+def render_parameter_grid(
+    interval: Interval,
+    output_path: Path,
+    grids: list[int],
+    smoothing_values: list[int],
+    cutoffs: list[float],
+) -> None:
+    row_count = len(grids) * len(smoothing_values)
+    column_count = len(cutoffs)
+    fig, axes = plt.subplots(
+        row_count,
+        column_count,
+        figsize=(max(9.6, column_count * 3.2), max(6.0, row_count * 2.55)),
+        facecolor='#030b18',
+    )
+    axes = np.atleast_2d(axes)
     panel_index = 0
     for grid_size in grids:
         for smoothing_meters in smoothing_values:
@@ -424,13 +434,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--input-csv', type=Path, default=DEFAULT_INPUT)
     parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument('--grid', type=int, default=104, help='Grid used for interval selection metrics.')
+    parser.add_argument('--grids', default='48,104', help='Comma-separated render grid sizes.')
+    parser.add_argument('--smoothing', default='100,150,250', help='Comma-separated smoothing radii in meters.')
+    parser.add_argument('--cutoffs', default='0.10,0.20,0.30', help='Comma-separated normalized cutoffs.')
     parser.add_argument('--max-intervals', type=int, default=6, help='Number of representative intervals to render.')
     parser.add_argument('--evolution-weeks', type=int, default=6, help='Number of contiguous two-week windows in each evolution image.')
     return parser.parse_args()
 
 
+def parse_int_values(raw: str) -> list[int]:
+    values = [int(value.strip()) for value in raw.split(',') if value.strip()]
+    if not values or any(value < 4 for value in values):
+        raise ValueError(f'Invalid integer values: {raw}')
+    return values
+
+
+def parse_float_values(raw: str) -> list[float]:
+    values = [float(value.strip()) for value in raw.split(',') if value.strip()]
+    if not values or any(value <= 0 or value >= 1 for value in values):
+        raise ValueError(f'Invalid cutoff values: {raw}')
+    return values
+
+
 def main() -> None:
     args = parse_args()
+    grids = parse_int_values(args.grids)
+    smoothing_values = parse_int_values(args.smoothing)
+    cutoffs = parse_float_values(args.cutoffs)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     supports, latest_day = load_two_week_supports(args.input_csv, args.grid)
     if not supports:
@@ -451,14 +481,14 @@ def main() -> None:
 
     for interval in intervals:
         filename = f'parameter_sweep_{interval.start:%Y%m%d}_{interval.index:04d}.png'
-        render_parameter_grid(interval, args.output_dir / filename)
+        render_parameter_grid(interval, args.output_dir / filename, grids, smoothing_values, cutoffs)
 
     render_recommended_contact_sheet(intervals, args.output_dir / 'recommended_contact_sheet.png')
     evolution_intervals = select_evolution_sequence(supports, latest_day, args.evolution_weeks)
     write_evolution_sequence(evolution_intervals, args.output_dir / 'evolution_sequence.csv')
-    for grid_size in [48, 104]:
-        for smoothing_meters in [100, 150, 250]:
-            for cutoff in [0.10, 0.20, 0.30]:
+    for grid_size in grids:
+        for smoothing_meters in smoothing_values:
+            for cutoff in cutoffs:
                 filename = f'evolution_{grid_size}g_{smoothing_meters}m_{int(cutoff * 100):02d}pct.png'
                 render_evolution_grid(
                     evolution_intervals,
@@ -469,7 +499,8 @@ def main() -> None:
                 )
 
     print(f'Wrote {len(intervals)} interval sweep images to {args.output_dir}')
-    print(f'Wrote {len(evolution_intervals)} contiguous evolution windows and 18 evolution images')
+    combination_count = len(grids) * len(smoothing_values) * len(cutoffs)
+    print(f'Wrote {len(evolution_intervals)} contiguous evolution windows and {combination_count} evolution images')
     print(f'Wrote {args.output_dir / "recommended_contact_sheet.png"}')
 
 
