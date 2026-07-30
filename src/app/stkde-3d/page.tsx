@@ -8,6 +8,8 @@ import { Stkde3DScene } from './components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from './components/Stkde3DSceneProvider';
 import { SliceInspector } from './components/SliceInspector';
 import { KdeTuningPanel } from './components/KdeTuningPanel';
+import { buildAllocationMetrics, buildDurationVolumeProfile } from './lib/volume-encoding';
+import type { Stkde3DTemporalWindowPayload } from './components/Stkde3DSceneProvider';
 import type { KdeParams } from '@/lib/kde';
 import type { CrimeRecord } from '@/types/crime';
 import type { EvolvingSlice } from './lib/types';
@@ -131,6 +133,8 @@ export default function Stkde3DPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isFocusedView, setIsFocusedView] = useState(false);
   const [showRawEvents, setShowRawEvents] = useState(false);
+  const [hoveredSliceId, setHoveredSliceId] = useState<string | null>(null);
+  const [scanProposal, setScanProposal] = useState<Stkde3DTemporalWindowPayload | null>(null);
   const [kdeParams, setKdeParams] = useState<KdeParams>(EXPERIMENTAL_KDE_PARAMS);
   const [dataset, setDataset] = useState<DatasetState | null>(null);
 
@@ -212,13 +216,22 @@ export default function Stkde3DPage() {
     [sliceKdeResults],
   );
 
+  const volumeProfile = useMemo(
+    () => buildDurationVolumeProfile(sceneSlices),
+    [sceneSlices],
+  );
+
   const totalEvents = useMemo(
     () => slices.reduce((sum, s) => sum + s.crimeCount, 0),
     [slices],
   );
 
   const activeSlice = slices[activeIndex];
-  const activeSliceKde = sliceKdeResults[activeIndex];
+  const inspectedSlice = sceneSlices.find((slice) => slice.sourceSliceId === hoveredSliceId) ?? sceneSlices[activeIndex];
+  const inspectedSliceKde = inspectedSlice ? sliceKdeResults[inspectedSlice.index] : undefined;
+  const allocationMetrics = inspectedSlice
+    ? buildAllocationMetrics({ slice: inspectedSlice, slices: sceneSlices, profile: volumeProfile })
+    : null;
   const activeSliceTitle = activeSlice?.label ?? 'No slice selected';
   const activeSliceRange = activeSlice
     ? `${DATE_FORMATTER.format(new Date(activeSlice.startEpoch * 1000))} - ${DATE_FORMATTER.format(new Date(activeSlice.endEpoch * 1000))}`
@@ -240,10 +253,32 @@ export default function Stkde3DPage() {
           : index;
         setActiveIndex(selectedIndex >= 0 ? selectedIndex : index);
       },
+      onSliceHover: (payload) => setHoveredSliceId(payload?.sourceSliceId ?? null),
       onSliceResize: () => undefined,
+      onBurstHover: () => undefined,
+      onBurstSelect: () => undefined,
+      onClusterHover: () => undefined,
+      onClusterSelect: () => undefined,
+      onCameraFocus: () => undefined,
+      onTemporalWindowPropose: setScanProposal,
+      onTemporalWindowCommit: (proposal) => {
+        setScanProposal(proposal);
+        const midpoint = (proposal.startEpoch + proposal.endEpoch) / 2;
+        const nextIndex = sceneSlices.reduce((closestIndex, slice, index) => {
+          const closest = sceneSlices[closestIndex];
+          if (!closest) return index;
+          const currentDistance = Math.abs((slice.startEpoch + slice.endEpoch) / 2 - midpoint);
+          const closestDistance = Math.abs((closest.startEpoch + closest.endEpoch) / 2 - midpoint);
+          return currentDistance < closestDistance ? index : closestIndex;
+        }, 0);
+        setActiveIndex(nextIndex);
+      },
       onCreateDraftAtPoint: () => undefined,
       onCanvasPointerDown: () => undefined,
-      onCanvasPointerMissed: () => setActiveIndex(-1),
+      onCanvasPointerMissed: () => {
+        setHoveredSliceId(null);
+        setActiveIndex(-1);
+      },
     }),
     [isPlaying, sceneSlices, timeDomain],
   );
@@ -383,7 +418,8 @@ export default function Stkde3DPage() {
             <Stkde3DScene
               slices={sceneSlices}
               sliceKdes={sliceKdes}
-              sliceEvents={sliceEvents}
+               sliceEvents={sliceEvents}
+               volumeProfile={volumeProfile}
               activeIndex={activeIndex}
               viewMode={isFocusedView ? 'focus' : 'stack'}
               showRawEvents={showRawEvents}
@@ -404,12 +440,20 @@ export default function Stkde3DPage() {
               </p>
             </div>
 
-            {isFocusedView && (
-              <SliceInspector
-                slice={activeSlice}
-                sliceKde={activeSliceKde}
-              />
-            )}
+            {scanProposal ? (
+              <div className="rounded-md border border-cyan-400/25 bg-cyan-400/5 px-2 py-1.5 text-[10px] text-cyan-100">
+                Scan preview: {new Date(scanProposal.startEpoch * 1000).toLocaleDateString()} – {new Date(scanProposal.endEpoch * 1000).toLocaleDateString()}
+              </div>
+            ) : null}
+
+             {inspectedSlice && (
+               <SliceInspector
+                 slice={inspectedSlice}
+                 sliceKde={inspectedSliceKde}
+                 burstiness={inspectedSlice.burstScore}
+                 allocationMetrics={allocationMetrics}
+               />
+             )}
 
             <StandaloneSliceScrubber
               slices={slices}

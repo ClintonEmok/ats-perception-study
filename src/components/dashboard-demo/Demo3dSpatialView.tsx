@@ -8,10 +8,11 @@ import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoord
 import { normalizedToEpochSeconds } from '@/lib/time-domain';
 import { epochSecondsToNormalized } from '@/lib/time-domain';
 import { normalizeTimeRange } from '@/lib/time-range';
+import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
 import { Stkde3DScene } from '@/app/stkde-3d/components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from '@/app/stkde-3d/components/Stkde3DSceneProvider';
-import { buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
-import { resolveEpochFromWarpedY } from '@/app/stkde-3d/lib/timeline-axis';
+import { buildAllocationMetrics, buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
+import { resolveEpochFromWarpedY, resolveWarpedEpochY } from '@/app/stkde-3d/lib/timeline-axis';
 import { computeDensityMap } from '@/components/timeline/hooks/useDensityStripDerivation';
 import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import { ADAPTIVE_BIN_COUNT, ADAPTIVE_KERNEL_WIDTH } from '@/lib/adaptive-utils';
@@ -20,6 +21,16 @@ import { buildDemoSliceAuthoredWarpMap } from '@/components/dashboard-demo/lib/d
 import { useDashboardDemo3d } from '@/components/dashboard-demo/DashboardDemo3dProvider';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
 import { START_Y } from '@/app/stkde-3d/lib/timeline-axis';
+import { SliceInspector } from '@/app/stkde-3d/components/SliceInspector';
+import { applyRangeToStoresContract } from '@/components/timeline/DemoDualTimeline';
+import { deriveDemo3dInteractionCommand } from '@/components/dashboard-demo/lib/syncDemo3dInteraction';
+import { lonLatToNormalized } from '@/lib/coordinate-normalization';
+import type { SpatialBounds } from '@/store/useDashboardDemoFilterStore';
+import type {
+  Stkde3DBurstInteractionPayload,
+  Stkde3DClusterInteractionPayload,
+  Stkde3DTemporalWindowPayload,
+} from '@/app/stkde-3d/components/Stkde3DSceneProvider';
 import type { KdeCell } from '@/lib/kde';
 import type { CrimeRecord } from '@/types/crime';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
@@ -32,6 +43,8 @@ interface SceneSlice {
   endEpoch: number;
   burstScore: number;
   crimeCount: number;
+  warpWeight?: number;
+  signal?: number;
 }
 
 function normalizeBurstScore(score: number): number {
@@ -95,6 +108,35 @@ function resolveSliceEpochRange(
   return [time, time];
 }
 
+function buildSpatialBoundsFromCentroid({
+  centroidLat,
+  centroidLng,
+  radiusMeters,
+}: {
+  centroidLat: number;
+  centroidLng: number;
+  radiusMeters: number | null;
+}): SpatialBounds | null {
+  if (!Number.isFinite(centroidLat) || !Number.isFinite(centroidLng)) return null;
+
+  const radius = Number.isFinite(radiusMeters ?? Number.NaN) ? Math.max(0, radiusMeters ?? 0) : 0;
+  const latDelta = radius / 111_320;
+  const lonDelta = radius / Math.max(1, 111_320 * Math.cos((centroidLat * Math.PI) / 180));
+  const southwest = lonLatToNormalized(centroidLng - lonDelta, centroidLat - latDelta);
+  const northeast = lonLatToNormalized(centroidLng + lonDelta, centroidLat + latDelta);
+
+  return {
+    minX: Math.min(southwest.x, northeast.x),
+    maxX: Math.max(southwest.x, northeast.x),
+    minZ: Math.min(southwest.z, northeast.z),
+    maxZ: Math.max(southwest.z, northeast.z),
+    minLat: centroidLat - latDelta,
+    maxLat: centroidLat + latDelta,
+    minLon: centroidLng - lonDelta,
+    maxLon: centroidLng + lonDelta,
+  };
+}
+
 export function Demo3dSpatialView() {
   const { response: stkdeResponse } = useDashboardDemo3d();
   const slices = useSliceDomainStore((state) => state.slices);
@@ -102,9 +144,16 @@ export function Demo3dSpatialView() {
   const maxTimestampSec = useTimelineDataStore((state) => state.maxTimestampSec);
   const overviewTimestampSec = useTimelineDataStore((state) => state.overviewTimestampSec);
   const selectedTimeRange = useDashboardDemoFilterStore((state) => state.selectedTimeRange);
+  const setSelectedTimeRange = useDashboardDemoFilterStore((state) => state.setTimeRange);
+  const setSpatialBounds = useDashboardDemoFilterStore((state) => state.setSpatialBounds);
+  const clearSpatialBounds = useDashboardDemoFilterStore((state) => state.clearSpatialBounds);
+  const currentTime = useDashboardDemoTimeStore((state) => state.currentTime);
+  const setTime = useDashboardDemoTimeStore((state) => state.setTime);
+  const setRange = useDashboardDemoTimeStore((state) => state.setRange);
   const activeIndex = useDashboardDemoCoordinationStore((state) => state.activeSliceIndex);
   const viewMode = useDashboardDemoCoordinationStore((state) => state.viewMode);
   const brushRange = useDashboardDemoCoordinationStore((state) => state.brushRange);
+  const setBrushRange = useDashboardDemoCoordinationStore((state) => state.setBrushRange);
   const isPlaying = useDashboardDemoCoordinationStore((state) => state.inspectIsPlaying);
   const isInterpolated = useDashboardDemoCoordinationStore((state) => state.inspectInterpolation);
   const playbackSpeed = useDashboardDemoCoordinationStore((state) => state.inspectPlaybackSpeed);
@@ -127,6 +176,9 @@ export function Demo3dSpatialView() {
   const setSliceCrimeCounts = useDashboardDemoCoordinationStore((state) => state.setSliceCrimeCounts);
   const setCrimeFetchStatus = useDashboardDemoCoordinationStore((state) => state.setCrimeFetchStatus);
   const setActiveRailTab = useDashboardDemoCoordinationStore((state) => state.setActiveRailTab);
+  const setSelectedBurstWindow = useDashboardDemoCoordinationStore((state) => state.toggleBurstWindow);
+  const setDetailsOpen = useDashboardDemoCoordinationStore((state) => state.setDetailsOpen);
+  const setSelectedHotspot = useDashboardDemoCoordinationStore((state) => state.setSelectedHotspot);
   const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
   const updateSlice = useSliceDomainStore((state) => state.updateSlice);
   const addManualDraftRange = useDashboardDemoTimeslicingModeStore((state) => state.addManualDraftRange);
@@ -139,6 +191,8 @@ export function Demo3dSpatialView() {
   const kdeRequestIdRef = useRef(0);
   const playbackTimeoutRef = useRef<number | null>(null);
   const [canvasPointer, setCanvasPointer] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredSliceId, setHoveredSliceId] = useState<string | null>(null);
+  const [scanProposal, setScanProposal] = useState<Stkde3DTemporalWindowPayload | null>(null);
 
   const orderedSlices = useMemo(() => {
     if (minTimestampSec === null || maxTimestampSec === null) return [];
@@ -155,6 +209,8 @@ export function Demo3dSpatialView() {
           endEpoch,
           burstScore: normalizeBurstScore(slice.burstScore ?? 0),
           crimeCount: 0,
+          warpWeight: slice.warpWeight,
+          signal: slice.burstinessCoefficient,
         } satisfies SceneSlice;
       })
       .sort((left, right) => {
@@ -269,6 +325,22 @@ export function Demo3dSpatialView() {
       ? [minTimestampSec, maxTimestampSec]
       : [0, 1]
   ), [maxTimestampSec, minTimestampSec]);
+
+  const commitTemporalRange = useCallback((range: [number, number] | null) => {
+    if (!range) return;
+    applyRangeToStoresContract({
+      interactive: true,
+      startSec: range[0],
+      endSec: range[1],
+      domainStart: fullTimeDomain[0],
+      domainEnd: fullTimeDomain[1],
+      currentTime,
+      setTimeRange: setSelectedTimeRange,
+      setRange,
+      setBrushRange,
+      setTime,
+    });
+  }, [currentTime, fullTimeDomain, setBrushRange, setRange, setSelectedTimeRange, setTime]);
 
   const brushedTimeDomain = useMemo<[number, number]>(() => {
     if (
@@ -413,6 +485,14 @@ export function Demo3dSpatialView() {
     warpDomain: activeWarpDomain,
   }), [activeWarpDomain, activeWarpMap, cubeTimeDomain, effectiveTimeScaleMode, effectiveWarpBlend]);
 
+  const sceneEpochToY = useCallback((epoch: number): number => resolveWarpedEpochY(epoch, START_Y, {
+    timeScaleMode: effectiveTimeScaleMode,
+    warpBlend: effectiveWarpBlend,
+    warpMap: activeWarpMap,
+    displayDomain: cubeTimeDomain,
+    warpDomain: activeWarpDomain,
+  }), [activeWarpDomain, activeWarpMap, cubeTimeDomain, effectiveTimeScaleMode, effectiveWarpBlend]);
+
   const handleCreateDraftAtPoint = useCallback(({ y, clientX, clientY }: { y: number; clientX: number; clientY: number }) => {
     const pointer = canvasPointer;
     const movedTooFar = pointer ? Math.hypot(clientX - pointer.x, clientY - pointer.y) > 8 : false;
@@ -433,6 +513,48 @@ export function Demo3dSpatialView() {
     setCanvasPointer({ x: clientX, y: clientY });
   }, []);
 
+  const activateCommandSlice = useCallback((sourceSliceId: string | null, sourceSliceIndex: number | null) => {
+    if (!sourceSliceId) return;
+    const nextGlobalIndex = countedSlices.findIndex((slice) => slice.sourceSliceId === sourceSliceId);
+    setActiveSlice(sourceSliceId);
+    setActiveSliceIndex(nextGlobalIndex >= 0 ? nextGlobalIndex : sourceSliceIndex ?? -1);
+  }, [countedSlices, setActiveSlice, setActiveSliceIndex]);
+
+  const handleBurstSelect = useCallback((payload: Stkde3DBurstInteractionPayload) => {
+    const command = deriveDemo3dInteractionCommand({
+      kind: 'burst',
+      payload,
+      existingBurstWindow: selectedBurstWindows[0] ?? null,
+      resolveEpochY: sceneEpochToY,
+    });
+    activateCommandSlice(command.sourceSliceId, command.sourceSliceIndex);
+    if (command.selectedBurstWindow) {
+      setSelectedBurstWindow(command.selectedBurstWindow);
+      setDetailsOpen(true);
+    }
+    commitTemporalRange(command.epochRange);
+    setActiveRailTab('inspect');
+  }, [activateCommandSlice, commitTemporalRange, sceneEpochToY, selectedBurstWindows, setActiveRailTab, setDetailsOpen, setSelectedBurstWindow]);
+
+  const handleTrajectorySelect = useCallback((payload: Stkde3DClusterInteractionPayload) => {
+    const command = deriveDemo3dInteractionCommand({
+      kind: 'trajectory',
+      payload,
+      topLevelHotspotIds: stkdeResponse?.hotspots.map((hotspot) => hotspot.id) ?? [],
+      resolveEpochY: sceneEpochToY,
+    });
+    activateCommandSlice(command.sourceSliceId, command.sourceSliceIndex);
+    setSelectedHotspot(command.selectedHotspotId);
+    if (command.mapFocus) {
+      const bounds = buildSpatialBoundsFromCentroid(command.mapFocus);
+      if (bounds) setSpatialBounds(bounds);
+    } else {
+      clearSpatialBounds();
+    }
+    commitTemporalRange(command.epochRange);
+    setActiveRailTab('inspect');
+  }, [activateCommandSlice, clearSpatialBounds, commitTemporalRange, sceneEpochToY, setActiveRailTab, setSelectedHotspot, setSpatialBounds, stkdeResponse]);
+
   const sceneRuntime = useMemo(
     () => createStkde3DSceneRuntime({
       displayDomain: cubeTimeDomain,
@@ -452,6 +574,9 @@ export function Demo3dSpatialView() {
           : -1;
         setActiveSliceIndex(nextGlobalIndex);
       },
+      onSliceHover: (payload) => {
+        setHoveredSliceId(payload?.sourceSliceId ?? null);
+      },
       onSliceSelect: ({ index, sourceSliceId }) => {
         const selectedSlice = sourceSliceId
           ? cubeSlices.find((slice) => slice.sourceSliceId === sourceSliceId)
@@ -461,6 +586,13 @@ export function Demo3dSpatialView() {
         const nextGlobalIndex = countedSlices.findIndex((slice) => slice.sourceSliceId === selectedSlice.sourceSliceId);
         setActiveSliceIndex(nextGlobalIndex >= 0 ? nextGlobalIndex : index);
       },
+      onBurstHover: () => undefined,
+      onBurstSelect: handleBurstSelect,
+      onClusterHover: () => undefined,
+      onClusterSelect: handleTrajectorySelect,
+      onCameraFocus: () => undefined,
+      onTemporalWindowPropose: setScanProposal,
+      onTemporalWindowCommit: (proposal) => commitTemporalRange([proposal.startEpoch, proposal.endEpoch]),
       onSliceResize: ({ index, sourceSliceId, startEpoch, endEpoch }) => {
         const start = Math.min(startEpoch, endEpoch);
         const end = Math.max(startEpoch, endEpoch);
@@ -479,11 +611,12 @@ export function Demo3dSpatialView() {
       onCreateDraftAtPoint: handleCreateDraftAtPoint,
       onCanvasPointerDown: handleCanvasPointerDown,
       onCanvasPointerMissed: () => {
+        setHoveredSliceId(null);
         setActiveSliceIndex(-1);
         setActiveSlice(null);
       },
     }),
-    [activeWarpDomain, activeWarpMap, countedSlices, cubeSlices, cubeTimeDomain, densityMap, effectiveTimeScaleMode, effectiveWarpBlend, fullTimeDomain, handleCanvasPointerDown, handleCreateDraftAtPoint, isInterpolated, isPlaying, sceneYToEpoch, scopedDensityMap, setActiveSlice, setActiveSliceIndex, updateSlice],
+    [activeWarpDomain, activeWarpMap, commitTemporalRange, countedSlices, cubeSlices, cubeTimeDomain, densityMap, effectiveTimeScaleMode, effectiveWarpBlend, fullTimeDomain, handleBurstSelect, handleCanvasPointerDown, handleCreateDraftAtPoint, handleTrajectorySelect, isInterpolated, isPlaying, sceneYToEpoch, scopedDensityMap, setActiveSlice, setActiveSliceIndex, setHoveredSliceId, updateSlice],
   );
 
   const detailChip = useMemo(() => {
@@ -500,6 +633,21 @@ export function Demo3dSpatialView() {
     const sliceLabel = `${fmt.format(new Date(active.startEpoch * 1000))} – ${fmt.format(new Date(active.endEpoch * 1000))}`;
     return { domainLabel, domainDurationDays, sliceLabel, sliceDurationDays, percentage };
   }, [cubeScopeMode, cubeTimeDomain, cubeSlices, cubeActiveIndex]);
+
+  const inspectedSliceIndex = useMemo(() => {
+    if (hoveredSliceId) {
+      const hoveredIndex = cubeSlices.findIndex((slice) => slice.sourceSliceId === hoveredSliceId);
+      if (hoveredIndex >= 0) return hoveredIndex;
+    }
+    return cubeActiveIndex;
+  }, [cubeActiveIndex, cubeSlices, hoveredSliceId]);
+  const inspectedSlice = cubeSlices[inspectedSliceIndex];
+  const inspectedAllocationMetrics = useMemo(
+    () => inspectedSlice
+      ? buildAllocationMetrics({ slice: inspectedSlice, slices: cubeSlices, profile: cubeVolumeProfile })
+      : null,
+    [cubeSlices, cubeVolumeProfile, inspectedSlice],
+  );
 
   useEffect(() => {
     if (crimesBySlice.length === 0 || orderedSlices.length === 0) {
@@ -635,6 +783,26 @@ export function Demo3dSpatialView() {
           )}
         </div>
       )}
+
+      {scanProposal ? (
+        <div className="absolute right-3 top-3 z-20 rounded-md border border-cyan-400/30 bg-slate-950/90 px-3 py-2 text-[10px] text-cyan-100 shadow-md backdrop-blur">
+          <div className="uppercase tracking-[0.16em] text-cyan-300/80">Clock scan preview</div>
+          <div className="mt-1 tabular-nums">
+            {new Date(scanProposal.startEpoch * 1000).toLocaleString()} – {new Date(scanProposal.endEpoch * 1000).toLocaleString()}
+          </div>
+        </div>
+      ) : null}
+
+      {inspectedSlice ? (
+        <div className="absolute right-3 top-16 z-20 w-72">
+          <SliceInspector
+            slice={inspectedSlice}
+            burstiness={inspectedSlice.burstScore}
+            allocationMetrics={inspectedAllocationMetrics}
+            burstVolumeModel={burstVolumeModel}
+          />
+        </div>
+      ) : null}
 
       <Stkde3DScene
         slices={cubeSlices}
