@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 Phase: 2 of 4 (Burst Volume Rendering)
 Plan: 1 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-07-14 — Phase 1 burst-volume implementation verified
+Last activity: 2026-07-30 — Completed quick task 260730-ptr persistent STKDE spatial columns
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -54,6 +54,9 @@ Recent decisions affecting current work:
 - [Milestone v1.0] The adaptive timeline stays the control layer while the cube becomes the analytical artifact.
 - [Milestone v1.0] Stage 1 should prioritize structural clarity before richer metaphor layers.
 - [Milestone v1.0] Phase 1 delivered the shared BurstVolumeModel and live hook; the next step is rendering the analytical cube volume.
+- [Quick 260730-ptr] Persistent columns use direct normalized KDE x/z anchors and never reuse trajectory projection coordinates.
+- [Quick 260730-ptr] Persistent segment bounds resolve both actual epoch endpoints through the shared adaptive scene runtime.
+- [Quick 260730-ptr] Missing or below-cutoff source slices remain temporal gaps, and the overlay stays opt-in to standalone stack view.
 
 ### Pending Todos
 
@@ -72,8 +75,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-14
-Stopped at: Starting milestone planning for burst-volume analytical model
+Last session: 2026-07-30T17:16:39Z
+Stopped at: Completed quick task 260730-ptr
 Resume file: None
 
 ## Quick Tasks Completed
@@ -81,3 +84,4 @@ Resume file: None
 | Task | Status | Completed |
 |------|--------|-----------|
 | Useful adaptive 3D interactions (`260728-gh3`) | Complete | 2026-07-30 |
+| Persistent spatial columns across STKDE slices (`260730-ptr`) | Complete | 2026-07-30 |
