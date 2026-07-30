@@ -29,6 +29,8 @@ import {
 
 const CAMERA_POSITION: [number, number, number] = [105, 175, 105];
 const CAMERA_TARGET: [number, number, number] = [0, 0, 0];
+// Keep semantic camera-focus wiring available, but avoid disorienting jumps by default.
+const ENABLE_INTERACTION_CAMERA_FOCUS = false;
 
 const MAP_VIEW_STATE = {
   longitude: -87.649,
@@ -334,6 +336,7 @@ export function Stkde3DScene({
   const interactiveRuntime = useMemo<Stkde3DSceneRuntime>(() => ({
     ...sceneRuntime,
     cameraFocus: (target) => {
+      if (target && !ENABLE_INTERACTION_CAMERA_FOCUS) return;
       setCameraFocusTarget(target);
       sceneRuntime.cameraFocus(target);
     },
