@@ -425,6 +425,8 @@ export default function Stkde3DPage() {
               volumeProfile={volumeProfile}
               heatmapRenderer={heatmapRenderer}
               kdeGridSize={kdeParams.gridSize}
+              kdeThreshold={kdeParams.threshold}
+              showPersistentSpatialColumns={true}
               activeIndex={activeIndex}
               viewMode={isFocusedView ? 'focus' : 'stack'}
               showRawEvents={showRawEvents}

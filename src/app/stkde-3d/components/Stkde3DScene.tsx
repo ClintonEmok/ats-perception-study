@@ -13,6 +13,7 @@ import { HotspotTrajectoryOverlay } from './HotspotTrajectoryOverlay';
 import { StkdeIntensityLegend } from './StkdeIntensityLegend';
 import { StkdeSliceStack } from './StkdeSliceStack';
 import { BurstVolumeRenderer } from './BurstVolumeRenderer';
+import { PersistentSpatialColumns } from './PersistentSpatialColumns';
 import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { FIXED_SCAN_DURATION_SECONDS, proposeFixedDurationWindowAtY } from '../lib/temporal-interactions';
@@ -122,6 +123,8 @@ interface Stkde3DSceneProps {
   burstVolumeModel?: BurstVolumeModel;
   heatmapRenderer?: StkdeHeatmapRenderer;
   kdeGridSize?: number;
+  kdeThreshold?: number;
+  showPersistentSpatialColumns?: boolean;
   runtime?: Stkde3DSceneRuntime;
 }
 
@@ -190,10 +193,13 @@ function SceneContent({
   cameraFocusTarget,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
+  kdeThreshold,
+  showPersistentSpatialColumns = false,
 }: Pick<
   Stkde3DSceneProps,
   'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'activeIndex' | 'viewMode' |
-  'showRawEvents' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize'
+  'showRawEvents' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize' |
+  'kdeThreshold' | 'showPersistentSpatialColumns'
 > & {
   cameraFocusTarget: Stkde3DCameraFocusTarget | null;
 }) {
@@ -272,6 +278,15 @@ function SceneContent({
         kdeGridSize={kdeGridSize}
       />
 
+      {showPersistentSpatialColumns && viewMode === 'stack' ? (
+        <PersistentSpatialColumns
+          slices={slices}
+          sliceKdes={sliceKdes}
+          kdeGridSize={kdeGridSize}
+          intensityCutoff={kdeThreshold}
+        />
+      ) : null}
+
       {burstVolumeModel ? (
         <BurstVolumeRenderer
           model={burstVolumeModel}
@@ -325,6 +340,8 @@ export function Stkde3DScene({
   burstVolumeModel,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
+  kdeThreshold,
+  showPersistentSpatialColumns = false,
   runtime,
   onCreateDraftAtPoint,
 }: Stkde3DSceneProps) {
@@ -458,6 +475,8 @@ export function Stkde3DScene({
               burstVolumeModel={burstVolumeModel}
               heatmapRenderer={heatmapRenderer}
               kdeGridSize={kdeGridSize}
+              kdeThreshold={kdeThreshold}
+              showPersistentSpatialColumns={showPersistentSpatialColumns}
               cameraFocusTarget={cameraFocusTarget}
             />
 
