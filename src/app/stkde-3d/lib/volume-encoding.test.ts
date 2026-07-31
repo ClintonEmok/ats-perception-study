@@ -76,6 +76,31 @@ describe('buildDurationVolumeProfile', () => {
     expect(profile[1]?.thickness).toBeGreaterThan(profile[0]?.thickness ?? 0);
   });
 
+  test('keeps brushed slice allocation on the same adaptive profile path after reindexing', () => {
+    const sourceSlices = [
+      { index: 0, startEpoch: 0, endEpoch: 20 },
+      { index: 1, startEpoch: 20, endEpoch: 50 },
+      { index: 2, startEpoch: 50, endEpoch: 100 },
+    ];
+    const settings = {
+      scaleSeconds: 50,
+      exaggeration: 1,
+      normalizationMode: 'reference' as const,
+      timeScaleMode: 'adaptive' as const,
+      warpBlend: 1,
+      warpMap: new Float32Array([0, 10, 100]),
+      warpDomain: [0, 100] as [number, number],
+    };
+    const brushedSlices = [sourceSlices[1]!, sourceSlices[2]!]
+      .map((slice, index) => ({ ...slice, index }));
+
+    const profile = buildDurationVolumeProfile(brushedSlices, settings);
+
+    expect(profile.map((entry) => entry.index)).toEqual([0, 1]);
+    expect(profile.map((entry) => entry.durationSeconds)).toEqual([6, 90]);
+    expect(profile[1]?.thickness).toBeGreaterThan(profile[0]?.thickness ?? 0);
+  });
+
   test('recovers clock duration separately from warped display allocation', () => {
     const sourceSlices = [
       { index: 0, startEpoch: 0, endEpoch: 3_600, crimeCount: 12, warpWeight: 1.5, signal: 0.8 },

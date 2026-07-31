@@ -25,6 +25,12 @@ import { SliceInspector } from '@/app/stkde-3d/components/SliceInspector';
 import { applyRangeToStoresContract } from '@/components/timeline/DemoDualTimeline';
 import { deriveDemo3dInteractionCommand } from '@/components/dashboard-demo/lib/syncDemo3dInteraction';
 import { lonLatToNormalized } from '@/lib/coordinate-normalization';
+import {
+  alignMockCrimeEventsToSlices,
+  buildMockCrimeEventsBySourceSliceId,
+  filterMockCrimeEventsByDomain,
+  toMockCrimeEvents,
+} from '@/app/stkde-3d/lib/event-data';
 import type { SpatialBounds } from '@/store/useDashboardDemoFilterStore';
 import type {
   Stkde3DBurstInteractionPayload,
@@ -193,6 +199,7 @@ export function Demo3dSpatialView() {
   const [canvasPointer, setCanvasPointer] = useState<{ x: number; y: number } | null>(null);
   const [hoveredSliceId, setHoveredSliceId] = useState<string | null>(null);
   const [scanProposal, setScanProposal] = useState<Stkde3DTemporalWindowPayload | null>(null);
+  const [showRawEvents, setShowRawEvents] = useState(false);
 
   const orderedSlices = useMemo(() => {
     if (minTimestampSec === null || maxTimestampSec === null) return [];
@@ -297,8 +304,13 @@ export function Demo3dSpatialView() {
   }, [crimesBySlice, orderedSlices]);
 
   const sliceEvents = useMemo(
-    () => crimesBySlice.map((events) => events.map((event) => ({ x: event.x, z: event.z, type: event.type }))),
+    () => crimesBySlice.map((events) => toMockCrimeEvents(events)),
     [crimesBySlice],
+  );
+
+  const sliceEventsBySourceSliceId = useMemo(
+    () => buildMockCrimeEventsBySourceSliceId(orderedSlices, sliceEvents),
+    [orderedSlices, sliceEvents],
   );
 
   const burstVolumeModel = useMemo(() => {
@@ -442,26 +454,24 @@ export function Demo3dSpatialView() {
     });
   }, [countedSlices, cubeScopeMode, cubeSlices, sliceKdes]);
 
+  const cubeSliceEvents = useMemo(() => {
+    const alignedEvents = alignMockCrimeEventsToSlices(cubeSlices, sliceEventsBySourceSliceId);
+    return alignedEvents.map((events) => filterMockCrimeEventsByDomain(events, cubeTimeDomain));
+  }, [cubeSlices, cubeTimeDomain, sliceEventsBySourceSliceId]);
+
   const cubeVolumeProfile = useMemo(() => {
     if (cubeScopeMode !== 'brushed') return volumeProfile;
 
-    const [domainStart, domainEnd] = cubeTimeDomain;
-    const domainDuration = Math.max(1, domainEnd - domainStart);
-
-    return cubeSlices.map((slice, index) => {
-      const sliceDuration = Math.max(0, slice.endEpoch - slice.startEpoch);
-      const percentage = sliceDuration / domainDuration;
-      const thickness = Math.max(0.6, percentage * 100);
-      return {
-        index,
-        durationSeconds: sliceDuration,
-        normalizedDuration: Math.min(1, percentage),
-        thickness,
-        opacity: 0.2,
-        falloff: 0.15,
-      };
+    return buildDurationVolumeProfile(cubeSlices, {
+      scaleSeconds: volumeScaleSeconds,
+      exaggeration: volumeExaggeration,
+      normalizationMode: volumeNormalizationMode,
+      timeScaleMode: effectiveTimeScaleMode,
+      warpBlend: effectiveWarpBlend,
+      warpMap: activeWarpMap,
+      warpDomain: activeWarpDomain,
     });
-  }, [cubeSlices, cubeScopeMode, cubeTimeDomain, volumeProfile]);
+  }, [activeWarpDomain, activeWarpMap, cubeScopeMode, cubeSlices, effectiveTimeScaleMode, effectiveWarpBlend, volumeExaggeration, volumeNormalizationMode, volumeProfile, volumeScaleSeconds]);
 
   const cubeActiveIndex = useMemo(() => {
     if (cubeSlices.length === 0) {
@@ -808,10 +818,11 @@ export function Demo3dSpatialView() {
         slices={cubeSlices}
         sliceKdes={cubeSliceKdes}
         volumeProfile={cubeVolumeProfile}
-        sliceEvents={sliceEvents}
+        sliceEvents={cubeSliceEvents}
         hotspotSliceResults={stkdeResponse?.sliceResults ?? null}
         activeIndex={cubeActiveIndex}
         viewMode={viewMode}
+        showRawEvents={showRawEvents}
         sliceOpacity={sliceOpacity}
         timeDomain={cubeTimeDomain}
         overrideWarpMap={scopedWarpMap}
@@ -819,6 +830,22 @@ export function Demo3dSpatialView() {
         burstVolumeModel={burstVolumeModel}
         runtime={sceneRuntime}
       />
+
+      <div className="absolute left-3 top-3 z-20">
+        <button
+          type="button"
+          aria-pressed={showRawEvents}
+          onClick={() => setShowRawEvents((value) => !value)}
+          className={`rounded-full border px-3 py-1.5 text-[11px] transition ${
+            showRawEvents
+              ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-100'
+              : 'border-border bg-background/85 text-muted-foreground hover:border-emerald-400/60 hover:text-emerald-100'
+          }`}
+          title="Show or hide event points for the active cube slice"
+        >
+          Active events
+        </button>
+      </div>
     </div>
   );
 }

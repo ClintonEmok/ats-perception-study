@@ -29,4 +29,6 @@ export interface MockCrimeEvent {
   x: number;
   z: number;
   type: string;
+  /** Unix epoch timestamp in seconds. */
+  timestampEpochSec: number;
 }

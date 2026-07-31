@@ -105,6 +105,8 @@ function randomChicagoScenePoint(): [number, number] {
 function generateSliceEvents(
   sliceIndex: number,
   eventCount: number,
+  startEpoch: number,
+  endEpoch: number,
 ): MockCrimeEvent[] {
   const events: MockCrimeEvent[] = [];
   const noiseCount = Math.round(eventCount * NOISE_RATIO);
@@ -140,7 +142,7 @@ function generateSliceEvents(
         -48,
         48,
       );
-      events.push({ x, z, type: def.type });
+      events.push({ x, z, type: def.type, timestampEpochSec: 0 });
     }
   }
 
@@ -152,6 +154,7 @@ function generateSliceEvents(
       x,
       z,
       type: CRIME_TYPES[Math.floor(Math.random() * CRIME_TYPES.length)],
+      timestampEpochSec: 0,
     });
   }
 
@@ -161,6 +164,7 @@ function generateSliceEvents(
       x,
       z,
       type: CRIME_TYPES[Math.floor(Math.random() * CRIME_TYPES.length)],
+      timestampEpochSec: 0,
     });
   }
 
@@ -169,7 +173,13 @@ function generateSliceEvents(
     [events[i], events[j]] = [events[j]!, events[i]!];
   }
 
-  return events;
+  const duration = Math.max(0, endEpoch - startEpoch);
+  return events.map((event, index) => ({
+    ...event,
+    // Coordinates remain randomized, but timestamps are deterministic within
+    // the slice so mock data exercises the same event-level Y placement path.
+    timestampEpochSec: Math.floor(startEpoch + ((index + 1) / (events.length + 1)) * duration),
+  }));
 }
 
 function computeBurstScore(
@@ -219,7 +229,7 @@ export function generateStkde3dMockData(): Stkde3dMockData {
       MOCK_RANGE_START + ((i + 1) / SLICE_COUNT) * (MOCK_RANGE_END - MOCK_RANGE_START),
     );
 
-    const events = generateSliceEvents(i, EVENTS_PER_SLICE);
+    const events = generateSliceEvents(i, EVENTS_PER_SLICE, startEpoch, endEpoch);
     sliceEvents.push(events);
 
     const activeHotspots = HOTSPOT_DEFS.map((h) => h.evolution[i]).filter(
@@ -270,6 +280,7 @@ export function generateStkde3dRealData(records: CrimeRecord[]): Stkde3dMockData
       x: record.x,
       z: record.z,
       type: record.type,
+      timestampEpochSec: record.timestamp,
     }));
 
     sliceEvents.push(events);
