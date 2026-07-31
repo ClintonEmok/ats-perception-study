@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildHotspotEvolution } from './hotspot-evolution';
+import { buildHotspotEvolution, getAdaptiveMatchToleranceMeters } from './hotspot-evolution';
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
 
 function makeSurface(overrides: Partial<StkdeSurfaceResponse> = {}): StkdeSurfaceResponse {
@@ -104,5 +104,85 @@ describe('buildHotspotEvolution', () => {
     const firstIntensity = result.tracks[0].snapshots.reduce((s, hs) => s + hs.intensityScore, 0) / result.tracks[0].snapshots.length;
     const secondIntensity = result.tracks[1].snapshots.reduce((s, hs) => s + hs.intensityScore, 0) / result.tracks[1].snapshots.length;
     expect(firstIntensity).toBeGreaterThanOrEqual(secondIntensity);
+  });
+
+  test('does not bridge a hotspot across a missing adjacent slice', () => {
+    const result = buildHotspotEvolution({
+      'slice-a': makeSurface({ hotspots: [hotspot(-87.63, 41.88)] }),
+      'slice-b': makeSurface(),
+      'slice-c': makeSurface({ hotspots: [hotspot(-87.631, 41.881)] }),
+    });
+
+    expect(result.tracks.every((track) => track.snapshots.length < 2)).toBe(true);
+  });
+
+  test('keeps omitted matching options behaviorally equivalent to fixed mode', () => {
+    const sliceResults = {
+      'slice-a': makeSurface({ hotspots: [hotspot(-87.63, 41.88)] }),
+      'slice-b': makeSurface({ hotspots: [hotspot(-87.631, 41.881)] }),
+    };
+
+    expect(buildHotspotEvolution(sliceResults)).toEqual(
+      buildHotspotEvolution(sliceResults, { mode: 'fixed', gridSize: 128, smoothingMeters: 900 }),
+    );
+  });
+
+  test('derives adaptive tolerance from grid resolution and smoothing within one to two cells', () => {
+    expect(getAdaptiveMatchToleranceMeters(48, 150)).toBeCloseTo(358.333, 2);
+    expect(getAdaptiveMatchToleranceMeters(48, 300)).toBeCloseTo(416.667, 2);
+    expect(getAdaptiveMatchToleranceMeters(16, 1_000)).toBeCloseTo(1_250, 2);
+  });
+
+  test('links an adaptive candidate inside the resolution-derived tolerance', () => {
+    const result = buildHotspotEvolution(
+      {
+        'slice-a': makeSurface({ hotspots: [hotspot(-87.63, 41.88, 10, 0.8)] }),
+        'slice-b': makeSurface({ hotspots: [hotspot(-87.63, 41.882, 11, 0.78)] }),
+      },
+      { mode: 'adaptive', gridSize: 48, smoothingMeters: 150 },
+    );
+
+    expect(result.tracks).toHaveLength(1);
+    expect(result.tracks[0].snapshots).toHaveLength(2);
+  });
+
+  test('rejects adaptive candidates outside tolerance and candidates with poor continuity', () => {
+    const farResult = buildHotspotEvolution(
+      {
+        'slice-a': makeSurface({ hotspots: [hotspot(-87.63, 41.88, 10, 0.8)] }),
+        'slice-b': makeSurface({ hotspots: [hotspot(-87.63, 41.89, 11, 0.78)] }),
+      },
+      { mode: 'adaptive', gridSize: 48, smoothingMeters: 150 },
+    );
+    const poorContinuityResult = buildHotspotEvolution(
+      {
+        'slice-a': makeSurface({ hotspots: [hotspot(-87.63, 41.88, 10, 0.9)] }),
+        'slice-b': makeSurface({ hotspots: [hotspot(-87.63, 41.882, 100, 0.1)] }),
+      },
+      { mode: 'adaptive', gridSize: 48, smoothingMeters: 150 },
+    );
+
+    expect(farResult.tracks.every((track) => track.snapshots.length < 2)).toBe(true);
+    expect(poorContinuityResult.tracks.every((track) => track.snapshots.length < 2)).toBe(true);
+  });
+
+  test('assigns each adaptive next-slice hotspot at most once', () => {
+    const result = buildHotspotEvolution(
+      {
+        'slice-a': makeSurface({
+          hotspots: [
+            hotspot(-87.63, 41.88, 10, 0.8),
+            hotspot(-87.632, 41.88, 10, 0.79),
+          ],
+        }),
+        'slice-b': makeSurface({ hotspots: [hotspot(-87.631, 41.88, 10, 0.795)] }),
+      },
+      { mode: 'adaptive', gridSize: 48, smoothingMeters: 150 },
+    );
+
+    const matchedSnapshots = result.tracks
+      .filter((track) => track.snapshots.length >= 2)
+      .flatMap((track) => track.snapshots.slice(1).map((snapshot) => snapshot.hotspotId));
+    expect(new Set(matchedSnapshots).size).toBe(matchedSnapshots.length);
   });
 });

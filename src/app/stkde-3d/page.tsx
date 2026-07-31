@@ -3,14 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Focus, Pause, Play } from 'lucide-react';
 import { generateStkde3dMockData, generateStkde3dRealData } from './lib/mock-data';
-import { computeSliceKde } from '@/lib/kde';
+import { computeSliceKde, KDE_SCENE_SPAN_METERS } from '@/lib/kde';
 import { Stkde3DScene } from './components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from './components/Stkde3DSceneProvider';
 import { SliceInspector } from './components/SliceInspector';
 import type { StkdeHeatmapRenderer } from './components/StkdeSliceStack';
 import { KdeTuningPanel } from './components/KdeTuningPanel';
+import { buildKdeHotspotSliceResults } from './lib/kde-hotspots';
+import { buildStandaloneAdaptiveTimeMaps } from './lib/standalone-adaptive-time';
 import { buildAllocationMetrics, buildDurationVolumeProfile } from './lib/volume-encoding';
 import type { Stkde3DTemporalWindowPayload } from './components/Stkde3DSceneProvider';
+import { buildHotspotEvolution, getAdaptiveMatchToleranceMeters, type HotspotMatchingMode, type HotspotMatchingOptions } from '@/lib/hotspot-evolution';
 import type { KdeParams } from '@/lib/kde';
 import type { CrimeRecord } from '@/types/crime';
 import type { EvolvingSlice } from './lib/types';
@@ -135,7 +138,10 @@ export default function Stkde3DPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isFocusedView, setIsFocusedView] = useState(false);
   const [showRawEvents, setShowRawEvents] = useState(false);
+  const [showHotspotTrajectories, setShowHotspotTrajectories] = useState(true);
+  const [adaptiveTimeEnabled, setAdaptiveTimeEnabled] = useState(true);
   const [heatmapRenderer, setHeatmapRenderer] = useState<StkdeHeatmapRenderer>('field');
+  const [hotspotMatchingMode, setHotspotMatchingMode] = useState<HotspotMatchingMode>('fixed');
   const [hoveredSliceId, setHoveredSliceId] = useState<string | null>(null);
   const [scanProposal, setScanProposal] = useState<Stkde3DTemporalWindowPayload | null>(null);
   const [kdeParams, setKdeParams] = useState<KdeParams>(EXPERIMENTAL_KDE_PARAMS);
@@ -219,9 +225,52 @@ export default function Stkde3DPage() {
     [sliceKdeResults],
   );
 
+  const hotspotSliceResults = useMemo(
+    () => buildKdeHotspotSliceResults(sceneSlices, sliceKdes, kdeParams.gridSize),
+    [kdeParams.gridSize, sceneSlices, sliceKdes],
+  );
+
+  const standaloneAdaptiveTimeMaps = useMemo(
+    () => buildStandaloneAdaptiveTimeMaps(sliceEvents, timeDomain),
+    [sliceEvents, timeDomain],
+  );
+
+  const effectiveSmoothingMeters = useMemo(() => {
+    const safeGridSize = Number.isFinite(kdeParams.gridSize) ? Math.max(4, Math.round(kdeParams.gridSize)) : 4;
+    return Number.isFinite(kdeParams.smoothingMeters)
+      ? Math.max(1, kdeParams.smoothingMeters as number)
+      : Math.max(1, (kdeParams.sigmaCells * KDE_SCENE_SPAN_METERS) / safeGridSize);
+  }, [kdeParams.gridSize, kdeParams.sigmaCells, kdeParams.smoothingMeters]);
+
+  const hotspotMatchingOptions = useMemo<HotspotMatchingOptions>(
+    () => ({
+      mode: hotspotMatchingMode,
+      gridSize: kdeParams.gridSize,
+      smoothingMeters: effectiveSmoothingMeters,
+    }),
+    [effectiveSmoothingMeters, hotspotMatchingMode, kdeParams.gridSize],
+  );
+
+  const adaptiveToleranceKm = getAdaptiveMatchToleranceMeters(
+    kdeParams.gridSize,
+    effectiveSmoothingMeters,
+  ) / 1000;
+
+  const qualifiedTrackCount = useMemo(
+    () => buildHotspotEvolution(hotspotSliceResults, hotspotMatchingOptions).tracks
+      .filter((track) => track.snapshots.length >= 2)
+      .length,
+    [hotspotMatchingOptions, hotspotSliceResults],
+  );
+
   const volumeProfile = useMemo(
-    () => buildDurationVolumeProfile(sceneSlices),
-    [sceneSlices],
+    () => buildDurationVolumeProfile(sceneSlices, {
+      timeScaleMode: adaptiveTimeEnabled ? 'adaptive' : 'linear',
+      warpBlend: adaptiveTimeEnabled ? 1 : 0,
+      warpMap: standaloneAdaptiveTimeMaps.warpMap,
+      warpDomain: timeDomain,
+    }),
+    [adaptiveTimeEnabled, sceneSlices, standaloneAdaptiveTimeMaps.warpMap, timeDomain],
   );
 
   const totalEvents = useMemo(
@@ -244,8 +293,10 @@ export default function Stkde3DPage() {
     () => createStkde3DSceneRuntime({
       displayDomain: timeDomain,
       warpDomain: timeDomain,
-      timeScaleMode: 'linear',
-      warpBlend: 0,
+      timeScaleMode: adaptiveTimeEnabled ? 'adaptive' : 'linear',
+      warpBlend: adaptiveTimeEnabled ? 1 : 0,
+      densityMap: standaloneAdaptiveTimeMaps.densityMap,
+      warpMap: standaloneAdaptiveTimeMaps.warpMap,
       sourceSliceIds: sceneSlices.map((slice) => slice.sourceSliceId),
       isPlaying,
       isInterpolated: true,
@@ -283,7 +334,7 @@ export default function Stkde3DPage() {
         setActiveIndex(-1);
       },
     }),
-    [isPlaying, sceneSlices, timeDomain],
+    [adaptiveTimeEnabled, isPlaying, sceneSlices, standaloneAdaptiveTimeMaps.densityMap, standaloneAdaptiveTimeMaps.warpMap, timeDomain],
   );
 
   useEffect(() => {
@@ -392,7 +443,33 @@ export default function Stkde3DPage() {
                   : 'border-slate-600/70 bg-slate-800 text-slate-100 hover:border-emerald-400/60 hover:text-emerald-100'
               }`}
             >
-              Raw points
+              Active events
+            </button>
+
+            <button
+              type="button"
+              aria-pressed={showHotspotTrajectories}
+              onClick={() => setShowHotspotTrajectories((value) => !value)}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition ${
+                showHotspotTrajectories
+                  ? 'border-fuchsia-400/60 bg-fuchsia-400/10 text-fuchsia-100'
+                  : 'border-slate-600/70 bg-slate-800 text-slate-100 hover:border-fuchsia-400/60 hover:text-fuchsia-100'
+              }`}
+            >
+              Trajectories
+            </button>
+
+            <button
+              type="button"
+              aria-pressed={adaptiveTimeEnabled}
+              onClick={() => setAdaptiveTimeEnabled((value) => !value)}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition ${
+                adaptiveTimeEnabled
+                  ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-100'
+                  : 'border-slate-600/70 bg-slate-800 text-slate-100 hover:border-cyan-400/60 hover:text-cyan-100'
+              }`}
+            >
+              Adaptive time
             </button>
 
             <label className="flex items-center gap-2">
@@ -422,14 +499,15 @@ export default function Stkde3DPage() {
               slices={sceneSlices}
               sliceKdes={sliceKdes}
               sliceEvents={sliceEvents}
+              hotspotSliceResults={hotspotSliceResults}
+              hotspotMatchingOptions={hotspotMatchingOptions}
               volumeProfile={volumeProfile}
               heatmapRenderer={heatmapRenderer}
               kdeGridSize={kdeParams.gridSize}
-              kdeThreshold={kdeParams.threshold}
-              showPersistentSpatialColumns={true}
               activeIndex={activeIndex}
               viewMode={isFocusedView ? 'focus' : 'stack'}
               showRawEvents={showRawEvents}
+              showHotspotTrajectories={showHotspotTrajectories}
               timeDomain={timeDomain}
               runtime={sceneRuntime}
             />
@@ -437,6 +515,40 @@ export default function Stkde3DPage() {
 
           <aside className="min-h-0 space-y-4 overflow-y-auto rounded-3xl border border-slate-700/60 bg-slate-950/55 p-4 shadow-[0_30px_100px_-44px_rgba(14,165,233,0.35)] backdrop-blur-md">
             <KdeTuningPanel value={kdeParams} onChange={setKdeParams} />
+
+            <section className="rounded-2xl border border-slate-700/70 bg-slate-950/55 p-3 text-xs text-slate-300">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Track matching</span>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                  {qualifiedTrackCount} qualified tracks
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-800 bg-slate-900/70 p-1">
+                {([
+                  ['adaptive', 'Adaptive'],
+                  ['fixed', 'Fixed 3 km'],
+                ] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={hotspotMatchingMode === mode}
+                    onClick={() => setHotspotMatchingMode(mode)}
+                    className={`rounded-md px-2 py-1.5 text-[10px] transition ${
+                      hotspotMatchingMode === mode
+                        ? 'bg-sky-400/15 text-sky-100 shadow-sm'
+                        : 'text-slate-500 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] leading-4 text-slate-500">
+                {hotspotMatchingMode === 'adaptive'
+                  ? `Adaptive uses the active grid and smoothing (about ${adaptiveToleranceKm.toFixed(2)} km here).`
+                  : 'Fixed uses the legacy nearest-hotspot rule with a strict 3 km limit.'}
+              </p>
+            </section>
 
             <section className="rounded-2xl border border-slate-700/70 bg-slate-950/55 p-3 text-xs text-slate-300">
               <div className="mb-2 flex items-center justify-between gap-3">

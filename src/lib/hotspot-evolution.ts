@@ -1,4 +1,13 @@
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
+import { KDE_SCENE_SPAN_METERS } from '@/lib/kde';
+
+export type HotspotMatchingMode = 'fixed' | 'adaptive';
+
+export interface HotspotMatchingOptions {
+  mode?: HotspotMatchingMode;
+  gridSize?: number;
+  smoothingMeters?: number;
+}
 
 export interface TrackedHotspotSnapshot {
   hotspotId: string;
@@ -44,6 +53,7 @@ function centroidDistance(a: TrackedHotspotSnapshot, b: TrackedHotspotSnapshot):
 
 const MATCH_DISTANCE_KM = 3;
 const DISPLACING_THRESHOLD_KM = 1.5;
+const ADAPTIVE_SCORE_THRESHOLD = 0.55;
 
 interface SliceEntry {
   id: string;
@@ -58,7 +68,6 @@ function buildSliceEntries(
     const hotspots: TrackedHotspotSnapshot[] = (surface.hotspots ?? [])
       .filter((h) => h.supportCount > 0)
       .sort((a, b) => b.intensityScore - a.intensityScore)
-      .slice(0, 5)
       .map((h) => ({
         hotspotId: h.id,
         sliceId,
@@ -76,7 +85,119 @@ function buildSliceEntries(
   });
 }
 
-function matchHotspotsAcrossSlices(entries: SliceEntry[]): TrackedHotspot[] {
+function sanitizeGridSize(value: number | undefined): number {
+  return Number.isFinite(value) ? Math.max(4, Math.round(value as number)) : 32;
+}
+
+function sanitizeSmoothingMeters(value: number | undefined): number {
+  return Number.isFinite(value) ? Math.max(1, value as number) : 1;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function getAdaptiveMatchToleranceMeters(
+  gridSize?: number,
+  smoothingMeters?: number,
+): number {
+  const cellMeters = KDE_SCENE_SPAN_METERS / sanitizeGridSize(gridSize);
+  const tolerance = cellMeters + sanitizeSmoothingMeters(smoothingMeters);
+  return clamp(tolerance, cellMeters, cellMeters * 2);
+}
+
+function normalizedDifference(left: number, right: number): number {
+  const denominator = Math.max(Math.abs(left), Math.abs(right), Number.EPSILON);
+  return clamp(Math.abs(left - right) / denominator, 0, 1);
+}
+
+interface HotspotLink {
+  currentIndex: number;
+  nextIndex: number;
+  snapshot: TrackedHotspotSnapshot;
+  distance: number;
+}
+
+function getFixedLinks(current: SliceEntry, next: SliceEntry): HotspotLink[] {
+  const links: HotspotLink[] = [];
+  const usedInNext = new Set<number>();
+
+  for (let currentIndex = 0; currentIndex < current.hotspots.length; currentIndex += 1) {
+    const curHs = current.hotspots[currentIndex];
+    if (!curHs) continue;
+
+    let bestMatch: HotspotLink | null = null;
+    for (let nextIndex = 0; nextIndex < next.hotspots.length; nextIndex += 1) {
+      if (usedInNext.has(nextIndex)) continue;
+      const nxtHs = next.hotspots[nextIndex];
+      if (!nxtHs) continue;
+      const distance = centroidDistance(curHs, nxtHs);
+      if (distance < MATCH_DISTANCE_KM && (!bestMatch || distance < bestMatch.distance)) {
+        bestMatch = { currentIndex, nextIndex, snapshot: nxtHs, distance };
+      }
+    }
+
+    if (bestMatch) {
+      usedInNext.add(bestMatch.nextIndex);
+      links.push(bestMatch);
+    }
+  }
+
+  return links;
+}
+
+function getAdaptiveLinks(
+  current: SliceEntry,
+  next: SliceEntry,
+  options: HotspotMatchingOptions,
+): HotspotLink[] {
+  const toleranceKm = getAdaptiveMatchToleranceMeters(options.gridSize, options.smoothingMeters) / 1000;
+  const candidates: Array<HotspotLink & { score: number }> = [];
+
+  for (let currentIndex = 0; currentIndex < current.hotspots.length; currentIndex += 1) {
+    const curHs = current.hotspots[currentIndex];
+    if (!curHs) continue;
+
+    for (let nextIndex = 0; nextIndex < next.hotspots.length; nextIndex += 1) {
+      const nxtHs = next.hotspots[nextIndex];
+      if (!nxtHs) continue;
+      const distance = centroidDistance(curHs, nxtHs);
+      if (distance > toleranceKm) continue;
+
+      const score =
+        0.45 * (distance / toleranceKm) +
+        0.35 * normalizedDifference(curHs.intensityScore, nxtHs.intensityScore) +
+        0.2 * normalizedDifference(curHs.supportCount, nxtHs.supportCount);
+      if (score >= ADAPTIVE_SCORE_THRESHOLD) continue;
+
+      candidates.push({ currentIndex, nextIndex, snapshot: nxtHs, distance, score });
+    }
+  }
+
+  candidates.sort((left, right) =>
+    left.score - right.score ||
+    left.distance - right.distance ||
+    left.currentIndex - right.currentIndex ||
+    left.nextIndex - right.nextIndex,
+  );
+
+  const usedCurrent = new Set<number>();
+  const usedNext = new Set<number>();
+  const links: HotspotLink[] = [];
+  for (const candidate of candidates) {
+    if (usedCurrent.has(candidate.currentIndex) || usedNext.has(candidate.nextIndex)) continue;
+    usedCurrent.add(candidate.currentIndex);
+    usedNext.add(candidate.nextIndex);
+    links.push(candidate);
+  }
+
+  return links.sort((left, right) => left.currentIndex - right.currentIndex || left.nextIndex - right.nextIndex);
+}
+
+function matchHotspotsAcrossSlices(
+  entries: SliceEntry[],
+  options: HotspotMatchingOptions = {},
+): TrackedHotspot[] {
   if (entries.length < 2) return [];
 
   const tracks: TrackedHotspot[] = [];
@@ -84,44 +205,35 @@ function matchHotspotsAcrossSlices(entries: SliceEntry[]): TrackedHotspot[] {
   for (let i = 0; i < entries.length - 1; i++) {
     const current = entries[i];
     const next = entries[i + 1];
-    const usedInNext = new Set<number>();
+    const links = options.mode === 'adaptive'
+      ? getAdaptiveLinks(current, next, options)
+      : getFixedLinks(current, next);
+    const usedInNext = new Set(links.map((link) => link.nextIndex));
 
-    for (const curHs of current.hotspots) {
-      let bestMatch: { snapshot: TrackedHotspotSnapshot; distance: number; index: number } | null = null;
+    for (const link of links) {
+      const curHs = current.hotspots[link.currentIndex];
+      if (!curHs) continue;
 
-      for (let j = 0; j < next.hotspots.length; j++) {
-        if (usedInNext.has(j)) continue;
-        const nxtHs = next.hotspots[j];
-        const d = centroidDistance(curHs, nxtHs);
-        if (d < MATCH_DISTANCE_KM && (!bestMatch || d < bestMatch.distance)) {
-          bestMatch = { snapshot: nxtHs, distance: d, index: j };
-        }
-      }
+      const existingTrack = tracks.find(
+        (t) =>
+          t.snapshots.length > 0 &&
+          t.snapshots[t.snapshots.length - 1].sliceId === curHs.sliceId,
+      );
 
-      if (bestMatch) {
-        usedInNext.add(bestMatch.index);
-
-        const existingTrack = tracks.find(
-          (t) =>
-            t.snapshots.length > 0 &&
-            t.snapshots[t.snapshots.length - 1].sliceId === curHs.sliceId,
-        );
-
-        if (existingTrack) {
-          existingTrack.snapshots.push(bestMatch.snapshot);
-        } else {
-          tracks.push({
-            id: `track-${tracks.length + 1}`,
-            label: `Track ${tracks.length + 1}`,
-            snapshots: [curHs, bestMatch.snapshot],
-            startEpoch: curHs.peakStartEpochSec,
-            endEpoch: bestMatch.snapshot.peakEndEpochSec,
-            displacementKm: 0,
-            supportTrend: 'stable',
-            extentTrend: 'stable',
-            status: 'stable',
-          });
-        }
+      if (existingTrack) {
+        existingTrack.snapshots.push(link.snapshot);
+      } else {
+        tracks.push({
+          id: `track-${tracks.length + 1}`,
+          label: `Track ${tracks.length + 1}`,
+          snapshots: [curHs, link.snapshot],
+          startEpoch: curHs.peakStartEpochSec,
+          endEpoch: link.snapshot.peakEndEpochSec,
+          displacementKm: 0,
+          supportTrend: 'stable',
+          extentTrend: 'stable',
+          status: 'stable',
+        });
       }
     }
 
@@ -199,13 +311,14 @@ export interface HotspotEvolutionResult {
 
 export function buildHotspotEvolution(
   sliceResults: Record<string, StkdeSurfaceResponse> | null | undefined,
+  options: HotspotMatchingOptions = {},
 ): HotspotEvolutionResult {
   if (!sliceResults || Object.keys(sliceResults).length < 2) {
     return { tracks: [], totalDisplacementKm: 0, sliceCount: Object.keys(sliceResults ?? {}).length, hasMultiSlice: false };
   }
 
   const entries = buildSliceEntries(sliceResults);
-  const tracks = matchHotspotsAcrossSlices(entries);
+  const tracks = matchHotspotsAcrossSlices(entries, options);
   const totalDisplacementKm = Math.round(tracks.reduce((sum, t) => sum + t.displacementKm, 0) * 100) / 100;
 
   return {

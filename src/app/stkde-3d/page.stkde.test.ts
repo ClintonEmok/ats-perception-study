@@ -10,7 +10,9 @@ describe('/stkde-3d route focus mode', () => {
 
     expect(pageSource).toMatch(/Single slice/);
     expect(pageSource).toMatch(/Stack view/);
-    expect(pageSource).toMatch(/Raw points/);
+    expect(pageSource).toMatch(/Active events/);
+    expect(pageSource).toMatch(/Trajectories/);
+    expect(pageSource).toMatch(/Adaptive time/);
     expect(pageSource).toMatch(/Grid field/);
     expect(pageSource).toMatch(/Legacy blobs/);
     expect(pageSource).toMatch(/SliceInspector/);
@@ -21,6 +23,7 @@ describe('/stkde-3d route focus mode', () => {
     expect(pageSource).toMatch(/createStkde3DSceneRuntime/);
     expect(pageSource).toMatch(/sourceSliceId/);
     expect(pageSource).toMatch(/timeDomain/);
+    expect(pageSource).toMatch(/buildStandaloneAdaptiveTimeMaps/);
     expect(pageSource).toMatch(/StandaloneSliceScrubber/);
     expect(pageSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);
     expect(sceneSource).toMatch(/viewMode\?: 'stack' \| 'focus'/);
@@ -28,6 +31,7 @@ describe('/stkde-3d route focus mode', () => {
     expect(sceneSource).toMatch(/sliceEvents\?: MockCrimeEvent\[\]\[]/);
     expect(sceneSource).toMatch(/compact={viewMode === 'focus'}/);
     expect(sceneSource).toMatch(/RawEventPoints/);
+    expect(sceneSource).toMatch(/showHotspotTrajectories/);
     expect(stackSource).toMatch(/compact\?: boolean/);
     expect(inspectorSource).toMatch(/Clock range/);
     expect(inspectorSource).toMatch(/Burstiness/);

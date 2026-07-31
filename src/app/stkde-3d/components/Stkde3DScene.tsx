@@ -7,13 +7,13 @@ import * as THREE from 'three';
 import Map, { MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
+import type { HotspotMatchingOptions } from '@/lib/hotspot-evolution';
 import type { KdeCell, MockCrimeEvent } from '../lib/types';
 import { AdaptiveWarpAxis } from './AdaptiveWarpAxis';
 import { HotspotTrajectoryOverlay } from './HotspotTrajectoryOverlay';
 import { StkdeIntensityLegend } from './StkdeIntensityLegend';
 import { StkdeSliceStack } from './StkdeSliceStack';
 import { BurstVolumeRenderer } from './BurstVolumeRenderer';
-import { PersistentSpatialColumns } from './PersistentSpatialColumns';
 import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { buildRawEventPositions } from '../lib/raw-events';
@@ -111,9 +111,11 @@ interface Stkde3DSceneProps {
   volumeProfile?: DurationVolumeProfileEntry[];
   sliceEvents?: MockCrimeEvent[][];
   hotspotSliceResults?: Record<string, StkdeSurfaceResponse> | null;
+  hotspotMatchingOptions?: HotspotMatchingOptions;
   activeIndex: number;
   viewMode?: 'stack' | 'focus';
   showRawEvents?: boolean;
+  showHotspotTrajectories?: boolean;
   sliceOpacity?: number;
   timeDomain?: [number, number];
   overrideWarpMap?: Float32Array | null;
@@ -124,8 +126,6 @@ interface Stkde3DSceneProps {
   burstVolumeModel?: BurstVolumeModel;
   heatmapRenderer?: StkdeHeatmapRenderer;
   kdeGridSize?: number;
-  kdeThreshold?: number;
-  showPersistentSpatialColumns?: boolean;
   runtime?: Stkde3DSceneRuntime;
 }
 
@@ -176,22 +176,21 @@ function SceneContent({
   volumeProfile,
   sliceEvents = [],
   hotspotSliceResults = null,
+  hotspotMatchingOptions,
   activeIndex,
   viewMode = 'stack',
   showRawEvents = false,
+  showHotspotTrajectories = true,
   sliceOpacity = 1,
   heightScale = 1,
   burstVolumeModel,
   cameraFocusTarget,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
-  kdeThreshold,
-  showPersistentSpatialColumns = false,
 }: Pick<
   Stkde3DSceneProps,
-  'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'activeIndex' | 'viewMode' |
-  'showRawEvents' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize' |
-  'kdeThreshold' | 'showPersistentSpatialColumns'
+  'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'hotspotMatchingOptions' | 'activeIndex' | 'viewMode' |
+  'showRawEvents' | 'showHotspotTrajectories' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize'
 > & {
   cameraFocusTarget: Stkde3DCameraFocusTarget | null;
 }) {
@@ -270,15 +269,6 @@ function SceneContent({
         kdeGridSize={kdeGridSize}
       />
 
-      {showPersistentSpatialColumns && viewMode === 'stack' ? (
-        <PersistentSpatialColumns
-          slices={slices}
-          sliceKdes={sliceKdes}
-          kdeGridSize={kdeGridSize}
-          intensityCutoff={kdeThreshold}
-        />
-      ) : null}
-
       {burstVolumeModel ? (
         <BurstVolumeRenderer
           model={burstVolumeModel}
@@ -287,12 +277,15 @@ function SceneContent({
         />
       ) : null}
 
-      <HotspotTrajectoryOverlay
-        slices={viewMode === 'focus' ? focusedSlices : slices}
-        sliceResults={hotspotSliceResults}
-        viewMode={viewMode}
-        resolveSliceY={resolveSliceY}
-      />
+      {showHotspotTrajectories ? (
+        <HotspotTrajectoryOverlay
+          slices={viewMode === 'focus' ? focusedSlices : slices}
+          sliceResults={hotspotSliceResults}
+          viewMode={viewMode}
+          resolveEpochY={resolveEpochY}
+          matchingOptions={hotspotMatchingOptions}
+        />
+      ) : null}
 
       {showRawEvents ? (
         <RawEventPoints
@@ -321,9 +314,11 @@ export function Stkde3DScene({
   volumeProfile,
   sliceEvents = [],
   hotspotSliceResults = null,
+  hotspotMatchingOptions,
   activeIndex,
   viewMode = 'stack',
   showRawEvents = false,
+  showHotspotTrajectories = true,
   sliceOpacity = 1,
   timeDomain,
   overrideWarpMap,
@@ -333,8 +328,6 @@ export function Stkde3DScene({
   burstVolumeModel,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
-  kdeThreshold,
-  showPersistentSpatialColumns = false,
   runtime,
   onCreateDraftAtPoint,
 }: Stkde3DSceneProps) {
@@ -460,16 +453,16 @@ export function Stkde3DScene({
               volumeProfile={volumeProfile}
               sliceEvents={sliceEvents}
               hotspotSliceResults={hotspotSliceResults}
+              hotspotMatchingOptions={hotspotMatchingOptions}
               activeIndex={activeIndex}
               viewMode={viewMode}
               showRawEvents={showRawEvents}
+              showHotspotTrajectories={showHotspotTrajectories}
               sliceOpacity={sliceOpacity}
               heightScale={heightScale}
               burstVolumeModel={burstVolumeModel}
               heatmapRenderer={heatmapRenderer}
               kdeGridSize={kdeGridSize}
-              kdeThreshold={kdeThreshold}
-              showPersistentSpatialColumns={showPersistentSpatialColumns}
               cameraFocusTarget={cameraFocusTarget}
             />
 

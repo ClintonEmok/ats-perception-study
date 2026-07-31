@@ -23,7 +23,7 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 Phase: 2 of 4 (Burst Volume Rendering)
 Plan: 1 of 2 in current phase
 Status: In progress
-Last activity: 2026-07-31 — Completed quick task 260731-juc implementation
+Last activity: 2026-07-31 — Implemented standalone STKDE 3D adaptive temporal warp (260731-nsj)
 
 Progress: [██░░░░░░░░] 25%
 
@@ -67,6 +67,7 @@ Recent decisions affecting current work:
 - [Quick 260731-juc] Dashboard trajectories already use shared adaptive epoch placement; active event points need timestamp preservation and source-slice alignment before dashboard enablement.
 - [Quick 260731-juc] Active event records retain epoch-second timestamps, are keyed by source slice before brushed cube reindexing, and are clipped to the active cube domain.
 - [Quick 260731-juc] Active event points remain opt-in in dashboard mode and use the shared runtime epoch resolver; brushed volume profiles use the active adaptive allocation helper.
+- [Quick 260731-nsj] Standalone adaptive time derives a density warp from event timestamps and shares it with event Y placement, trajectories, slice surfaces, and volume allocation.
 
 ### Pending Todos
 
@@ -85,8 +86,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-31T12:49:16Z
-Stopped at: Completed quick task 260731-juc implementation
+Last session: 2026-07-31T15:20:00Z
+Stopped at: Completed quick task 260731-nsj
 Resume file: None
 
 ## Quick Tasks Completed
@@ -101,3 +102,4 @@ Resume file: None
 | Toggleable hotspot trajectories (`260731-h4m`) | Complete | 2026-07-31 |
 | Rename active event control (`260731-i6l`) | Complete | 2026-07-31 |
 | Timestamp-safe adaptive 3D active events (`260731-juc`) | Complete | 2026-07-31 |
+| Standalone adaptive temporal warp (`260731-nsj`) | Complete | 2026-07-31 |
