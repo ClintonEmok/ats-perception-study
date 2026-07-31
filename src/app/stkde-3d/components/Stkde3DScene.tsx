@@ -16,6 +16,7 @@ import { BurstVolumeRenderer } from './BurstVolumeRenderer';
 import { PersistentSpatialColumns } from './PersistentSpatialColumns';
 import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
+import { buildRawEventPositions } from '../lib/raw-events';
 import { FIXED_SCAN_DURATION_SECONDS, proposeFixedDurationWindowAtY } from '../lib/temporal-interactions';
 import { CHICAGO_BOUNDS } from '../lib/chicago-bounds';
 import { AXIS_HEIGHT, START_Y } from '../lib/timeline-axis';
@@ -132,8 +133,10 @@ function RawEventPoints({
   slices,
   sliceEvents = [],
   activeIndex,
+  resolveEpochY,
   resolveSliceY,
 }: Pick<Stkde3DSceneProps, 'slices' | 'sliceEvents' | 'activeIndex'> & {
+  resolveEpochY: (epochSec: number) => number;
   resolveSliceY: (slice: Stkde3DSceneSlice) => number;
 }) {
   const positions = useMemo(() => {
@@ -145,19 +148,8 @@ function RawEventPoints({
     if (!slice) return new Float32Array();
 
     const events = sliceEvents[slice.index] ?? [];
-    const flattened = new Float32Array(events.length * 3);
-    let cursor = 0;
-    const y = resolveSliceY(slice) + 0.15;
-
-    for (const event of events) {
-      flattened[cursor] = event.x;
-      flattened[cursor + 1] = y;
-      flattened[cursor + 2] = event.z;
-      cursor += 3;
-    }
-
-    return flattened;
-  }, [activeIndex, resolveSliceY, sliceEvents, slices]);
+    return buildRawEventPositions(events, resolveEpochY, resolveSliceY(slice));
+  }, [activeIndex, resolveEpochY, resolveSliceY, sliceEvents, slices]);
 
   if (positions.length === 0) return null;
 
@@ -307,6 +299,7 @@ function SceneContent({
           slices={slices}
           sliceEvents={sliceEvents}
           activeIndex={activeIndex}
+          resolveEpochY={resolveEpochY}
           resolveSliceY={resolveSliceY}
         />
       ) : null}
