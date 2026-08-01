@@ -11,15 +11,12 @@ import type { HotspotMatchingOptions } from '@/lib/hotspot-evolution';
 import type { KdeCell, MockCrimeEvent } from '../lib/types';
 import { AdaptiveWarpAxis } from './AdaptiveWarpAxis';
 import { HotspotTrajectoryOverlay } from './HotspotTrajectoryOverlay';
-import { StkdeIntensityLegend } from './StkdeIntensityLegend';
 import { StkdeSliceStack } from './StkdeSliceStack';
 import { BurstVolumeRenderer } from './BurstVolumeRenderer';
 import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { buildRawEventPositions } from '../lib/raw-events';
-import { FIXED_SCAN_DURATION_SECONDS, proposeFixedDurationWindowAtY } from '../lib/temporal-interactions';
 import { CHICAGO_BOUNDS } from '../lib/chicago-bounds';
-import { AXIS_HEIGHT, START_Y } from '../lib/timeline-axis';
 import {
   createStkde3DSceneRuntime,
   Stkde3DSceneProvider,
@@ -43,7 +40,7 @@ const MAP_VIEW_STATE = {
   bearing: 0,
 };
 
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const MAP_PLANE_Y = -38;
 
 function MapTileSource({
@@ -117,6 +114,8 @@ interface Stkde3DSceneProps {
   showRawEvents?: boolean;
   showHotspotTrajectories?: boolean;
   sliceOpacity?: number;
+  activeSliceOpacity?: number;
+  nonActiveSliceOpacity?: number;
   timeDomain?: [number, number];
   overrideWarpMap?: Float32Array | null;
   overrideWarpDomain?: [number, number];
@@ -127,6 +126,8 @@ interface Stkde3DSceneProps {
   heatmapRenderer?: StkdeHeatmapRenderer;
   kdeGridSize?: number;
   runtime?: Stkde3DSceneRuntime;
+  comparisonSelectedSourceSliceIds?: readonly string[];
+  comparisonSelectedSourceIndices?: readonly number[];
 }
 
 function RawEventPoints({
@@ -182,15 +183,19 @@ function SceneContent({
   showRawEvents = false,
   showHotspotTrajectories = true,
   sliceOpacity = 1,
+  activeSliceOpacity = 1,
+  nonActiveSliceOpacity = 0.35,
   heightScale = 1,
   burstVolumeModel,
   cameraFocusTarget,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
+  comparisonSelectedSourceSliceIds = [],
+  comparisonSelectedSourceIndices = [],
 }: Pick<
   Stkde3DSceneProps,
   'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'hotspotMatchingOptions' | 'activeIndex' | 'viewMode' |
-  'showRawEvents' | 'showHotspotTrajectories' | 'sliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize'
+  'showRawEvents' | 'showHotspotTrajectories' | 'sliceOpacity' | 'activeSliceOpacity' | 'nonActiveSliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize' | 'comparisonSelectedSourceSliceIds' | 'comparisonSelectedSourceIndices'
 > & {
   cameraFocusTarget: Stkde3DCameraFocusTarget | null;
 }) {
@@ -199,6 +204,7 @@ function SceneContent({
     resolveSliceY,
     resolveEpochY,
     onCreateDraftAtPoint,
+    comparisonSelectionEnabled,
   } = useStkde3DSceneRuntime();
   const focusedSlice = slices[activeIndex]
     ? { ...slices[activeIndex], index: 0 }
@@ -264,9 +270,13 @@ function SceneContent({
         activeIndex={viewMode === 'focus' ? 0 : activeIndex}
         compact={viewMode === 'focus'}
         sliceOpacity={sliceOpacity}
+        activeSliceOpacity={activeSliceOpacity}
+        nonActiveSliceOpacity={nonActiveSliceOpacity}
         heightScale={heightScale}
         heatmapRenderer={heatmapRenderer}
         kdeGridSize={kdeGridSize}
+        comparisonSelectedSourceSliceIds={comparisonSelectedSourceSliceIds}
+        comparisonSelectedSourceIndices={comparisonSelectedSourceIndices}
       />
 
       {burstVolumeModel ? (
@@ -320,6 +330,8 @@ export function Stkde3DScene({
   showRawEvents = false,
   showHotspotTrajectories = true,
   sliceOpacity = 1,
+  activeSliceOpacity = 1,
+  nonActiveSliceOpacity = 0.35,
   timeDomain,
   overrideWarpMap,
   overrideWarpDomain,
@@ -330,11 +342,11 @@ export function Stkde3DScene({
   kdeGridSize = 32,
   runtime,
   onCreateDraftAtPoint,
+  comparisonSelectedSourceSliceIds = [],
+  comparisonSelectedSourceIndices = [],
 }: Stkde3DSceneProps) {
   const [mapTexture, setMapTexture] = useState<THREE.CanvasTexture | null>(null);
   const [cameraFocusTarget, setCameraFocusTarget] = useState<Stkde3DCameraFocusTarget | null>(null);
-  const [scanProgress, setScanProgress] = useState(0.5);
-  const [scanDurationSeconds, setScanDurationSeconds] = useState(FIXED_SCAN_DURATION_SECONDS);
   const sceneRuntime = useMemo(
     () => runtime ?? createStkde3DSceneRuntime({
       displayDomain: timeDomain,
@@ -353,33 +365,6 @@ export function Stkde3DScene({
       sceneRuntime.cameraFocus(target);
     },
   }), [sceneRuntime]);
-  const scanY = START_Y + scanProgress * AXIS_HEIGHT;
-  const scanWindow = useMemo(
-    () => interactiveRuntime.temporalWindowEnabled
-      ? proposeFixedDurationWindowAtY(
-        scanY,
-        interactiveRuntime.yToEpoch,
-        scanDurationSeconds,
-        interactiveRuntime.displayDomain,
-      )
-      : null,
-    [interactiveRuntime, scanDurationSeconds, scanY],
-  );
-  const scanProposal = useMemo(() => {
-    if (!scanWindow) return null;
-    return {
-      startEpoch: scanWindow[0],
-      endEpoch: scanWindow[1],
-      durationSeconds: scanWindow[1] - scanWindow[0],
-      scanY,
-    };
-  }, [scanWindow, scanY]);
-
-  useEffect(() => {
-    if (!interactiveRuntime.temporalWindowEnabled) return;
-    interactiveRuntime.onTemporalWindowPropose(scanProposal);
-  }, [interactiveRuntime, scanProposal]);
-
   useEffect(() => {
     return () => {
       mapTexture?.dispose();
@@ -390,54 +375,12 @@ export function Stkde3DScene({
     <Stkde3DSceneProvider runtime={interactiveRuntime}>
       <div className="relative h-full w-full overflow-hidden bg-transparent">
         <MapTileSource onTextureReady={setMapTexture} />
-        <div className="absolute left-4 top-4 z-20">
-          <StkdeIntensityLegend mode={heatmapRenderer} />
-        </div>
-        {interactiveRuntime.temporalWindowEnabled ? (
-          <div className="absolute bottom-4 left-4 z-20 w-64 rounded-md border border-sky-400/25 bg-slate-950/90 p-2 text-[11px] text-slate-200 shadow-xl backdrop-blur">
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <span className="font-medium uppercase tracking-[0.16em] text-sky-200">Clock scan</span>
-              <select
-                value={scanDurationSeconds}
-                onChange={(event) => setScanDurationSeconds(Number(event.target.value))}
-                className="rounded border border-slate-700 bg-slate-900 px-1.5 py-1 text-[10px] text-slate-200"
-                aria-label="Fixed scan duration"
-              >
-                <option value={12 * 60 * 60}>12 hours</option>
-                <option value={FIXED_SCAN_DURATION_SECONDS}>24 hours</option>
-                <option value={48 * 60 * 60}>48 hours</option>
-              </select>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={scanProgress}
-              onChange={(event) => setScanProgress(Number(event.target.value))}
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-sky-400"
-              aria-label="Move fixed clock window through adaptive axis"
-            />
-            <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-400">
-              <span>{scanProposal ? `${new Date(scanProposal.startEpoch * 1000).toLocaleDateString()} – ${new Date(scanProposal.endEpoch * 1000).toLocaleDateString()}` : 'No valid window'}</span>
-              <button
-                type="button"
-                disabled={!scanProposal}
-                onClick={() => {
-                  if (scanProposal) interactiveRuntime.onTemporalWindowCommit(scanProposal);
-                }}
-                className="rounded border border-sky-400/50 px-2 py-1 font-medium text-sky-100 transition hover:bg-sky-400/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Apply to timeline
-              </button>
-            </div>
-          </div>
-        ) : null}
         <div className="absolute inset-0 z-10">
           <Canvas
             camera={{ position: CAMERA_POSITION, fov: 38 }}
-            gl={{ alpha: true, antialias: true }}
-            style={{ background: 'transparent' }}
+            gl={{ alpha: false, antialias: true }}
+            style={{ background: 'var(--muted)' }}
+            onCreated={({ gl }) => gl.setClearColor('#f4f1eb', 1)}
             onPointerDown={(event) => interactiveRuntime.onCanvasPointerDown({ clientX: event.clientX, clientY: event.clientY })}
             onPointerMissed={() => {
               interactiveRuntime.onSliceHover(null);
@@ -459,10 +402,14 @@ export function Stkde3DScene({
               showRawEvents={showRawEvents}
               showHotspotTrajectories={showHotspotTrajectories}
               sliceOpacity={sliceOpacity}
+              activeSliceOpacity={activeSliceOpacity}
+              nonActiveSliceOpacity={nonActiveSliceOpacity}
               heightScale={heightScale}
               burstVolumeModel={burstVolumeModel}
               heatmapRenderer={heatmapRenderer}
               kdeGridSize={kdeGridSize}
+              comparisonSelectedSourceSliceIds={comparisonSelectedSourceSliceIds}
+              comparisonSelectedSourceIndices={comparisonSelectedSourceIndices}
               cameraFocusTarget={cameraFocusTarget}
             />
 
@@ -471,7 +418,7 @@ export function Stkde3DScene({
                 <mesh position={[0, -0.72, 0]}>
                   <boxGeometry args={[98.4, 1.25, 98.4]} />
                   <meshStandardMaterial
-                    color="#081120"
+                    color="#dedbd2"
                     roughness={1}
                     metalness={0}
                     transparent

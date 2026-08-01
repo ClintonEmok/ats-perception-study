@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { START_Y, resolveEpochFromWarpedY, resolveWarpedEpochY } from '../lib/timeline-axis';
 import type { EvolvingSlice } from '../lib/types';
 
-export type Stkde3DSceneSlice = EvolvingSlice & { sourceSliceId?: string };
+export type Stkde3DSceneSlice = EvolvingSlice & { sourceSliceId?: string; sourceSliceIndex?: number };
 export type Stkde3DWorldPoint = [number, number, number];
 
 export interface Stkde3DCameraFocusTarget {
@@ -16,8 +16,10 @@ export interface Stkde3DSliceInteractionPayload {
   index: number;
   renderedIndex: number;
   sourceSliceId: string | null;
+  sourceSliceIndex: number;
   startEpoch: number;
   endEpoch: number;
+  eventCount?: number;
   focusPoint: Stkde3DWorldPoint;
 }
 
@@ -69,12 +71,14 @@ export interface Stkde3DSceneRuntime {
   isPlaying: boolean;
   isInterpolated: boolean;
   sourceSliceIds: readonly string[];
+  comparisonSelectionEnabled: boolean;
   resolveSliceY: (slice: Stkde3DSceneSlice) => number;
   resolveEpochY: (epochSec: number) => number;
   yToEpoch: (y: number) => number;
   onActiveIndexChange: (index: number) => void;
   onSliceHover: (payload: Stkde3DSliceInteractionPayload | null) => void;
   onSliceSelect: (payload: Stkde3DSliceInteractionPayload) => void;
+  onComparisonSliceSelect: (payload: Stkde3DSliceInteractionPayload) => void;
   onSliceResize: (payload: {
     index: number;
     sourceSliceId: string;
@@ -104,6 +108,7 @@ export interface Stkde3DSceneRuntimeOptions {
   isPlaying?: boolean;
   isInterpolated?: boolean;
   sourceSliceIds?: readonly string[];
+  comparisonSelectionEnabled?: boolean;
   yOffset?: number;
   resolveSliceY?: (slice: Stkde3DSceneSlice) => number;
   resolveEpochY?: (epochSec: number) => number;
@@ -111,6 +116,7 @@ export interface Stkde3DSceneRuntimeOptions {
   onActiveIndexChange?: (index: number) => void;
   onSliceHover?: (payload: Stkde3DSliceInteractionPayload | null) => void;
   onSliceSelect?: (payload: Stkde3DSliceInteractionPayload) => void;
+  onComparisonSliceSelect?: (payload: Stkde3DSliceInteractionPayload) => void;
   onSliceResize?: (payload: {
     index: number;
     sourceSliceId: string;
@@ -176,12 +182,14 @@ export function createStkde3DSceneRuntime(options: Stkde3DSceneRuntimeOptions = 
     isPlaying: options.isPlaying ?? false,
     isInterpolated: options.isInterpolated ?? false,
     sourceSliceIds: options.sourceSliceIds ?? [],
+    comparisonSelectionEnabled: options.comparisonSelectionEnabled ?? false,
     resolveSliceY,
     resolveEpochY,
     yToEpoch,
     onActiveIndexChange: options.onActiveIndexChange ?? (() => undefined),
     onSliceHover: options.onSliceHover ?? (() => undefined),
     onSliceSelect: options.onSliceSelect ?? (() => undefined),
+    onComparisonSliceSelect: options.onComparisonSliceSelect ?? (() => undefined),
     onSliceResize: options.onSliceResize ?? (() => undefined),
     onBurstHover: options.onBurstHover ?? (() => undefined),
     onBurstSelect: options.onBurstSelect ?? (() => undefined),

@@ -7,6 +7,9 @@ describe('/stkde-3d route focus mode', () => {
     const sceneSource = readFileSync(new URL('./components/Stkde3DScene.tsx', import.meta.url), 'utf8');
     const inspectorSource = readFileSync(new URL('./components/SliceInspector.tsx', import.meta.url), 'utf8');
     const stackSource = readFileSync(new URL('./components/StkdeSliceStack.tsx', import.meta.url), 'utf8');
+    const comparisonSource = readFileSync(new URL('./components/StkdeComparisonControls.tsx', import.meta.url), 'utf8');
+    const providerSource = readFileSync(new URL('./components/Stkde3DSceneProvider.tsx', import.meta.url), 'utf8');
+    const sourceContextSource = readFileSync(new URL('./lib/comparison-source-context.ts', import.meta.url), 'utf8');
 
     expect(pageSource).toMatch(/Single slice/);
     expect(pageSource).toMatch(/Stack view/);
@@ -25,6 +28,9 @@ describe('/stkde-3d route focus mode', () => {
     expect(pageSource).toMatch(/timeDomain/);
     expect(pageSource).toMatch(/buildStandaloneAdaptiveTimeMaps/);
     expect(pageSource).toMatch(/StandaloneSliceScrubber/);
+    expect(pageSource).toMatch(/setIsFocusedView\(false\)/);
+    expect(pageSource).toMatch(/setComparison\(exitComparison\(\)\)/);
+    expect(pageSource).toMatch(/comparisonSelectionEnabled: comparison\?\.mode === 'selecting'/);
     expect(pageSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);
     expect(sceneSource).toMatch(/viewMode\?: 'stack' \| 'focus'/);
     expect(sceneSource).toMatch(/showRawEvents\?: boolean/);
@@ -33,6 +39,18 @@ describe('/stkde-3d route focus mode', () => {
     expect(sceneSource).toMatch(/RawEventPoints/);
     expect(sceneSource).toMatch(/showHotspotTrajectories/);
     expect(stackSource).toMatch(/compact\?: boolean/);
+    expect(stackSource).toMatch(/sourceSliceIndex/);
+    expect(stackSource).toMatch(/onComparisonSliceSelect/);
+    expect(stackSource).toMatch(/comparisonSelectionEnabled/);
+    expect(comparisonSource).toMatch(/Compare intervals/);
+    expect(comparisonSource).toMatch(/Select interval A/);
+    expect(comparisonSource).toMatch(/Select interval B/);
+    expect(comparisonSource).toMatch(/Reset comparison/);
+    expect(comparisonSource).toMatch(/Back to stack/);
+    expect(comparisonSource).toMatch(/aria-live="polite"/);
+    expect(providerSource).toMatch(/onComparisonSliceSelect/);
+    expect(providerSource).toMatch(/comparisonSelectionEnabled/);
+    expect(sourceContextSource).toMatch(/resolveComparisonSourceContext/);
     expect(inspectorSource).toMatch(/Clock range/);
     expect(inspectorSource).toMatch(/Burstiness/);
     expect(sceneSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);

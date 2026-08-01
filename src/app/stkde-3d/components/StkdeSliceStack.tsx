@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Html } from '@react-three/drei';
 import { ThreeEvent, useThree } from '@react-three/fiber';
 import { easeInOutCubic, interpolateKdeCells } from '@/lib/motion/easing';
 import { START_Y, SLICE_SPACING } from '../lib/timeline-axis';
@@ -24,17 +23,6 @@ export function yForIndex(index: number): number {
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
-}
-
-function formatRangeLabel(startEpoch: number, endEpoch: number): string {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-
-  return `${formatter.format(new Date(startEpoch * 1000))} → ${formatter.format(new Date(endEpoch * 1000))}`;
 }
 
 function configureTexture(texture: THREE.CanvasTexture): THREE.CanvasTexture {
@@ -159,15 +147,19 @@ function buildInterpolatedTexture(
 }
 
 interface StkdeSliceStackProps {
-  slices: Array<EvolvingSlice & { sourceSliceId?: string }>;
+  slices: Array<EvolvingSlice & { sourceSliceId?: string; sourceSliceIndex?: number }>;
   sliceKdes: KdeCell[][];
   volumeProfile?: DurationVolumeProfileEntry[];
   activeIndex: number;
   compact?: boolean;
   sliceOpacity?: number;
+  activeSliceOpacity?: number;
+  nonActiveSliceOpacity?: number;
   heightScale?: number;
   heatmapRenderer?: StkdeHeatmapRenderer;
   kdeGridSize?: number;
+  comparisonSelectedSourceSliceIds?: readonly string[];
+  comparisonSelectedSourceIndices?: readonly number[];
 }
 
 type ResizeHandle = 'start' | 'end';
@@ -197,9 +189,13 @@ export function StkdeSliceStack({
   activeIndex,
   compact = false,
   sliceOpacity = 1,
+  activeSliceOpacity = 1,
+  nonActiveSliceOpacity = 0.35,
   heightScale = 1,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
+  comparisonSelectedSourceSliceIds = [],
+  comparisonSelectedSourceIndices = [],
 }: StkdeSliceStackProps) {
   const {
     isPlaying,
@@ -210,6 +206,8 @@ export function StkdeSliceStack({
     onActiveIndexChange,
     onSliceHover,
     onSliceSelect,
+    onComparisonSliceSelect,
+    comparisonSelectionEnabled,
     onSliceResize,
     cameraFocus,
   } = useStkde3DSceneRuntime();
@@ -272,16 +270,22 @@ export function StkdeSliceStack({
       index: compact ? 0 : sliceIndex,
       renderedIndex: compact ? 0 : sliceIndex,
       sourceSliceId,
+      sourceSliceIndex: slice.sourceSliceIndex ?? slice.index,
       startEpoch: slice.startEpoch,
       endEpoch: slice.endEpoch,
+      eventCount: slice.crimeCount,
       focusPoint: [0, resolveSliceY(slice), 0] as [number, number, number],
     };
+    if (comparisonSelectionEnabled) {
+      onComparisonSliceSelect(payload);
+      return;
+    }
     onSliceSelect(payload);
     cameraFocus(createCameraFocusTarget(payload.focusPoint));
     if (!compact) {
       onActiveIndexChange(sliceIndex);
     }
-  }, [cameraFocus, compact, onActiveIndexChange, onSliceSelect, resolveSliceY, resolveSourceSliceId, slices]);
+  }, [cameraFocus, comparisonSelectionEnabled, compact, onActiveIndexChange, onComparisonSliceSelect, onSliceSelect, resolveSliceY, resolveSourceSliceId, slices]);
 
   const buildSliceHoverPayload = useCallback((sliceIndex: number) => {
     const slice = slices[sliceIndex];
@@ -290,14 +294,17 @@ export function StkdeSliceStack({
       index: compact ? 0 : sliceIndex,
       renderedIndex: compact ? 0 : sliceIndex,
       sourceSliceId: resolveSourceSliceId(sliceIndex),
+      sourceSliceIndex: slice.sourceSliceIndex ?? slice.index,
       startEpoch: slice.startEpoch,
       endEpoch: slice.endEpoch,
+      eventCount: slice.crimeCount,
       focusPoint: [0, resolveSliceY(slice), 0] as [number, number, number],
     };
   }, [compact, resolveSliceY, resolveSourceSliceId, slices]);
 
   const handleHandlePointerDown = useCallback((e: ThreeEvent<PointerEvent>, sliceIndex: number, handle: ResizeHandle, centerY: number) => {
     e.stopPropagation();
+    if (comparisonSelectionEnabled) return;
     const sourceSliceId = resolveSourceSliceId(sliceIndex);
     if (!sourceSliceId) return;
 
@@ -317,7 +324,7 @@ export function StkdeSliceStack({
       previewStartEpoch: slice.startEpoch,
       previewEndEpoch: slice.endEpoch,
     });
-  }, [gl.domElement, handleSliceSelect, resolveSourceSliceId, slices]);
+  }, [comparisonSelectionEnabled, gl.domElement, handleSliceSelect, resolveSourceSliceId, slices]);
 
   useEffect(() => {
     if (!dragState) return undefined;
@@ -439,34 +446,42 @@ export function StkdeSliceStack({
         const diff = Math.abs(i - activeIndex);
         const isActive = hasActiveSlice && diff === 0;
         const isAdjacent = hasActiveSlice && diff === 1;
+        const sourceSliceIndex = slice.sourceSliceIndex ?? slice.index;
+        const sourceSliceId = resolveSourceSliceId(i);
+        const isComparisonSelected = comparisonSelectionEnabled && (
+          (sourceSliceId ? comparisonSelectedSourceSliceIds.includes(sourceSliceId) : false)
+          || comparisonSelectedSourceIndices.includes(sourceSliceIndex)
+        );
+        const isEmphasized = isActive || isComparisonSelected;
         const opacityMultiplier = isActive
-          ? 1
+          ? activeSliceOpacity
+          : isComparisonSelected
+            ? activeSliceOpacity
           : isAdjacent
-            ? 0.35
-            : 0.1;
+            ? nonActiveSliceOpacity
+            : nonActiveSliceOpacity * 0.3;
 
-        const gridOpacity = isActive ? 0.08 : isAdjacent ? 0.03 : 0.01;
+        const gridOpacity = isEmphasized ? 0.08 : isAdjacent ? 0.03 : 0.01;
         const volume = volumeProfile?.[i];
         const hasVolume = Boolean(volume);
         const thickness = (volume?.thickness ?? 0.3) * heightScale;
         const surfaceY = hasVolume ? thickness / 2 + 0.1 : 0;
         const baseMultiplier = opacityMultiplier * sliceOpacity;
         const slabOpacity = hasVolume
-          ? Math.min(0.3, Math.max(0.1, (volume?.opacity ?? 0.18) * baseMultiplier))
+          ? isActive
+            ? Math.min(0.48, Math.max(0.08, (volume?.opacity ?? 0.18) * baseMultiplier + 0.24 * activeSliceOpacity))
+            : Math.min(0.3, Math.max(0.04, (volume?.opacity ?? 0.18) * baseMultiplier))
           : 0;
         const surfaceOpacity = hasVolume
-          ? Math.min(0.88, Math.max(0.18, ((volume?.opacity ?? 0.18) + 0.2) * baseMultiplier))
-          : Math.min(0.85, 0.3 * baseMultiplier);
+          ? isActive
+            ? Math.min(0.98, Math.max(0.32, ((volume?.opacity ?? 0.18) + 0.2) * baseMultiplier + 0.24 * activeSliceOpacity))
+            : Math.min(0.75, Math.max(0.04, ((volume?.opacity ?? 0.18) + 0.2) * baseMultiplier))
+          : Math.min(isActive ? 0.85 : 0.7, 0.3 * baseMultiplier + (isActive ? 0.24 * activeSliceOpacity : 0));
         const underlayOpacity = hasVolume
           ? Math.max(0.05, surfaceOpacity * (0.26 + (volume?.falloff ?? 0.1)))
           : 0;
         const texture = textures.get(i) ?? undefined;
 
-        const sourceSliceId = resolveSourceSliceId(i);
-        const isDraggingThisSlice = dragState?.sliceId === sourceSliceId;
-        const labelText = isDraggingThisSlice && dragState
-          ? formatRangeLabel(dragState.previewStartEpoch, dragState.previewEndEpoch)
-          : slice.label;
         const handleInset = Math.max(0.06, thickness * 0.12);
         const bottomHandleY = hasVolume ? handleInset : 0.08;
         const topHandleY = hasVolume ? Math.max(handleInset + 0.06, thickness - handleInset) : 0.18;
@@ -495,7 +510,7 @@ export function StkdeSliceStack({
                 <mesh position={[0, thickness / 2, 0]}>
                   <boxGeometry args={[100, thickness, 100]} />
                   <meshStandardMaterial
-                    color={isActive ? '#1e40af' : '#334155'}
+                    color={isEmphasized ? '#b45309' : '#d6d3d1'}
                     transparent
                     opacity={slabOpacity}
                     roughness={0.96}
@@ -545,21 +560,21 @@ export function StkdeSliceStack({
             ) : null
             )}
 
-            {isActive && sourceSliceId ? (
+             {isActive && !comparisonSelectionEnabled && sourceSliceId ? (
               <>
                 <mesh
                   position={[50, topHandleY, 0]}
                   onPointerDown={(event) => handleHandlePointerDown(event, i, 'end', y + thickness / 2)}
                 >
                   <sphereGeometry args={[0.9, 16, 16]} />
-                  <meshBasicMaterial color={dragState?.sliceId === sourceSliceId && dragState.handle === 'end' ? '#67e8f9' : '#ffffff'} />
+                  <meshBasicMaterial color={dragState?.sliceId === sourceSliceId && dragState.handle === 'end' ? '#b45309' : '#f4f1eb'} />
                 </mesh>
                 <mesh
                   position={[50, bottomHandleY, 0]}
                   onPointerDown={(event) => handleHandlePointerDown(event, i, 'start', y + thickness / 2)}
                 >
                   <sphereGeometry args={[0.9, 16, 16]} />
-                  <meshBasicMaterial color={dragState?.sliceId === sourceSliceId && dragState.handle === 'start' ? '#67e8f9' : '#ffffff'} />
+                  <meshBasicMaterial color={dragState?.sliceId === sourceSliceId && dragState.handle === 'start' ? '#b45309' : '#f4f1eb'} />
                 </mesh>
               </>
             ) : null}
@@ -570,21 +585,21 @@ export function StkdeSliceStack({
               rotation={[0, 0, 0]}
             >
               <meshBasicMaterial
-                color="#38bdf8"
+                color="#b8a99a"
                 transparent
                 opacity={gridOpacity * 0.5}
               />
             </gridHelper>
 
-            {isActive && (
+             {isEmphasized && (
               <>
                 <mesh
                   rotation={[-Math.PI / 2, 0, 0]}
                   position={[0, hasVolume ? surfaceY + 0.1 : 0.08, 0]}
                 >
                   <ringGeometry args={[49.2, 50, 64]} />
-                  <meshBasicMaterial
-                    color="#ffffff"
+                   <meshBasicMaterial
+                     color={isComparisonSelected ? '#b45309' : '#7c6858'}
                     transparent
                     opacity={0.4}
                     depthWrite={false}
@@ -597,7 +612,7 @@ export function StkdeSliceStack({
                 >
                   <ringGeometry args={[48.5, 49.8, 64]} />
                   <meshBasicMaterial
-                    color="#ffffff"
+                    color="#b8a99a"
                     transparent
                     opacity={0.2}
                     depthWrite={false}
@@ -614,7 +629,7 @@ export function StkdeSliceStack({
               >
                 <ringGeometry args={[49.4, 50, 64]} />
                 <meshBasicMaterial
-                  color="#38bdf8"
+                  color="#b45309"
                   transparent
                   opacity={0.05}
                   depthWrite={false}
@@ -622,35 +637,6 @@ export function StkdeSliceStack({
                 />
               </mesh>
             )}
-
-            <Html position={[52, 0, 0]} center className="pointer-events-none select-none">
-              <div
-                onClick={(event) => event.stopPropagation()}
-                onPointerDown={(event) => event.stopPropagation()}
-                className={`rounded-md border px-2 py-1 text-[10px] leading-tight shadow-sm ${
-                  isActive
-                    ? 'border-sky-400/60 bg-slate-950/95 text-sky-100'
-                    : 'border-sky-800/40 bg-slate-950/80 text-sky-300'
-                }`}
-                >
-                <div className="font-medium tracking-wide">
-                  {labelText}
-                </div>
-                {isDraggingThisSlice && dragState ? (
-                  <div className="mt-1 text-[9px] uppercase tracking-[0.14em] text-cyan-200">
-                    {dragState.handle === 'start' ? 'Resizing start boundary' : 'Resizing end boundary'}
-                  </div>
-                ) : null}
-              </div>
-            </Html>
-
-            {isDraggingThisSlice && dragState ? (
-              <Html position={[52, 18, 0]} center className="pointer-events-none select-none">
-                <div className="rounded-md border border-cyan-400/40 bg-slate-950/90 px-2 py-1 text-[9px] font-medium tracking-[0.12em] text-cyan-100 shadow-sm">
-                  {formatRangeLabel(dragState.previewStartEpoch, dragState.previewEndEpoch)}
-                </div>
-              </Html>
-            ) : null}
 
             {transitionTexture && transition && i === transition.toIndex ? (
               <mesh

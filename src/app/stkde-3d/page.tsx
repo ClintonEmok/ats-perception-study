@@ -6,7 +6,7 @@ import { generateStkde3dMockData, generateStkde3dRealData } from './lib/mock-dat
 import { computeSliceKde, KDE_SCENE_SPAN_METERS } from '@/lib/kde';
 import { Stkde3DScene } from './components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from './components/Stkde3DSceneProvider';
-import type { Stkde3DSceneSlice } from './components/Stkde3DSceneProvider';
+import type { Stkde3DSceneSlice, Stkde3DSliceInteractionPayload } from './components/Stkde3DSceneProvider';
 import { SliceInspector } from './components/SliceInspector';
 import type { StkdeHeatmapRenderer } from './components/StkdeSliceStack';
 import { KdeTuningPanel } from './components/KdeTuningPanel';
@@ -297,6 +297,7 @@ export default function Stkde3DPage() {
       ...slice,
       index,
       sourceSliceId: `standalone-${index}-${slice.startEpoch}-${slice.endEpoch}`,
+      sourceSliceIndex: index,
     })),
     [slices],
   );
@@ -409,6 +410,24 @@ export default function Stkde3DPage() {
     setComparison((current) => (current ? selectComparisonSlice(current, toComparisonSelection(slice)) : current));
   };
 
+  const handleComparisonSurfaceSelect = (payload: Stkde3DSliceInteractionPayload) => {
+    const sourceSlice = sceneSlices.find((slice) => (
+      (payload.sourceSliceId && slice.sourceSliceId === payload.sourceSliceId)
+      || slice.sourceSliceIndex === payload.sourceSliceIndex
+    ));
+    setComparison((current) => (current
+      ? selectComparisonSlice(current, {
+        index: payload.sourceSliceIndex,
+        sourceSliceId: payload.sourceSliceId,
+        sourceSliceIndex: payload.sourceSliceIndex,
+        startEpoch: payload.startEpoch,
+        endEpoch: payload.endEpoch,
+        label: sourceSlice?.label,
+        eventCount: payload.eventCount ?? sourceSlice?.crimeCount,
+      })
+      : current));
+  };
+
   const sceneRuntime = useMemo(
     () => createStkde3DSceneRuntime({
       displayDomain: timeDomain,
@@ -418,6 +437,7 @@ export default function Stkde3DPage() {
       densityMap: standaloneAdaptiveTimeMaps.densityMap,
       warpMap: standaloneAdaptiveTimeMaps.warpMap,
       sourceSliceIds: sceneSlices.map((slice) => slice.sourceSliceId),
+      comparisonSelectionEnabled: comparison?.mode === 'selecting',
       isPlaying,
       isInterpolated: true,
       onActiveIndexChange: setActiveIndex,
@@ -427,6 +447,7 @@ export default function Stkde3DPage() {
           : index;
         setActiveIndex(selectedIndex >= 0 ? selectedIndex : index);
       },
+      onComparisonSliceSelect: handleComparisonSurfaceSelect,
       onSliceHover: (payload) => setHoveredSliceId(payload?.sourceSliceId ?? null),
       onSliceResize: () => undefined,
       onBurstHover: () => undefined,
@@ -437,11 +458,12 @@ export default function Stkde3DPage() {
       onCreateDraftAtPoint: () => undefined,
       onCanvasPointerDown: () => undefined,
       onCanvasPointerMissed: () => {
+        if (comparison?.mode === 'selecting') return;
         setHoveredSliceId(null);
         setActiveIndex(-1);
       },
     }),
-    [adaptiveTimeEnabled, isPlaying, sceneSlices, standaloneAdaptiveTimeMaps.densityMap, standaloneAdaptiveTimeMaps.warpMap, timeDomain],
+    [adaptiveTimeEnabled, comparison, handleComparisonSurfaceSelect, isPlaying, sceneSlices, standaloneAdaptiveTimeMaps.densityMap, standaloneAdaptiveTimeMaps.warpMap, timeDomain],
   );
 
   useEffect(() => {
@@ -492,6 +514,7 @@ export default function Stkde3DPage() {
             <button
               type="button"
               aria-pressed={isFocusedView}
+              disabled={comparison?.mode === 'selecting'}
               onClick={() => {
                 const nextFocusedView = !isFocusedView;
                 setIsFocusedView(nextFocusedView);
@@ -573,6 +596,14 @@ export default function Stkde3DPage() {
               nonActiveSliceOpacity={nonActiveSliceOpacity}
               timeDomain={timeDomain}
               runtime={sceneRuntime}
+              comparisonSelectedSourceSliceIds={[
+                comparison?.a?.sourceSliceId,
+                comparison?.b?.sourceSliceId,
+              ].filter((sourceSliceId): sourceSliceId is string => Boolean(sourceSliceId))}
+              comparisonSelectedSourceIndices={[
+                comparison?.a?.sourceSliceIndex,
+                comparison?.b?.sourceSliceIndex,
+              ].filter((sourceSliceIndex): sourceSliceIndex is number => typeof sourceSliceIndex === 'number')}
             />
           </div>
 

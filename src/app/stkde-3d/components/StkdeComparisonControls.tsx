@@ -49,7 +49,12 @@ export function StkdeComparisonControls({
   const hasNoIntervals = slices.length === 0;
   const hasTooFewIntervals = slices.length === 1;
   const isSelecting = comparison?.mode === 'selecting';
-  const statusMessage = comparison ? getComparisonMessage(comparison) : '';
+  const selectionPrompt = comparison?.activeSlot === 'A' ? 'Select interval A' : 'Select interval B';
+  const statusMessage = comparison
+    ? comparison.status === 'selecting-a' || comparison.status === 'selecting-b'
+      ? selectionPrompt
+      : getComparisonMessage(comparison)
+    : '';
 
   return (
     <section
