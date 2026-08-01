@@ -2,6 +2,7 @@ import {
   DEFAULT_KDE_PARAMS,
   smoothingMetersToSigmaCells,
   type KdeCell,
+  type KdeField,
   type KdeParams,
 } from './types';
 
@@ -14,7 +15,12 @@ function kdeColor(t: number): string {
 export function computeSliceKde(
   points: Array<{ x: number; z: number }>,
   params: Partial<KdeParams> = {},
-): { cells: KdeCell[]; maxIntensity: number; meanIntensity: number } {
+): {
+  cells: KdeCell[];
+  maxIntensity: number;
+  meanIntensity: number;
+  field: KdeField;
+} {
   const gridRows = Math.max(4, Math.round(params.gridSize ?? DEFAULT_KDE_PARAMS.gridSize));
   const gridCols = gridRows;
   const sigmaCells = Math.max(
@@ -100,7 +106,16 @@ export function computeSliceKde(
   }
 
   const meanIntensity = intensitySum / (gridRows * gridCols);
-  return { cells, maxIntensity: safeMax, meanIntensity };
+  const field: KdeField = {
+    values: intensity,
+    support,
+    gridSize: gridRows,
+    cellWidth,
+    cellHeight,
+    maxIntensity,
+  };
+
+  return { cells, maxIntensity: safeMax, meanIntensity, field };
 }
 
 export { kdeColor };

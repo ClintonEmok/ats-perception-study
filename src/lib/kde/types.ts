@@ -5,10 +5,27 @@ export interface KdeCell {
   support: number;
 }
 
+/**
+ * Complete, row-major KDE output used by analytical comparisons.
+ *
+ * `SliceKdeResult.cells` intentionally remains a sparse display-oriented
+ * projection. Consumers that need the analytical field must use this raw
+ * representation so thresholded cells are not mistaken for zero intensity.
+ */
+export interface KdeField {
+  values: Float32Array;
+  support: Float32Array;
+  gridSize: number;
+  cellWidth: number;
+  cellHeight: number;
+  maxIntensity: number;
+}
+
 export interface SliceKdeResult {
   cells: KdeCell[];
   maxIntensity: number;
   meanIntensity: number;
+  field: KdeField;
 }
 
 export interface KdeParams {

@@ -3,5 +3,5 @@ export {
   KDE_SCENE_SPAN_METERS,
   smoothingMetersToSigmaCells,
 } from './types';
-export type { KdeCell, KdeParams, SliceKdeResult } from './types';
+export type { KdeCell, KdeField, KdeParams, SliceKdeResult } from './types';
 export { DEFAULT_KDE_PARAMS } from './types';
