@@ -1,12 +1,19 @@
 ---
-gsd_state_version: '1.0'
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+current_phase: 4
+current_phase_name: STKDE-3D A/B Comparison
 status: planning
+stopped_at: Phase 4 context gathered
+last_updated: "2026-08-01T18:11:00.780Z"
+last_activity: 2026-08-01
+last_activity_desc: Prioritized standalone STKDE-3D A/B comparison before Phase 5 integration.
 progress:
-  total_phases: 4
-  completed_phases: 1
-  total_plans: 8
-  completed_plans: 2
-  percent: 25
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -16,20 +23,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14)
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Burst Volume Rendering
+**Current focus:** Standalone STKDE-3D A/B Comparison
 
 ## Current Position
 
-Phase: 2 of 4 (Burst Volume Rendering)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-07-31 — Implemented standalone STKDE 3D adaptive temporal warp (260731-nsj)
+Phase: 4 of 5 (STKDE-3D A/B Comparison)
+Plan: Plan standalone comparison before dashboard integration
+Status: Ready to plan
+Last activity: 2026-08-01 — Prioritized standalone STKDE-3D A/B comparison before Phase 5 integration.
 
-Progress: [██░░░░░░░░] 25%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: -
 - Total execution time: -
@@ -41,6 +49,7 @@ Progress: [██░░░░░░░░] 25%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: -
 - Trend: Stable
 
@@ -68,27 +77,32 @@ Recent decisions affecting current work:
 - [Quick 260731-juc] Active event records retain epoch-second timestamps, are keyed by source slice before brushed cube reindexing, and are clipped to the active cube domain.
 - [Quick 260731-juc] Active event points remain opt-in in dashboard mode and use the shared runtime epoch resolver; brushed volume profiles use the active adaptive allocation helper.
 - [Quick 260731-nsj] Standalone adaptive time derives a density warp from event timestamps and shares it with event Y placement, trajectories, slice surfaces, and volume allocation.
+- [Phase 4 spec] Direct STKDE-3D comparison is active: temporary rendered-slice A/B selection, top-and-bottom matched absolute views, linked cameras, and a 2D signed KDE difference view.
+- [Baseline 2026-08-01] Phases 1-3 are complete in the implementation baseline; Phase 5 remains partial and follows standalone A/B comparison.
+
+### Roadmap Evolution
+
+- Phase 4 added: STKDE-3D A/B Comparison.
 
 ### Pending Todos
 
-None blocking. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 standalone A/B comparison is the next active task. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
-None yet.
+The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted STKDE-3D, burst-volume, signal-source, store, preset, and evolution tests pass.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Comparison | Direct burst-to-burst comparison | Deferred | Milestone v1.0 |
 | Metaphor | Temporal-gravity interaction system | Deferred | Milestone v1.0 |
 
 ## Session Continuity
 
-Last session: 2026-07-31T15:20:00Z
-Stopped at: Completed quick task 260731-nsj
-Resume file: None
+Last session: 2026-08-01T18:11:00.772Z
+Stopped at: Phase 4 context gathered
+Resume file: .planning/phases/04-stkde-3d-a-b-comparison-mode/04-CONTEXT.md
 
 ## Quick Tasks Completed
 
