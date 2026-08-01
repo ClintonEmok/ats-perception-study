@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
-status: planning
-stopped_at: Phase 4 planning complete
-last_updated: "2026-08-01T23:28:22.924Z"
+status: in_progress
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-08-01T23:56:21Z"
 last_activity: 2026-08-01
-last_activity_desc: Prioritized standalone STKDE-3D A/B comparison before Phase 5 integration.
+last_activity_desc: Completed raw KDE comparison fields, signed subtraction math, and the dedicated signed palette.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,25 +28,25 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: Plan standalone comparison before dashboard integration
-Status: Ready to plan
-Last activity: 2026-08-01 — Prioritized standalone STKDE-3D A/B comparison before Phase 5 integration.
+Plan: 2 of 5 (raw KDE comparison math and signed palette)
+Status: In progress
+Last activity: 2026-08-01 — Completed 04-02-PLAN.md.
 
-Progress: [███████░░░] 75%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: -
+- Total plans completed: 2
+- Average duration: 11 min
+- Total execution time: 22 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| Phase 4 | 2 | 5 | 11 min |
 
 **Recent Trend:**
 
@@ -79,6 +79,9 @@ Recent decisions affecting current work:
 - [Quick 260731-nsj] Standalone adaptive time derives a density warp from event timestamps and shares it with event Y placement, trajectories, slice surfaces, and volume allocation.
 - [Phase 4 spec] Direct STKDE-3D comparison is active: temporary rendered-slice A/B selection, top-and-bottom matched absolute views, linked cameras, and a 2D signed KDE difference view.
 - [Baseline 2026-08-01] Phases 1-3 are complete in the implementation baseline; Phase 5 remains partial and follows standalone A/B comparison.
+- [Phase 4 Plan 04-02] Complete raw KDE fields remain separate from sparse thresholded display cells, and `KdeField` is consumed through the public `@/lib/kde` barrel.
+- [Phase 4 Plan 04-02] Signed comparison rejects missing or mismatched fields and uses a stable positive fallback only for valid all-zero domains.
+- [Phase 4 Plan 04-02] Red-neutral-blue signed colors are centralized separately from the existing sequential absolute palettes.
 
 ### Roadmap Evolution
 
@@ -86,7 +89,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 standalone A/B comparison is the next active task. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 Plan 04-03 is the next active task: matched vertical absolute panes and linked cameras. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
@@ -100,9 +103,9 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-01T23:28:22.910Z
-Stopped at: Phase 4 planning complete
-Resume file: .planning/phases/04-stkde-3d-a-b-comparison-mode/04-01-PLAN.md
+Last session: 2026-08-01T23:56:21Z
+Stopped at: Completed 04-02-PLAN.md
+Resume file: None
 
 ## Quick Tasks Completed
 

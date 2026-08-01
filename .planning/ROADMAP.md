@@ -80,12 +80,12 @@ Plans:
   3. A-B replaces the pair with one 2D signed KDE map centered at zero.
   4. Built-in presets reproduce the dataset, intervals, parameters, layer, mode, and camera state.
 
-**Plans**: 5 plans
+**Plans**: 2/5 plans executed
 
 Plans:
 
-- [ ] 04-01-PLAN.md — Build the temporary A/B selection tracer over existing rendered intervals.
-- [ ] 04-02-PLAN.md — Preserve raw KDE fields and add tested shared/signed comparison math.
+- [x] 04-01-PLAN.md — Build the temporary A/B selection tracer over existing rendered intervals.
+- [x] 04-02-PLAN.md — Preserve raw KDE fields and add tested shared/signed comparison math.
 - [ ] 04-03-PLAN.md — Render matched vertical absolute panes with linked cameras.
 - [ ] 04-04-PLAN.md — Add signed difference mode, exact-pair presets, and invalidation wiring.
 - [ ] 04-05-PLAN.md — Harden UI states, contracts, verification, and browser behavior.
@@ -119,5 +119,5 @@ Current execution order: 1 → 2 → 3 → 4 → 5
 | 1. Burst Model Foundation | 2/2 | Complete (baseline verified) | 2026-08-01 |
 | 2. Burst Volume Rendering | 2/2 | Complete (baseline verified) | 2026-08-01 |
 | 3. Cluster Evolution | 2/2 | Complete (baseline verified) | 2026-08-01 |
-| 4. STKDE-3D A/B Comparison | 0/0 | Next priority | - |
+| 4. STKDE-3D A/B Comparison | 2/5 | In Progress|  |
 | 5. Cube Integration | 0/2 | Partial baseline | - |
