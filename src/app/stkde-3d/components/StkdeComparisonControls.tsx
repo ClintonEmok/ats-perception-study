@@ -38,6 +38,7 @@ export function StkdeComparisonControls({
   onSelectSlice,
   onResetComparison,
   onBackToStack,
+  announcement,
 }: {
   slices: readonly Stkde3DSceneSlice[];
   comparison: Stkde3DComparisonState | null;
@@ -45,6 +46,7 @@ export function StkdeComparisonControls({
   onSelectSlice: (slice: Stkde3DSceneSlice) => void;
   onResetComparison: () => void;
   onBackToStack: () => void;
+  announcement?: string | null;
 }) {
   const hasNoIntervals = slices.length === 0;
   const hasTooFewIntervals = slices.length === 1;
@@ -54,7 +56,7 @@ export function StkdeComparisonControls({
     ? comparison.status === 'selecting-a' || comparison.status === 'selecting-b'
       ? selectionPrompt
       : getComparisonMessage(comparison)
-    : '';
+    : announcement ?? '';
 
   return (
     <section
@@ -98,16 +100,18 @@ export function StkdeComparisonControls({
         </p>
       ) : null}
 
+      {comparison || announcement ? (
+        <div
+          aria-live="polite"
+          className="rounded-xl border border-amber-600/30 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-950"
+          data-comparison-status={comparison?.status ?? 'announcement'}
+        >
+          {statusMessage}
+        </div>
+      ) : null}
+
       {comparison ? (
         <>
-          <div
-            aria-live="polite"
-            className="rounded-xl border border-amber-600/30 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-950"
-            data-comparison-status={comparison.status}
-          >
-            {statusMessage}
-          </div>
-
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {(['A', 'B'] as const).map((slot) => {
               const selection = comparison[slot === 'A' ? 'a' : 'b'];

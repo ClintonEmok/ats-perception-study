@@ -12,6 +12,7 @@ import type { StkdeHeatmapRenderer } from './components/StkdeSliceStack';
 import { KdeTuningPanel } from './components/KdeTuningPanel';
 import { StkdeComparisonControls } from './components/StkdeComparisonControls';
 import {
+  COMPARISON_MESSAGES,
   enterComparison,
   exitComparison,
   invalidateComparison,
@@ -217,6 +218,7 @@ export default function Stkde3DPage() {
   const [caseStudyPresetId, setCaseStudyPresetId] = useState<CaseStudyPresetId>('full');
   const [dataset, setDataset] = useState<DatasetState | null>(null);
   const [comparison, setComparison] = useState<Stkde3DComparisonState | null>(null);
+  const [comparisonAnnouncement, setComparisonAnnouncement] = useState<string | null>(null);
   const selectedCaseStudy = CASE_STUDY_PRESETS.find((preset) => preset.id === caseStudyPresetId) ?? CASE_STUDY_PRESETS[0]!;
 
   useEffect(() => {
@@ -394,19 +396,23 @@ export default function Stkde3DPage() {
   const handleEnterComparison = () => {
     setIsFocusedView(false);
     setIsPlaying(false);
+    setComparisonAnnouncement(null);
     setComparison(enterComparison());
   };
 
   const handleResetComparison = () => {
+    setComparisonAnnouncement(null);
     setComparison(resetComparison());
   };
 
   const handleBackToStack = () => {
     setIsFocusedView(false);
+    setComparisonAnnouncement(COMPARISON_MESSAGES.exited);
     setComparison(exitComparison());
   };
 
   const handleComparisonSliceSelect = (slice: Stkde3DSceneSlice) => {
+    setComparisonAnnouncement(null);
     setComparison((current) => (current ? selectComparisonSlice(current, toComparisonSelection(slice)) : current));
   };
 
@@ -415,6 +421,7 @@ export default function Stkde3DPage() {
       (payload.sourceSliceId && slice.sourceSliceId === payload.sourceSliceId)
       || slice.sourceSliceIndex === payload.sourceSliceIndex
     ));
+    setComparisonAnnouncement(null);
     setComparison((current) => (current
       ? selectComparisonSlice(current, {
         index: payload.sourceSliceIndex,
@@ -639,6 +646,7 @@ export default function Stkde3DPage() {
               onSelectSlice={handleComparisonSliceSelect}
               onResetComparison={handleResetComparison}
               onBackToStack={handleBackToStack}
+              announcement={comparisonAnnouncement}
             />
 
             <section className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
