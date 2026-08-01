@@ -66,3 +66,49 @@ export function getStkdePaletteGradient(mode: 'field' | 'legacy' = 'field'): str
   const stops = mode === 'legacy' ? LEGACY_STKDE_INTENSITY_STOPS : STKDE_INTENSITY_STOPS;
   return `linear-gradient(90deg, ${stops.map(({ stop, rgb }) => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]}) ${Math.round(stop * 100)}%`).join(', ')})`;
 }
+
+/**
+ * Signed KDE comparison colors. The normalized input is in [-1, 1]: negative
+ * values are B-dominant, zero is neutral, and positive values are A-dominant.
+ * This palette is intentionally separate from both absolute sequential ramps.
+ */
+export const STKDE_SIGNED_DIFFERENCE_STOPS: StkdeColorStop[] = [
+  { stop: 0, rgb: [23, 92, 211] },
+  { stop: 0.5, rgb: [244, 241, 235] },
+  { stop: 1, rgb: [180, 35, 24] },
+];
+
+export const SIGNED_STKDE_DIFFERENCE_STOPS = STKDE_SIGNED_DIFFERENCE_STOPS;
+
+export const STKDE_SIGNED_DIFFERENCE_LABELS = {
+  negative: 'B-dominant',
+  neutral: 'No difference',
+  positive: 'A-dominant',
+  red: 'Red = A higher',
+  neutralColor: 'Neutral = no difference',
+  blue: 'Blue = B higher',
+} as const;
+
+function clampSignedNormalized(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(-1, value));
+}
+
+function safeAlpha(alpha: number): number {
+  if (!Number.isFinite(alpha)) return 1;
+  return Math.min(1, Math.max(0, alpha));
+}
+
+export function getStkdeSignedDifferenceColor(normalizedDifference: number, alpha = 1): string {
+  const signed = clampSignedNormalized(normalizedDifference);
+  const palettePosition = (signed + 1) / 2;
+  return getColorFromStops(STKDE_SIGNED_DIFFERENCE_STOPS, palettePosition, safeAlpha(alpha));
+}
+
+export const getSignedDifferenceColor = getStkdeSignedDifferenceColor;
+
+export function getStkdeSignedDifferencePaletteGradient(): string {
+  return `linear-gradient(90deg, ${STKDE_SIGNED_DIFFERENCE_STOPS.map(({ stop, rgb }) => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]}) ${Math.round(stop * 100)}%`).join(', ')})`;
+}
+
+export const getSignedDifferencePaletteGradient = getStkdeSignedDifferencePaletteGradient;
