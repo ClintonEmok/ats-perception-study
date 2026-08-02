@@ -121,7 +121,7 @@ Each task was committed atomically:
 2. **Task 2: Render the signed heatmap-only difference mode** - `2c3b399` (feat)
 3. **Task 3: Wire preset application, invalidation, and shared-setting recomputation** - `ec19069` (feat)
 
-**Plan metadata:** pending
+**Plan metadata:** `9e46c84` (docs: complete signed difference comparison plan)
 
 ## Files Created/Modified
 
