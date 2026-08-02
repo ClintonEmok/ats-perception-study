@@ -10,6 +10,7 @@ describe('/stkde-3d route focus mode', () => {
     const comparisonSource = readFileSync(new URL('./components/StkdeComparisonControls.tsx', import.meta.url), 'utf8');
     const comparisonStageSource = readFileSync(new URL('./components/StkdeComparisonStage.tsx', import.meta.url), 'utf8');
     const comparisonViewportSource = readFileSync(new URL('./components/StkdeComparisonViewport.tsx', import.meta.url), 'utf8');
+    const cameraSource = readFileSync(new URL('./lib/comparison-camera.ts', import.meta.url), 'utf8');
     const providerSource = readFileSync(new URL('./components/Stkde3DSceneProvider.tsx', import.meta.url), 'utf8');
     const sourceContextSource = readFileSync(new URL('./lib/comparison-source-context.ts', import.meta.url), 'utf8');
 
@@ -61,6 +62,10 @@ describe('/stkde-3d route focus mode', () => {
     expect(comparisonViewportSource).toMatch(/resolveComparisonSourceContext/);
     expect(comparisonViewportSource).toMatch(/data-interval-slot/);
     expect(comparisonViewportSource).toMatch(/selectedSourceIndex/);
+    expect(comparisonViewportSource).toMatch(/CameraControls/);
+    expect(cameraSource).toMatch(/setLookAt/);
+    expect(cameraSource).toMatch(/snapBToA/);
+    expect(cameraSource).toMatch(/applyingMirror/);
     expect(inspectorSource).toMatch(/Clock range/);
     expect(inspectorSource).toMatch(/Burstiness/);
     expect(sceneSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);

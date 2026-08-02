@@ -92,9 +92,8 @@ export function HotspotTrajectoryOverlay({
                     trackId: track.id,
                    snapshotIndex: rendered.snapshotIndex ?? pointIndex,
                    sourceSliceId: rendered.snapshot.sliceId,
-                    sourceSliceIndex: sliceById.get(rendered.snapshot.sliceId)?.sourceSliceIndex
-                      ?? sliceById.get(rendered.snapshot.sliceId)?.index
-                      ?? 0,
+                   sourceSliceIndex: sliceById.get(rendered.snapshot.sliceId)?.sourceSliceIndex
+                      ?? sliceById.get(rendered.snapshot.sliceId)?.index,
                     startEpoch: rendered.snapshot.peakStartEpochSec,
                     endEpoch: rendered.snapshot.peakEndEpochSec,
                     centroidLat: rendered.snapshot.centroidLat,
@@ -117,8 +116,7 @@ export function HotspotTrajectoryOverlay({
                      snapshotIndex: rendered.snapshotIndex ?? pointIndex,
                      sourceSliceId: rendered.snapshot.sliceId,
                      sourceSliceIndex: sliceById.get(rendered.snapshot.sliceId)?.sourceSliceIndex
-                       ?? sliceById.get(rendered.snapshot.sliceId)?.index
-                       ?? 0,
+                       ?? sliceById.get(rendered.snapshot.sliceId)?.index,
                     startEpoch: rendered.snapshot.peakStartEpochSec,
                     endEpoch: rendered.snapshot.peakEndEpochSec,
                     centroidLat: rendered.snapshot.centroidLat,

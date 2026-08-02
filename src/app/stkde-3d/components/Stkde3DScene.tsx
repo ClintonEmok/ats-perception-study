@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -146,7 +146,7 @@ interface Stkde3DSceneProps {
   absoluteThreshold?: number;
   mapTexture?: THREE.CanvasTexture | null;
   renderMapSource?: boolean;
-  cameraControlsRef?: MutableRefObject<CameraControls | null>;
+  cameraControlsRef?: { current: CameraControls | null };
   onCameraUpdate?: () => void;
 }
 

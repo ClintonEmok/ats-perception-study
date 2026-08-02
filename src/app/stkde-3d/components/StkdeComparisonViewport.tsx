@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import type { CameraControls } from '@react-three/drei';
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
 import type { SliceKdeResult } from '@/lib/kde';
 import { resolveComparisonSourceContext } from '../lib/comparison-source-context';
@@ -46,6 +47,8 @@ export interface StkdeComparisonViewportProps {
   timeDomain?: [number, number];
   runtime?: Stkde3DSceneRuntime;
   mapTexture?: THREE.CanvasTexture | null;
+  cameraControlsRef?: { current: CameraControls | null };
+  onCameraUpdate?: () => void;
 }
 
 export function StkdeComparisonViewport({
@@ -68,6 +71,8 @@ export function StkdeComparisonViewport({
   timeDomain,
   runtime,
   mapTexture,
+  cameraControlsRef,
+  onCameraUpdate,
 }: StkdeComparisonViewportProps) {
   const sourceContext = useMemo(() => resolveComparisonSourceContext({
     selection,
@@ -149,6 +154,8 @@ export function StkdeComparisonViewport({
             kdeGridSize={kdeGridSize}
             mapTexture={mapTexture}
             renderMapSource={false}
+            cameraControlsRef={cameraControlsRef}
+            onCameraUpdate={onCameraUpdate}
             comparisonSelectedSourceSliceIds={sourceContext.sourceSliceId ? [sourceContext.sourceSliceId] : []}
             comparisonSelectedSourceIndices={[sourceSliceIndex]}
           />

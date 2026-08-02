@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CameraControls } from '@react-three/drei';
 import type * as THREE from 'three';
 import type { SliceKdeResult } from '@/lib/kde';
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
@@ -9,6 +10,7 @@ import type { MockCrimeEvent } from '../lib/types';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import type { ComparisonSelection } from '../lib/comparison';
 import { computeSharedAbsoluteDomain } from '../lib/comparison-difference';
+import { createComparisonCameraController } from '../lib/comparison-camera';
 import { StkdeIntensityLegend } from './StkdeIntensityLegend';
 import { Stkde3DMapCapture } from './Stkde3DScene';
 import { StkdeComparisonViewport } from './StkdeComparisonViewport';
@@ -61,6 +63,41 @@ export function StkdeComparisonStage({
   onResetViews,
 }: StkdeComparisonStageProps) {
   const [mapTexture, setMapTexture] = useState<THREE.CanvasTexture | null>(null);
+  const controlsARef = useRef<CameraControls | null>(null);
+  const controlsBRef = useRef<CameraControls | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const cameraController = useMemo(() => createComparisonCameraController({
+    getControls: (pane) => pane === 'A' ? controlsARef.current : controlsBRef.current,
+    initialLinked: true,
+    reducedMotion: prefersReducedMotion,
+  }), [prefersReducedMotion]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setPrefersReducedMotion(mediaQuery.matches);
+    onChange();
+    mediaQuery.addEventListener?.('change', onChange);
+    return () => mediaQuery.removeEventListener?.('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    cameraController.setLinked(linkedCameras);
+  }, [cameraController, linkedCameras]);
+
+  const handleCameraUpdateA = useCallback(() => {
+    cameraController.handleUpdate('A');
+  }, [cameraController]);
+  const handleCameraUpdateB = useCallback(() => {
+    cameraController.handleUpdate('B');
+  }, [cameraController]);
+  const handleLinkedCamerasChange = useCallback((nextLinked: boolean) => {
+    cameraController.setLinked(nextLinked);
+    onLinkedCamerasChange?.(nextLinked);
+  }, [cameraController, onLinkedCamerasChange]);
+  const handleResetViews = useCallback(() => {
+    cameraController.reset();
+    onResetViews?.();
+  }, [cameraController, onResetViews]);
   const absoluteDomain = useMemo(() => {
     const fieldA = sliceKdeResults[selectionA.sourceSliceIndex]?.field;
     const fieldB = sliceKdeResults[selectionB.sourceSliceIndex]?.field;
@@ -94,7 +131,7 @@ export function StkdeComparisonStage({
             type="button"
             aria-pressed={linkedCameras}
             data-camera-linked={linkedCameras ? 'true' : 'false'}
-            onClick={() => onLinkedCamerasChange?.(!linkedCameras)}
+            onClick={() => handleLinkedCamerasChange(!linkedCameras)}
             className={`min-h-8 rounded-md border px-2.5 py-1 text-[10px] transition ${
               linkedCameras
                 ? 'border-amber-600/60 bg-amber-50 text-amber-950'
@@ -105,7 +142,7 @@ export function StkdeComparisonStage({
           </button>
           <button
             type="button"
-            onClick={onResetViews}
+            onClick={handleResetViews}
             className="min-h-8 rounded-md border border-border bg-background px-2.5 py-1 text-[10px] text-foreground transition hover:border-foreground/40"
           >
             Reset views
@@ -138,6 +175,8 @@ export function StkdeComparisonStage({
           timeDomain={timeDomain}
           runtime={runtime}
           mapTexture={mapTexture}
+          cameraControlsRef={controlsARef}
+          onCameraUpdate={handleCameraUpdateA}
         />
         <StkdeComparisonViewport
           slot="B"
@@ -159,6 +198,8 @@ export function StkdeComparisonStage({
           timeDomain={timeDomain}
           runtime={runtime}
           mapTexture={mapTexture}
+          cameraControlsRef={controlsBRef}
+          onCameraUpdate={handleCameraUpdateB}
         />
       </div>
     </section>
