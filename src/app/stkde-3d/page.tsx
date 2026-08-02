@@ -502,7 +502,7 @@ export default function Stkde3DPage() {
   }
 
   return (
-    <main className="min-h-dvh overflow-hidden bg-background text-foreground">
+    <main className="min-h-dvh overflow-x-hidden bg-background text-foreground">
       <div className="mx-auto flex min-h-dvh max-w-[1920px] flex-col px-4 py-4 lg:px-5 lg:py-5">
         <header className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius)] border border-border bg-card/90 px-3 py-2 shadow-sm backdrop-blur-md">
           <h1 className="sr-only">STKDE 3D evolution</h1>
