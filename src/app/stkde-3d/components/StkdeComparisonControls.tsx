@@ -83,6 +83,11 @@ export function StkdeComparisonControls({
   const hasTooFewIntervals = slices.length === 1 && (renderStatus === undefined || renderStatus === 'ready');
   const isSelecting = comparison?.mode === 'selecting';
   const activeSlot = isSelecting ? comparison?.activeSlot ?? null : null;
+  const intervalPrompt = activeSlot === 'A'
+    ? 'Select interval A'
+    : activeSlot === 'B'
+      ? 'Select interval B'
+      : 'Choose a comparison slot first';
 
   useEffect(() => {
     if (isSelecting) {
@@ -199,6 +204,7 @@ export function StkdeComparisonControls({
       {comparison || announcement ? (
         <div
           aria-live="polite"
+          role="status"
           className="rounded-xl border border-amber-600/30 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-950"
           data-comparison-status={comparison?.status ?? 'announcement'}
         >
@@ -257,7 +263,7 @@ export function StkdeComparisonControls({
           {isSelecting ? (
             <label className="mt-3 block" htmlFor="comparison-interval-picker">
               <span className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                {activeSlot ? `Select interval ${activeSlot}` : 'Choose a comparison slot first'}
+                {intervalPrompt}
               </span>
               <select
                 ref={intervalSelectRef}
