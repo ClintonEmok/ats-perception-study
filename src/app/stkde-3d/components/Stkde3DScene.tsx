@@ -243,7 +243,6 @@ function SceneContent({
     resolveSliceY,
     resolveEpochY,
     onCreateDraftAtPoint,
-    comparisonSelectionEnabled,
   } = useStkde3DSceneRuntime();
   const focusedSlice = slices[activeIndex]
     ? { ...slices[activeIndex], index: 0 }
@@ -280,7 +279,7 @@ function SceneContent({
       CAMERA_TARGET[2],
       true,
     );
-  }, [cameraFocusTarget]);
+  }, [cameraFocusTarget, controlsRef]);
 
   return (
     <>

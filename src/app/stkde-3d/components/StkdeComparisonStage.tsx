@@ -10,7 +10,7 @@ import type { MockCrimeEvent } from '../lib/types';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import type { ComparisonSelection } from '../lib/comparison';
 import { computeSharedAbsoluteDomain } from '../lib/comparison-difference';
-import { createComparisonCameraController } from '../lib/comparison-camera';
+import { createComparisonCameraController, type ComparisonCameraController } from '../lib/comparison-camera';
 import { StkdeIntensityLegend } from './StkdeIntensityLegend';
 import { Stkde3DMapCapture } from './Stkde3DScene';
 import { StkdeComparisonViewport } from './StkdeComparisonViewport';
@@ -66,11 +66,16 @@ export function StkdeComparisonStage({
   const controlsARef = useRef<CameraControls | null>(null);
   const controlsBRef = useRef<CameraControls | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const cameraController = useMemo(() => createComparisonCameraController({
-    getControls: (pane) => pane === 'A' ? controlsARef.current : controlsBRef.current,
-    initialLinked: true,
-    reducedMotion: prefersReducedMotion,
-  }), [prefersReducedMotion]);
+  const [cameraController, setCameraController] = useState<ComparisonCameraController | null>(null);
+
+  useEffect(() => {
+    const controller = createComparisonCameraController({
+      getControls: (pane) => pane === 'A' ? controlsARef.current : controlsBRef.current,
+      initialLinked: true,
+      reducedMotion: prefersReducedMotion,
+    });
+    setCameraController(controller);
+  }, [prefersReducedMotion]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -81,21 +86,21 @@ export function StkdeComparisonStage({
   }, []);
 
   useEffect(() => {
-    cameraController.setLinked(linkedCameras);
+    cameraController?.setLinked(linkedCameras);
   }, [cameraController, linkedCameras]);
 
   const handleCameraUpdateA = useCallback(() => {
-    cameraController.handleUpdate('A');
+    cameraController?.handleUpdate('A');
   }, [cameraController]);
   const handleCameraUpdateB = useCallback(() => {
-    cameraController.handleUpdate('B');
+    cameraController?.handleUpdate('B');
   }, [cameraController]);
   const handleLinkedCamerasChange = useCallback((nextLinked: boolean) => {
-    cameraController.setLinked(nextLinked);
+    cameraController?.setLinked(nextLinked);
     onLinkedCamerasChange?.(nextLinked);
   }, [cameraController, onLinkedCamerasChange]);
   const handleResetViews = useCallback(() => {
-    cameraController.reset();
+    cameraController?.reset();
     onResetViews?.();
   }, [cameraController, onResetViews]);
   const absoluteDomain = useMemo(() => {

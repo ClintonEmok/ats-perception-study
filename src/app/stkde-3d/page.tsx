@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Focus, Pause, Play } from 'lucide-react';
 import { generateStkde3dMockData, generateStkde3dRealData } from './lib/mock-data';
 import { computeSliceKde, KDE_SCENE_SPAN_METERS } from '@/lib/kde';
@@ -418,7 +418,7 @@ export default function Stkde3DPage() {
     setComparison((current) => (current ? selectComparisonSlice(current, toComparisonSelection(slice)) : current));
   };
 
-  const handleComparisonSurfaceSelect = (payload: Stkde3DSliceInteractionPayload) => {
+  const handleComparisonSurfaceSelect = useCallback((payload: Stkde3DSliceInteractionPayload) => {
     const sourceSlice = sceneSlices.find((slice) => (
       (payload.sourceSliceId && slice.sourceSliceId === payload.sourceSliceId)
       || slice.sourceSliceIndex === payload.sourceSliceIndex
@@ -435,7 +435,7 @@ export default function Stkde3DPage() {
         eventCount: payload.eventCount ?? sourceSlice?.crimeCount,
       })
       : current));
-  };
+  }, [sceneSlices]);
 
   const sceneRuntime = useMemo(
     () => createStkde3DSceneRuntime({
