@@ -38,7 +38,7 @@ export function StkdeComparisonViewport({
 
   return (
     <article
-      className="min-h-[20rem] min-w-0 overflow-hidden rounded-2xl border border-border bg-background/45"
+      className="flex min-h-[20rem] w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-white/70"
       data-interval-slot={slot}
       data-source-slice-id={sourceSliceId ?? selection.sourceSliceId ?? `index-${selection.sourceSliceIndex}`}
       aria-label={`Absolute KDE map for interval ${slot}, ${interval}`}

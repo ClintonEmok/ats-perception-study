@@ -58,7 +58,7 @@ export function StkdeComparisonStage({
 
   return (
     <section
-      className="relative flex min-h-[41rem] min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-[#f4f1eb] p-2"
+      className="relative flex min-h-[48rem] min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-[#f4f1eb] p-3 sm:p-4"
       data-comparison-stage
       data-comparison-mode={mode}
       data-render-status={hasComparisonFields ? 'ready' : 'error'}
@@ -66,22 +66,26 @@ export function StkdeComparisonStage({
     >
       <Stkde3DMapCapture onTextureReady={setMapTexture} />
 
-      <header className="relative z-10 mb-2 flex min-h-8 flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/95 px-2.5 py-1.5 text-[10px] text-muted-foreground shadow-sm">
-        <div className="min-w-0">
-          <span className="font-semibold uppercase tracking-[0.18em] text-foreground">A/B comparison</span>
+      <header className="relative z-10 mb-3 grid min-w-0 grid-cols-1 gap-4 rounded-2xl border border-border bg-white px-5 py-5 text-sm text-muted-foreground shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(19rem,24rem)] sm:items-stretch sm:px-7 sm:py-6">
+        <div className="flex min-w-0 flex-col justify-center gap-2">
+          <h2 className="text-2xl font-semibold uppercase tracking-[0.18em] text-foreground sm:text-3xl">A/B COMPARISON</h2>
           {mode === 'absolute' ? (
-            <span className="ml-2 font-mono tabular-nums">shared absolute domain {absoluteDomain[0].toPrecision(3)} – {absoluteDomain[1].toPrecision(3)}</span>
+            <p className="font-mono text-xs tabular-nums text-muted-foreground">
+              Shared absolute domain: {absoluteDomain[0].toPrecision(3)} – {absoluteDomain[1].toPrecision(3)}
+            </p>
           ) : (
-            <span className="ml-2 font-medium text-foreground">KDE(A) − KDE(B)</span>
+            <p className="text-xs font-medium text-foreground">KDE(A) − KDE(B) · signed difference</p>
           )}
         </div>
-        {mode === 'absolute' ? <StkdeIntensityLegend mode={heatmapRenderer} domain={absoluteDomain} /> : <StkdeSignedDifferenceLegend />}
+        <div className="flex min-w-0 items-center sm:justify-end">
+          {mode === 'absolute' ? <StkdeIntensityLegend mode={heatmapRenderer} domain={absoluteDomain} /> : <StkdeSignedDifferenceLegend />}
+        </div>
       </header>
 
       {mode === 'difference' ? (
         <StkdeDifferenceScene fieldA={fieldA} fieldB={fieldB} mapTexture={mapTexture} />
       ) : (
-        <div className="relative z-10 grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(20rem,1fr)_minmax(20rem,1fr)] gap-2">
+        <div className="relative z-10 grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(20rem,1fr)_minmax(20rem,1fr)] gap-3">
           <StkdeComparisonViewport
             slot="A"
             selection={selectionA}
