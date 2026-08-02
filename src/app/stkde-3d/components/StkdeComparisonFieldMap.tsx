@@ -19,6 +19,8 @@ import {
 
 type ComparisonFieldDisplayMode = 'absolute' | 'difference';
 
+const COMPARISON_MAP_ASPECT = 1.72;
+
 export interface StkdeComparisonFieldMapProps {
   field: KdeField | null | undefined;
   displayMode: ComparisonFieldDisplayMode;
@@ -101,17 +103,17 @@ export function StkdeComparisonFieldMap({
 
   return (
     <div className="flex h-full min-h-[20rem] w-full min-w-0 items-center justify-center overflow-hidden bg-[#f4f1eb] p-3 sm:p-6" aria-label={ariaLabel}>
-      <div className="relative flex h-full min-h-[20rem] w-full min-w-0 max-w-[72rem] items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-[#f4f1eb] shadow-inner aspect-[16/7]">
+      <div className="relative flex h-full min-h-[20rem] w-full min-w-0 max-w-[72rem] items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-[#f4f1eb] shadow-inner aspect-[7/4]">
         <Canvas
           className="!h-full !w-full"
           orthographic
-          camera={{ position: [0, 120, 0], zoom: 4.6, near: 0.1, far: 500 }}
+          camera={{ position: [0, 120, 0], zoom: 5.1, near: 0.1, far: 500 }}
           gl={{ alpha: false, antialias: true }}
           style={{ background: '#f4f1eb' }}
           onCreated={({ gl }) => gl.setClearColor('#f4f1eb', 1)}
         >
           <mesh position={[0, -1, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={-2}>
-            <planeGeometry args={[COMPARISON_MAP_EXTENT, COMPARISON_MAP_EXTENT]} />
+            <planeGeometry args={[COMPARISON_MAP_EXTENT * COMPARISON_MAP_ASPECT, COMPARISON_MAP_EXTENT]} />
             <meshBasicMaterial
               map={mapTexture ?? undefined}
               color={mapTexture ? '#ffffff' : '#dedbd2'}
@@ -122,7 +124,7 @@ export function StkdeComparisonFieldMap({
             />
           </mesh>
           <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
-            <planeGeometry args={[COMPARISON_MAP_EXTENT, COMPARISON_MAP_EXTENT]} />
+            <planeGeometry args={[COMPARISON_MAP_EXTENT * COMPARISON_MAP_ASPECT, COMPARISON_MAP_EXTENT]} />
             <meshBasicMaterial map={texture} transparent opacity={0.98} depthWrite={false} side={THREE.DoubleSide} />
           </mesh>
         </Canvas>

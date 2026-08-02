@@ -66,9 +66,9 @@ export function StkdeComparisonStage({
     >
       <Stkde3DMapCapture onTextureReady={setMapTexture} />
 
-      <header className="relative z-10 mb-3 grid min-w-0 grid-cols-1 gap-4 rounded-2xl border border-border bg-white px-5 py-5 text-sm text-muted-foreground shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(19rem,24rem)] sm:items-stretch sm:px-7 sm:py-6">
-        <div className="flex min-w-0 flex-col justify-center gap-2">
-          <h2 className="text-2xl font-semibold uppercase tracking-[0.18em] text-foreground sm:text-3xl">A/B COMPARISON</h2>
+      <header className="relative z-10 mb-3 grid min-w-0 grid-cols-1 gap-3 rounded-2xl border border-border bg-white px-4 py-4 text-sm text-muted-foreground shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(18rem,40%)] sm:items-stretch sm:px-5 sm:py-4">
+        <div className="flex min-w-0 flex-col justify-center gap-1.5">
+          <h2 className="text-xl font-semibold uppercase tracking-[0.18em] text-foreground sm:text-2xl">A/B COMPARISON</h2>
           {mode === 'absolute' ? (
             <p className="font-mono text-xs tabular-nums text-muted-foreground">
               Shared absolute domain: {absoluteDomain[0].toPrecision(3)} – {absoluteDomain[1].toPrecision(3)}

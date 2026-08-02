@@ -99,11 +99,13 @@ describe('/stkde-3d route focus mode', () => {
     expect(comparisonViewportSource).toMatch(/w-full/);
     expect(comparisonViewportSource).toMatch(/min-h-\[20rem\]/);
     expect(comparisonViewportSource).toMatch(/rounded-2xl/);
+    expect(comparisonViewportSource).toMatch(/data-interval-date/);
+    expect(comparisonViewportSource).toMatch(/formatDate/);
     expect(comparisonViewportSource).not.toMatch(/CameraControls|Stkde3DScene|selectedSourceIndex/);
     expect(comparisonMapSource).toMatch(/displayMode/);
     expect(comparisonMapSource).toMatch(/mapSignedContrast/);
     expect(comparisonMapSource).toMatch(/items-center justify-center/);
-    expect(comparisonMapSource).toMatch(/aspect-\[16\/7\]/);
+     expect(comparisonMapSource).toMatch(/aspect-\[7\/4\]/);
     expect(comparisonMapSource).toMatch(/max-w-\[72rem\]/);
     expect(comparisonMathSource).toMatch(/COMPARISON_MAP_EXTENT = 100/);
     expect(comparisonMathSource).toMatch(/Math\.pow\(Math\.abs\(ratio\), 0\.65\)/);

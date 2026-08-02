@@ -91,7 +91,7 @@ describe('/stkde-3d comparison integration contracts', () => {
     expect(differenceSource).not.toMatch(/StkdeSliceStack|RawEventPoints|HotspotTrajectoryOverlay|BurstVolumeRenderer|AdaptiveWarpAxis|CameraControls|Top-down spatial field/);
     expect(mapSource).toContain('mapSignedContrast');
     expect(mapSource).toContain('items-center justify-center');
-    expect(mapSource).toContain('aspect-[16/7]');
+     expect(mapSource).toContain('aspect-[7/4]');
     expect(mapSource).toContain('max-w-[72rem]');
     expect(mapMathSource).toContain('COMPARISON_MAP_EXTENT = 100');
     expect(mapMathSource).toContain('Math.pow(Math.abs(ratio), 0.65)');
