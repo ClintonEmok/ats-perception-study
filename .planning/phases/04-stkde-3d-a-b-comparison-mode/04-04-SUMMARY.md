@@ -123,6 +123,8 @@ Each task was committed atomically:
 
 **Plan metadata:** `9e46c84` (docs: complete signed difference comparison plan)
 
+Additional correctness commit: `97b0ba1` (fix: invalidate comparison before case-study switch)
+
 ## Files Created/Modified
 
 - `src/app/stkde-3d/lib/comparison-presets.ts` - Exact catalog, typed resolution errors, and runtime metadata resolver.
@@ -154,9 +156,18 @@ Each task was committed atomically:
 - **Verification:** Preset tests and `pnpm typecheck` pass.
 - **Committed in:** `432197b` (part of task commit)
 
+**2. [Rule 1 - Bug] Invalidated comparison before case-study state replacement**
+
+- **Found during:** Final Task 3 lifecycle review
+- **Issue:** Case-study selection invalidation ran in an effect, allowing one render to pair the old dataset geometry with the new case-study selection.
+- **Fix:** Invalidate the temporary comparison directly in the case-study change handler before updating the dataset selector.
+- **Files modified:** `src/app/stkde-3d/page.tsx`
+- **Verification:** Comparison lifecycle tests and `pnpm typecheck` pass.
+- **Committed in:** `97b0ba1`
+
 ---
 
-**Total deviations:** 1 auto-fixed (1 blocking). **Impact on plan:** Required for type-safe mode integration; no scope creep.
+**Total deviations:** 2 auto-fixed (1 blocking, 1 bug). **Impact on plan:** Both fixes preserve type safety and prevent stale comparison rendering; no scope creep.
 
 ## Issues Encountered
 
