@@ -6,6 +6,7 @@ import {
   type ComparisonSelection,
   type Stkde3DComparisonState,
 } from '../lib/comparison';
+import type { ComparisonPresetDefinition } from '../lib/comparison-presets';
 import type { Stkde3DSceneSlice } from './Stkde3DSceneProvider';
 
 const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
@@ -39,6 +40,12 @@ export function StkdeComparisonControls({
   onResetComparison,
   onBackToStack,
   announcement,
+  presets = [],
+  selectedPresetId = '',
+  pendingPresetId,
+  activePresetId,
+  presetError,
+  onPresetSelect,
 }: {
   slices: readonly Stkde3DSceneSlice[];
   comparison: Stkde3DComparisonState | null;
@@ -47,6 +54,12 @@ export function StkdeComparisonControls({
   onResetComparison: () => void;
   onBackToStack: () => void;
   announcement?: string | null;
+  presets?: readonly ComparisonPresetDefinition[];
+  selectedPresetId?: string;
+  pendingPresetId?: string | null;
+  activePresetId?: string | null;
+  presetError?: string | null;
+  onPresetSelect?: (presetId: string) => void;
 }) {
   const hasNoIntervals = slices.length === 0;
   const hasTooFewIntervals = slices.length === 1;
@@ -63,6 +76,7 @@ export function StkdeComparisonControls({
       aria-labelledby="comparison-controls-heading"
       className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground"
       data-comparison-controls
+      data-comparison-preset-id={activePresetId ?? undefined}
     >
       <div className="mb-2 flex items-start justify-between gap-3">
         <div>
@@ -84,6 +98,35 @@ export function StkdeComparisonControls({
           </button>
         ) : null}
       </div>
+
+      {presets.length > 0 ? (
+        <div className="mb-2 rounded-xl border border-border bg-muted/20 p-2">
+          <label htmlFor="comparison-preset" className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            Comparison preset
+          </label>
+          <select
+            id="comparison-preset"
+            value={selectedPresetId}
+            onChange={(event) => onPresetSelect?.(event.target.value)}
+            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] text-foreground outline-none transition focus:border-foreground/40"
+          >
+            <option value="">Choose an exact A/B pair</option>
+            {presets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.label} · {preset.datasetPresetId} · A {preset.intervalA.label} vs B {preset.intervalB.label}
+              </option>
+            ))}
+          </select>
+          {pendingPresetId ? (
+            <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">Loading comparison preset…</p>
+          ) : null}
+          {presetError ? (
+            <p className="mt-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-[10px] leading-4 text-destructive" role="alert">
+              {presetError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {hasNoIntervals ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3">

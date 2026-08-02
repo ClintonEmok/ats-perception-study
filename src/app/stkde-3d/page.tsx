@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Focus, Pause, Play } from 'lucide-react';
 import { generateStkde3dMockData, generateStkde3dRealData } from './lib/mock-data';
 import { computeSliceKde, KDE_SCENE_SPAN_METERS } from '@/lib/kde';
@@ -22,6 +22,12 @@ import {
   type ComparisonSelectionInput,
   type Stkde3DComparisonState,
 } from './lib/comparison';
+import {
+  COMPARISON_PRESETS,
+  getComparisonPreset,
+  resolveComparisonPreset,
+  type ComparisonDatasetPresetId,
+} from './lib/comparison-presets';
 import { buildKdeHotspotSliceResults } from './lib/kde-hotspots';
 import { buildStandaloneAdaptiveTimeMaps } from './lib/standalone-adaptive-time';
 import { buildAllocationMetrics, buildDurationVolumeProfile } from './lib/volume-encoding';
@@ -44,7 +50,7 @@ const REAL_DATA_RANGE = {
 
 const MAX_DATA_PAGES = 100;
 
-type CaseStudyPresetId = 'full' | 'fourth-of-july' | 'spring-break' | 'new-years';
+type CaseStudyPresetId = ComparisonDatasetPresetId;
 
 type CaseStudyPreset = {
   id: CaseStudyPresetId;
@@ -220,6 +226,11 @@ export default function Stkde3DPage() {
   const [dataset, setDataset] = useState<DatasetState | null>(null);
   const [comparison, setComparison] = useState<Stkde3DComparisonState | null>(null);
   const [comparisonAnnouncement, setComparisonAnnouncement] = useState<string | null>(null);
+  const [selectedComparisonPresetId, setSelectedComparisonPresetId] = useState('');
+  const [pendingComparisonPresetId, setPendingComparisonPresetId] = useState<string | null>(null);
+  const [activeComparisonPresetId, setActiveComparisonPresetId] = useState<string | null>(null);
+  const [comparisonPresetError, setComparisonPresetError] = useState<string | null>(null);
+  const pendingPresetDatasetRef = useRef<ComparisonDatasetPresetId | null>(null);
   const selectedCaseStudy = CASE_STUDY_PRESETS.find((preset) => preset.id === caseStudyPresetId) ?? CASE_STUDY_PRESETS[0]!;
 
   useEffect(() => {
@@ -229,6 +240,13 @@ export default function Stkde3DPage() {
     setDataset(null);
     setActiveIndex(0);
     setComparison((current) => (current ? invalidateComparison() : null));
+    setActiveComparisonPresetId(null);
+    if (pendingPresetDatasetRef.current !== caseStudyPresetId) {
+      setSelectedComparisonPresetId('');
+      setPendingComparisonPresetId(null);
+      setComparisonPresetError(null);
+    }
+    pendingPresetDatasetRef.current = null;
 
     async function loadDataset() {
       try {
@@ -383,8 +401,6 @@ export default function Stkde3DPage() {
   const activeSliceRange = activeSlice
     ? `${DATE_FORMATTER.format(new Date(activeSlice.startEpoch * 1000))} - ${DATE_FORMATTER.format(new Date(activeSlice.endEpoch * 1000))}`
     : 'No active range';
-  const hasCompletedComparison = comparison?.mode === 'absolute' && Boolean(comparison.a && comparison.b);
-
   const toComparisonSelection = (slice: Stkde3DSceneSlice): ComparisonSelectionInput => ({
     index: slice.index,
     sourceSliceId: slice.sourceSliceId ?? null,
@@ -413,6 +429,44 @@ export default function Stkde3DPage() {
     setComparison(exitComparison());
   };
 
+  const handleCaseStudyChange = (nextCaseStudyPresetId: CaseStudyPresetId) => {
+    setIsPlaying(false);
+    pendingPresetDatasetRef.current = null;
+    setPendingComparisonPresetId(null);
+    setSelectedComparisonPresetId('');
+    setActiveComparisonPresetId(null);
+    setComparisonPresetError(null);
+    setCaseStudyPresetId(nextCaseStudyPresetId);
+  };
+
+  const handleComparisonPresetSelect = (presetId: string) => {
+    const preset = getComparisonPreset(presetId);
+    setSelectedComparisonPresetId(presetId);
+    setComparisonPresetError(null);
+    setActiveComparisonPresetId(null);
+    setIsPlaying(false);
+    setIsFocusedView(false);
+
+    if (!preset) {
+      setPendingComparisonPresetId(null);
+      setComparison(null);
+      return;
+    }
+
+    setPendingComparisonPresetId(preset.id);
+    setKdeParams({ ...preset.parameters.kde });
+    setAdaptiveTimeEnabled(preset.parameters.adaptiveTime);
+    setHeatmapRenderer(preset.parameters.renderer);
+    setShowRawEvents(preset.layer === 'heatmap-with-events');
+    setShowHotspotTrajectories(preset.layer === 'heatmap-with-trajectories');
+    setComparison(null);
+
+    if (caseStudyPresetId !== preset.datasetPresetId) {
+      pendingPresetDatasetRef.current = preset.datasetPresetId;
+      setCaseStudyPresetId(preset.datasetPresetId);
+    }
+  };
+
   const handleComparisonSliceSelect = (slice: Stkde3DSceneSlice) => {
     setComparisonAnnouncement(null);
     setComparison((current) => (current ? selectComparisonSlice(current, toComparisonSelection(slice)) : current));
@@ -436,6 +490,43 @@ export default function Stkde3DPage() {
       })
       : current));
   }, [sceneSlices]);
+
+  useEffect(() => {
+    if (!pendingComparisonPresetId || !dataset || sceneSlices.length === 0 || sliceKdeResults.length !== sceneSlices.length) {
+      return;
+    }
+
+    const preset = getComparisonPreset(pendingComparisonPresetId);
+    if (!preset || preset.datasetPresetId !== caseStudyPresetId) {
+      return;
+    }
+
+    try {
+      const resolved = resolveComparisonPreset(preset, caseStudyPresetId, sceneSlices);
+      setComparison({
+        mode: preset.view,
+        activeSlot: 'B',
+        a: {
+          ...resolved.selectionA,
+          eventCount: sceneSlices[resolved.selectionA.sourceSliceIndex]?.crimeCount,
+        },
+        b: {
+          ...resolved.selectionB,
+          eventCount: sceneSlices[resolved.selectionB.sourceSliceIndex]?.crimeCount,
+        },
+        linkedCameras: true,
+        status: preset.view === 'difference' ? 'difference' : 'ready',
+      });
+      setActiveComparisonPresetId(preset.id);
+      setPendingComparisonPresetId(null);
+      setComparisonPresetError(null);
+    } catch {
+      setComparison(null);
+      setPendingComparisonPresetId(null);
+      setActiveComparisonPresetId(null);
+      setComparisonPresetError('This comparison could not be resolved. Reset comparison and select two distinct intervals.');
+    }
+  }, [caseStudyPresetId, dataset, pendingComparisonPresetId, sceneSlices, sliceKdeResults.length]);
 
   const sceneRuntime = useMemo(
     () => createStkde3DSceneRuntime({
@@ -588,7 +679,10 @@ export default function Stkde3DPage() {
 
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-h-0 rounded-3xl border border-border bg-card p-2 shadow-sm backdrop-blur-sm">
-             {hasCompletedComparison && comparison.a && comparison.b ? (
+             {comparison
+               && (comparison.mode === 'absolute' || comparison.mode === 'difference')
+               && comparison.a
+               && comparison.b ? (
                <StkdeComparisonStage
                  selectionA={comparison.a}
                  selectionB={comparison.b}
@@ -648,10 +742,9 @@ export default function Stkde3DPage() {
               <select
                 id="case-study-preset"
                 value={caseStudyPresetId}
-                onChange={(event) => {
-                  setIsPlaying(false);
-                  setCaseStudyPresetId(event.target.value as CaseStudyPresetId);
-                }}
+               onChange={(event) => {
+                   handleCaseStudyChange(event.target.value as CaseStudyPresetId);
+                 }}
                 className="w-full rounded-[var(--radius)] border border-border bg-background px-2.5 py-2 text-foreground outline-none transition focus:border-foreground/40"
               >
                 {CASE_STUDY_PRESETS.map((preset) => (
@@ -670,10 +763,16 @@ export default function Stkde3DPage() {
               comparison={comparison}
               onEnterComparison={handleEnterComparison}
               onSelectSlice={handleComparisonSliceSelect}
-              onResetComparison={handleResetComparison}
-              onBackToStack={handleBackToStack}
-              announcement={comparisonAnnouncement}
-            />
+               onResetComparison={handleResetComparison}
+               onBackToStack={handleBackToStack}
+               announcement={comparisonAnnouncement}
+               presets={COMPARISON_PRESETS}
+               selectedPresetId={selectedComparisonPresetId}
+               pendingPresetId={pendingComparisonPresetId}
+               activePresetId={activeComparisonPresetId}
+               presetError={comparisonPresetError}
+               onPresetSelect={handleComparisonPresetSelect}
+             />
 
             <section className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
               <div className="mb-2 flex items-center justify-between gap-3">
