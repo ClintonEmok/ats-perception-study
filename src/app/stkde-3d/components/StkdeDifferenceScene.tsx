@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CameraControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -49,6 +49,7 @@ export interface StkdeDifferenceSceneProps {
 }
 
 export function StkdeDifferenceScene({ fieldA, fieldB, mapTexture }: StkdeDifferenceSceneProps) {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const comparison = useMemo(() => {
     try {
       return { difference: computeSignedKdeDifference(fieldA, fieldB), error: null };
@@ -67,6 +68,14 @@ export function StkdeDifferenceScene({ fieldA, fieldB, mapTexture }: StkdeDiffer
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setPrefersReducedMotion(mediaQuery.matches);
+    onChange();
+    mediaQuery.addEventListener?.('change', onChange);
+    return () => mediaQuery.removeEventListener?.('change', onChange);
+  }, []);
+
   if (comparison.error || !comparison.difference) {
     return (
       <div
@@ -80,7 +89,7 @@ export function StkdeDifferenceScene({ fieldA, fieldB, mapTexture }: StkdeDiffer
   }
 
   return (
-    <div className="relative h-full min-h-[20rem] min-w-0 overflow-hidden bg-[#f4f1eb]" data-difference-field="signed-kde">
+    <div className="relative h-full min-h-[20rem] min-w-0 overflow-hidden bg-[#f4f1eb]" data-difference-field="signed-kde" aria-label="Signed KDE difference map: KDE(A) minus KDE(B)">
       <Canvas
         orthographic
         camera={{ position: [0, 120, 0], zoom: 5.5, near: 0.1, far: 500 }}
@@ -105,7 +114,7 @@ export function StkdeDifferenceScene({ fieldA, fieldB, mapTexture }: StkdeDiffer
         </mesh>
         <CameraControls
           makeDefault
-          smoothTime={0.3}
+          smoothTime={prefersReducedMotion ? 0 : 0.3}
           minDistance={30}
           maxDistance={500}
           minPolarAngle={0}

@@ -218,7 +218,6 @@ export default function Stkde3DPage() {
   const [caseStudyPresetId, setCaseStudyPresetId] = useState<CaseStudyPresetId>('full');
   const [dataset, setDataset] = useState<DatasetState | null>(null);
   const [datasetLoadStatus, setDatasetLoadStatus] = useState<DatasetRenderStatus>('loading');
-  const [datasetLoadError, setDatasetLoadError] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const [comparison, setComparison] = useState<Stkde3DComparisonState | null>(null);
   const [comparisonAnnouncement, setComparisonAnnouncement] = useState<string | null>(null);
@@ -236,7 +235,6 @@ export default function Stkde3DPage() {
 
     setDataset(null);
     setDatasetLoadStatus('loading');
-    setDatasetLoadError(false);
     setActiveIndex(0);
     setComparison((current) => (current ? invalidateComparison() : null));
     setActiveComparisonPresetId(null);
@@ -256,14 +254,12 @@ export default function Stkde3DPage() {
         if (!cancelled) {
           setDataset(loadedDataset);
           setDatasetLoadStatus(loadedDataset.slices.length === 0 ? 'empty' : 'ready');
-          setDatasetLoadError(false);
           setActiveIndex(0);
         }
       } catch {
         if (!cancelled) {
           setDataset(null);
           setDatasetLoadStatus('error');
-          setDatasetLoadError(true);
         }
       }
     }
@@ -410,6 +406,11 @@ export default function Stkde3DPage() {
     setComparisonPresetError(null);
     setComparison((current) => (current ? invalidateComparison() : null));
     setCaseStudyPresetId(nextCaseStudyPresetId);
+  };
+
+  const handleRetryLoading = () => {
+    setComparisonAnnouncement(null);
+    setRetryToken((value) => value + 1);
   };
 
   const handleComparisonPresetSelect = (presetId: string) => {
@@ -559,15 +560,12 @@ export default function Stkde3DPage() {
     }
   }, [isFocusedView, isPlaying]);
 
-  if (!dataset) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-background text-foreground">
-        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
-           Loading {selectedCaseStudy.label.toLowerCase()} data...
-        </div>
-      </main>
-    );
-  }
+  const loadingLabel = `Loading ${selectedCaseStudy.label.toLowerCase()} data…`;
+  const errorLabel = `Unable to load ${selectedCaseStudy.label.toLowerCase()} data. Retry loading or choose another case study.`;
+  const emptyLabel = 'No intervals available';
+  const emptyDescription = 'This case study returned no rendered intervals. Choose another case study or retry loading.';
+  const stageMode = comparison?.mode ?? 'stack';
+  const stageIsReady = datasetLoadStatus === 'ready' && Boolean(dataset);
 
   return (
     <main className="min-h-dvh overflow-x-hidden bg-background text-foreground">
@@ -663,9 +661,50 @@ export default function Stkde3DPage() {
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="min-h-0 rounded-3xl border border-border bg-card p-2 shadow-sm backdrop-blur-sm">
-             {comparison
+         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+           <div className="min-h-0 min-w-0 rounded-3xl border border-border bg-card p-2 shadow-sm backdrop-blur-sm">
+             {datasetLoadStatus === 'loading' ? (
+               <section
+                 className="relative flex min-h-[41rem] min-w-0 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-border bg-[#f4f1eb] p-6"
+                 data-comparison-stage
+                 data-comparison-mode={stageMode}
+                 data-render-status="loading"
+                 aria-busy="true"
+                 aria-live="polite"
+               >
+                 <div className="absolute inset-2 rounded-xl border border-border bg-card/35 motion-safe:animate-pulse motion-reduce:animate-none" />
+                 <div className="relative z-10 rounded-xl border border-border bg-card/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm">
+                   {loadingLabel}
+                 </div>
+               </section>
+             ) : datasetLoadStatus === 'error' ? (
+               <section
+                 className="flex min-h-[41rem] min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-destructive/30 bg-card px-6 text-center"
+                 data-comparison-stage
+                 data-comparison-mode={stageMode}
+                 data-render-status="error"
+                 role="alert"
+               >
+                 <h2 className="max-w-xl text-base font-semibold text-foreground">{errorLabel}</h2>
+                 <button
+                   type="button"
+                   onClick={handleRetryLoading}
+                   className="min-h-10 rounded-[var(--radius)] border border-destructive/40 bg-background px-3 py-2 text-sm text-foreground transition hover:border-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+                 >
+                   Retry loading
+                 </button>
+               </section>
+             ) : datasetLoadStatus === 'empty' ? (
+               <section
+                 className="flex min-h-[41rem] min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-[#f4f1eb] px-6 text-center"
+                 data-comparison-stage
+                 data-comparison-mode={stageMode}
+                 data-render-status="empty"
+               >
+                 <h2 className="text-base font-semibold text-foreground">{emptyLabel}</h2>
+                 <p className="max-w-md text-sm leading-5 text-muted-foreground">{emptyDescription}</p>
+               </section>
+             ) : comparison
                && (comparison.mode === 'absolute' || comparison.mode === 'difference')
                && comparison.a
                && comparison.b ? (
@@ -686,42 +725,64 @@ export default function Stkde3DPage() {
                  activeSliceOpacity={activeSliceOpacity}
                  nonActiveSliceOpacity={nonActiveSliceOpacity}
                  timeDomain={timeDomain}
-                  runtime={sceneRuntime}
-                  linkedCameras={comparison.linkedCameras}
-                  mode={comparison.mode}
-                  comparisonPresetId={activeComparisonPresetId}
-                  onModeChange={handleComparisonModeChange}
-                  onLinkedCamerasChange={(linked) => setComparison((current) => current ? { ...current, linkedCameras: linked } : current)}
+                 runtime={sceneRuntime}
+                 linkedCameras={comparison.linkedCameras}
+                 mode={comparison.mode}
+                 comparisonPresetId={activeComparisonPresetId}
+                 onModeChange={handleComparisonModeChange}
+                 onLinkedCamerasChange={(linked) => setComparison((current) => current ? { ...current, linkedCameras: linked } : current)}
                />
              ) : (
-               <Stkde3DScene
-                 slices={sceneSlices}
-                 sliceKdes={sliceKdes}
-                 sliceEvents={sliceEvents}
-                 hotspotSliceResults={hotspotSliceResults}
-                 hotspotMatchingOptions={hotspotMatchingOptions}
-                 volumeProfile={volumeProfile}
-                 heatmapRenderer={heatmapRenderer}
-                 kdeGridSize={kdeParams.gridSize}
-                 activeIndex={activeIndex}
-                 viewMode={isFocusedView ? 'focus' : 'stack'}
-                 showRawEvents={showRawEvents}
-                 showHotspotTrajectories={showHotspotTrajectories}
-                 activeSliceOpacity={activeSliceOpacity}
-                 nonActiveSliceOpacity={nonActiveSliceOpacity}
-                 timeDomain={timeDomain}
-                 runtime={sceneRuntime}
-                 comparisonSelectedSourceSliceIds={[
-                   comparison?.a?.sourceSliceId,
-                   comparison?.b?.sourceSliceId,
-                 ].filter((sourceSliceId): sourceSliceId is string => Boolean(sourceSliceId))}
-                 comparisonSelectedSourceIndices={[
-                   comparison?.a?.sourceSliceIndex,
-                   comparison?.b?.sourceSliceIndex,
-                 ].filter((sourceSliceIndex): sourceSliceIndex is number => typeof sourceSliceIndex === 'number')}
-               />
+               <section
+                 className="relative min-h-[41rem] min-w-0 overflow-hidden rounded-2xl border border-border bg-[#f4f1eb]"
+                 data-comparison-stage
+                 data-comparison-mode={comparison?.mode ?? 'stack'}
+                 data-render-status={stageIsReady ? 'ready' : datasetLoadStatus}
+                 data-selection-slot={comparison?.mode === 'selecting' ? comparison.activeSlot : undefined}
+               >
+                 <div className="absolute inset-0 z-10">
+                   <Stkde3DScene
+                     slices={sceneSlices}
+                     sliceKdes={sliceKdes}
+                     sliceEvents={sliceEvents}
+                     hotspotSliceResults={hotspotSliceResults}
+                     hotspotMatchingOptions={hotspotMatchingOptions}
+                     volumeProfile={volumeProfile}
+                     heatmapRenderer={heatmapRenderer}
+                     kdeGridSize={kdeParams.gridSize}
+                     activeIndex={activeIndex}
+                     viewMode={isFocusedView ? 'focus' : 'stack'}
+                     showRawEvents={showRawEvents}
+                     showHotspotTrajectories={showHotspotTrajectories}
+                     activeSliceOpacity={activeSliceOpacity}
+                     nonActiveSliceOpacity={nonActiveSliceOpacity}
+                     timeDomain={timeDomain}
+                     runtime={sceneRuntime}
+                     comparisonSelectedSourceSliceIds={[
+                       comparison?.a?.sourceSliceId,
+                       comparison?.b?.sourceSliceId,
+                     ].filter((sourceSliceId): sourceSliceId is string => Boolean(sourceSliceId))}
+                     comparisonSelectedSourceIndices={[
+                       comparison?.a?.sourceSliceIndex,
+                       comparison?.b?.sourceSliceIndex,
+                     ].filter((sourceSliceIndex): sourceSliceIndex is number => typeof sourceSliceIndex === 'number')}
+                   />
+                 </div>
+                 {dataset?.source === 'mock' ? (
+                   <div className="absolute left-3 top-3 z-20 rounded-md border border-amber-600/30 bg-amber-50/95 px-2 py-1 text-[10px] font-medium text-amber-950" role="status">
+                     Using mock data
+                   </div>
+                 ) : null}
+                 {pendingComparisonPresetId ? (
+                   <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/45 p-4 backdrop-blur-[1px]" role="status" aria-live="polite">
+                     <div className="rounded-xl border border-border bg-card/95 px-4 py-3 text-sm text-muted-foreground shadow-sm">
+                       Loading comparison preset…
+                     </div>
+                   </div>
+                 ) : null}
+               </section>
              )}
-          </div>
+           </div>
 
           <aside className="min-h-0 space-y-4 overflow-y-auto rounded-3xl border border-border bg-card/90 p-4 shadow-sm backdrop-blur-md">
            <section className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
@@ -747,8 +808,8 @@ export default function Stkde3DPage() {
               </div>
              </section>
 
-            <StkdeComparisonControls
-              slices={sceneSlices}
+             <StkdeComparisonControls
+               slices={sceneSlices}
               comparison={comparison}
               onEnterComparison={handleEnterComparison}
               onSelectSlice={handleComparisonSliceSelect}
@@ -761,8 +822,12 @@ export default function Stkde3DPage() {
                activePresetId={activeComparisonPresetId}
                presetError={comparisonPresetError}
                onPresetSelect={handleComparisonPresetSelect}
-               onModeChange={handleComparisonModeChange}
-             />
+                onModeChange={handleComparisonModeChange}
+                renderStatus={datasetLoadStatus}
+                caseStudyLabel={selectedCaseStudy.label.toLowerCase()}
+                onRetryLoading={handleRetryLoading}
+                usingMockData={dataset?.source === 'mock'}
+              />
 
             <section className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
               <div className="mb-2 flex items-center justify-between gap-3">

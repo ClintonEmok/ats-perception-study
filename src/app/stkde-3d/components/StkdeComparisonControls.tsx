@@ -47,6 +47,10 @@ export function StkdeComparisonControls({
   presetError,
   onPresetSelect,
   onModeChange,
+  renderStatus,
+  caseStudyLabel,
+  onRetryLoading,
+  usingMockData = false,
 }: {
   slices: readonly Stkde3DSceneSlice[];
   comparison: Stkde3DComparisonState | null;
@@ -62,9 +66,13 @@ export function StkdeComparisonControls({
   presetError?: string | null;
   onPresetSelect?: (presetId: string) => void;
   onModeChange?: (mode: 'absolute' | 'difference') => void;
+  renderStatus?: 'loading' | 'ready' | 'empty' | 'error';
+  caseStudyLabel?: string;
+  onRetryLoading?: () => void;
+  usingMockData?: boolean;
 }) {
-  const hasNoIntervals = slices.length === 0;
-  const hasTooFewIntervals = slices.length === 1;
+  const hasNoIntervals = renderStatus === 'empty' || (renderStatus === undefined && slices.length === 0);
+  const hasTooFewIntervals = slices.length === 1 && (renderStatus === undefined || renderStatus === 'ready');
   const isSelecting = comparison?.mode === 'selecting';
   const selectionPrompt = comparison?.activeSlot === 'A' ? 'Select interval A' : 'Select interval B';
   const statusMessage = comparison
@@ -79,6 +87,7 @@ export function StkdeComparisonControls({
       className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground"
       data-comparison-controls
       data-comparison-preset-id={activePresetId ?? undefined}
+      data-selection-slot={isSelecting && comparison ? comparison.activeSlot : undefined}
     >
       <div className="mb-2 flex items-start justify-between gap-3">
         <div>
@@ -92,25 +101,52 @@ export function StkdeComparisonControls({
         {!comparison ? (
           <button
             type="button"
-            onClick={onEnterComparison}
-            disabled={slices.length < 2}
-            className="min-h-9 shrink-0 rounded-[var(--radius)] border border-amber-600/60 bg-amber-50 px-2.5 py-1.5 font-medium text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
+           onClick={onEnterComparison}
+           disabled={slices.length < 2}
+            className="min-h-9 shrink-0 rounded-[var(--radius)] border border-amber-600/60 bg-amber-50 px-2.5 py-1.5 font-medium text-amber-900 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground motion-reduce:transition-none"
           >
             Compare intervals
           </button>
         ) : null}
       </div>
 
+      {usingMockData ? (
+        <p className="mb-2 rounded-lg border border-amber-600/30 bg-amber-50/70 px-2 py-1.5 text-[10px] leading-4 text-amber-950" role="status">
+          Using mock data
+        </p>
+      ) : null}
+
+      {renderStatus === 'loading' ? (
+        <p className="mb-2 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-[10px] leading-4" role="status">
+          Loading {caseStudyLabel ?? 'case study'} data…
+        </p>
+      ) : null}
+
+      {renderStatus === 'error' ? (
+        <div className="mb-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3" role="alert">
+          <p className="text-[11px] leading-4 text-destructive">
+            Unable to load {caseStudyLabel ?? 'case study'} data. Retry loading or choose another case study.
+          </p>
+          <button
+            type="button"
+            onClick={onRetryLoading}
+            className="mt-2 min-h-9 rounded-[var(--radius)] border border-destructive/40 bg-background px-2.5 py-1.5 text-foreground transition hover:border-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+          >
+            Retry loading
+          </button>
+        </div>
+      ) : null}
+
       {presets.length > 0 ? (
         <div className="mb-2 rounded-xl border border-border bg-muted/20 p-2">
           <label htmlFor="comparison-preset" className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
             Comparison preset
           </label>
-          <select
-            id="comparison-preset"
-            value={selectedPresetId}
-            onChange={(event) => onPresetSelect?.(event.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] text-foreground outline-none transition focus:border-foreground/40"
+           <select
+             id="comparison-preset"
+             value={selectedPresetId}
+             onChange={(event) => onPresetSelect?.(event.target.value)}
+             className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] text-foreground outline-none transition focus:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
           >
             <option value="">Choose an exact A/B pair</option>
             {presets.map((preset) => (
@@ -140,7 +176,7 @@ export function StkdeComparisonControls({
       ) : null}
 
       {hasTooFewIntervals ? (
-        <p className="rounded-xl border border-border bg-muted/30 p-3 leading-4">
+           <p className="rounded-xl border border-border bg-muted/30 p-3 leading-4">
           Comparison needs at least two rendered intervals.
         </p>
       ) : null}
@@ -233,17 +269,17 @@ export function StkdeComparisonControls({
           ) : null}
 
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={onResetComparison}
-              className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40"
+             <button
+               type="button"
+               onClick={onResetComparison}
+               className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
             >
               Reset comparison
             </button>
-            <button
-              type="button"
-              onClick={onBackToStack}
-              className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40"
+             <button
+               type="button"
+               onClick={onBackToStack}
+               className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
             >
               Back to stack
             </button>
@@ -256,8 +292,9 @@ export function StkdeComparisonControls({
                   type="button"
                   role="tab"
                   aria-selected={comparison.mode === 'absolute'}
+                  tabIndex={comparison.mode === 'absolute' ? 0 : -1}
                   onClick={() => onModeChange?.('absolute')}
-                  className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition ${comparison.mode === 'absolute' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+                  className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${comparison.mode === 'absolute' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
                 >
                   Absolute
                 </button>
@@ -265,15 +302,16 @@ export function StkdeComparisonControls({
                   type="button"
                   role="tab"
                   aria-selected={comparison.mode === 'difference'}
+                  tabIndex={comparison.mode === 'difference' ? 0 : -1}
                   onClick={() => onModeChange?.('difference')}
-                  className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition ${comparison.mode === 'difference' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+                  className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${comparison.mode === 'difference' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
                 >
                   A − B difference
                 </button>
               </div>
               {comparison.mode === 'difference' ? (
                 <p className="mt-2 rounded-lg border border-border bg-muted/50 px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
-                  Red = A higher · Neutral = no difference · Blue = B higher.
+                   Red = A higher · Neutral = no difference · Blue = B higher
                   <br />
                   Unavailable in A − B difference view: signed heatmap only.
                 </p>
@@ -287,7 +325,7 @@ export function StkdeComparisonControls({
         <button
           type="button"
           onClick={onResetComparison}
-          className="mt-2 min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40"
+           className="mt-2 min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
         >
           Reset comparison
         </button>

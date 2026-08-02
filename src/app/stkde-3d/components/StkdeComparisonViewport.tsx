@@ -106,20 +106,20 @@ export function StkdeComparisonViewport({
 
   return (
     <article
-      className="min-h-0 min-w-0 overflow-hidden rounded-2xl border border-border bg-background/45"
+      className="min-h-[20rem] min-w-0 overflow-hidden rounded-2xl border border-border bg-background/45"
       data-interval-slot={slot}
       data-source-slice-id={sourceContext.sourceSliceId ?? selection.sourceSliceId ?? `index-${sourceSliceIndex}`}
       aria-label={accessibleLabel}
     >
-      <header className="flex h-8 min-w-0 items-center justify-between gap-2 border-b border-border bg-card/95 px-2.5 text-[10px] text-muted-foreground">
-        <div className="flex min-w-0 items-center gap-2">
+      <header className="flex min-h-8 min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-2.5 py-1.5 text-[10px] text-muted-foreground">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <span className="shrink-0 font-mono text-sm font-semibold text-foreground">{slot}</span>
-          <span className="min-w-0 truncate font-medium text-foreground" title={selectedSlice?.label ?? selection.label}>
+          <span className="min-w-0 break-words font-medium text-foreground" title={selectedSlice?.label ?? selection.label}>
             {selectedSlice?.label ?? selection.label ?? `Slice ${sourceSliceIndex + 1}`}
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-2 font-mono tabular-nums">
-          <span title={`${formatEpoch(selection.startEpoch)} to ${formatEpoch(selection.endEpoch)}`}>
+        <div className="flex min-w-0 flex-wrap items-center gap-2 font-mono tabular-nums">
+          <span className="break-words" title={`${formatEpoch(selection.startEpoch)} to ${formatEpoch(selection.endEpoch)}`}>
             {formatEpoch(selection.startEpoch)} – {formatEpoch(selection.endEpoch)}
           </span>
           <span>{selection.eventCount ?? selectedSlice?.crimeCount ?? 0} events</span>
@@ -161,7 +161,7 @@ export function StkdeComparisonViewport({
           />
         ) : (
           <div className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
-            This interval has no KDE field available for focused comparison.
+            This comparison could not be resolved. Reset comparison and select two distinct intervals.
           </div>
         )}
       </div>

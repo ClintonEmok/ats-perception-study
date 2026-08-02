@@ -11,10 +11,10 @@ export function StkdeIntensityLegend({
   mode?: 'field' | 'legacy';
   domain?: [number, number];
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <aside className="pointer-events-auto w-[15rem] rounded-[var(--radius)] border border-border bg-card/95 px-2.5 py-2 text-[10px] text-muted-foreground shadow-sm backdrop-blur-md">
+    <aside className="pointer-events-auto w-full min-w-0 max-w-[15rem] rounded-[var(--radius)] border border-border bg-card/95 px-2.5 py-2 text-[10px] text-muted-foreground shadow-sm backdrop-blur-md sm:w-[15rem]">
       <button
         type="button"
         aria-expanded={isExpanded}

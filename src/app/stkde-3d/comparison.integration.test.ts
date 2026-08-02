@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
+import { buildComparisonSliceFixture } from './lib/comparison-fixtures';
 
 const read = (relativePath: string): string => readFileSync(
   new URL(`./${relativePath}`, import.meta.url),
@@ -40,21 +41,44 @@ describe('/stkde-3d comparison integration contracts', () => {
     const differenceSource = read('components/StkdeDifferenceScene.tsx');
     const fixtureSource = read('lib/comparison-fixtures.ts');
     const presetSource = read('lib/comparison-presets.ts');
+    const intensityLegendSource = read('components/StkdeIntensityLegend.tsx');
 
     expect(pageSource).toContain('sourceSliceId');
     expect(pageSource).toContain('sourceSliceIndex');
     expect(pageSource).toContain('loadConfiguredMockStkde3dDataset');
+    expect(pageSource).toContain('data-render-status="loading"');
+    expect(pageSource).toContain('data-render-status="error"');
+    expect(pageSource).toContain('data-render-status="empty"');
+    expect(pageSource).toContain('Retry loading');
+    expect(pageSource).toContain('Using mock data');
     expect(controlsSource).toContain('Compare intervals');
     expect(controlsSource).toContain('Select interval A');
     expect(controlsSource).toContain('Select interval B');
+    expect(controlsSource).toContain('data-selection-slot');
+    expect(controlsSource).toContain('Unavailable in A − B difference view: signed heatmap only.');
     expect(stageSource).toContain('data-comparison-stage');
     expect(stageSource).toContain('data-comparison-mode={mode}');
     expect(viewportSource).toContain('data-interval-slot={slot}');
     expect(viewportSource).toContain('data-source-slice-id=');
+    expect(viewportSource).toContain('min-h-[20rem]');
+    expect(intensityLegendSource).toContain('STKDE intensity');
     expect(differenceSource).toContain('data-difference-field="signed-kde"');
     expect(differenceSource).not.toMatch(/StkdeSliceStack|RawEventPoints|HotspotTrajectoryOverlay|BurstVolumeRenderer|AdaptiveWarpAxis/);
     expect(presetSource).toContain('full-slice-02-vs-08');
     expect(presetSource).toContain('fourth-of-july-slice-03-vs-09');
     expect(fixtureSource).toContain('buildComparisonSliceFixture');
+  });
+
+  test('keeps zero, one, two, and ten rendered-interval fixtures deterministic', () => {
+    for (const count of [0, 1, 2, 10] as const) {
+      const first = buildComparisonSliceFixture(count);
+      const second = buildComparisonSliceFixture(count);
+
+      expect(first).toHaveLength(count);
+      expect(first).toEqual(second);
+      expect(first.map((slice) => slice.sourceSliceId)).toEqual(
+        Array.from({ length: count }, (_, index) => `fixture-slice-${index}`),
+      );
+    }
   });
 });

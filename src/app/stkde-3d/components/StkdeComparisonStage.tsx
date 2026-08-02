@@ -120,6 +120,7 @@ export function StkdeComparisonStage({
 
   const fieldA = sliceKdeResults[selectionA.sourceSliceIndex]?.field;
   const fieldB = sliceKdeResults[selectionB.sourceSliceIndex]?.field;
+  const hasComparisonFields = Boolean(fieldA && fieldB);
   const formatInterval = useCallback((selection: ComparisonSelection) => {
     const formatter = new Intl.DateTimeFormat('en-US', {
       dateStyle: 'medium',
@@ -140,7 +141,7 @@ export function StkdeComparisonStage({
       className="relative flex min-h-[41rem] min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-border bg-[#f4f1eb] p-2"
       data-comparison-stage
       data-comparison-mode={mode}
-      data-render-status={mapTexture ? 'ready' : 'loading'}
+      data-render-status={hasComparisonFields ? 'ready' : 'error'}
       data-camera-linked={mode === 'absolute' ? (linkedCameras ? 'true' : 'false') : undefined}
       data-comparison-preset-id={comparisonPresetId ?? undefined}
     >
@@ -186,21 +187,21 @@ export function StkdeComparisonStage({
         ) : null}
       </header>
 
-      <div className="relative z-10 mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-card p-1 text-[10px]">
-          <button
-            type="button"
-            aria-pressed={mode === 'absolute'}
-            onClick={() => onModeChange?.('absolute')}
-            className={`min-h-8 rounded-md px-3 py-1.5 transition ${mode === 'absolute' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+      <div className="relative z-10 mb-2 flex min-w-0 flex-wrap items-start justify-between gap-2">
+        <div className="grid w-full max-w-[18rem] grid-cols-2 gap-1 rounded-lg border border-border bg-card p-1 text-[10px] sm:w-auto">
+            <button
+              type="button"
+              aria-pressed={mode === 'absolute'}
+              onClick={() => onModeChange?.('absolute')}
+              className={`min-h-8 rounded-md px-3 py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${mode === 'absolute' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
           >
             Absolute
           </button>
-          <button
-            type="button"
-            aria-pressed={mode === 'difference'}
-            onClick={() => onModeChange?.('difference')}
-            className={`min-h-8 rounded-md px-3 py-1.5 transition ${mode === 'difference' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            <button
+              type="button"
+              aria-pressed={mode === 'difference'}
+              onClick={() => onModeChange?.('difference')}
+              className={`min-h-8 rounded-md px-3 py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${mode === 'difference' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
           >
             A − B difference
           </button>
