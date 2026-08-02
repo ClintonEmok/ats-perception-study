@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: in_progress
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-08-01T23:56:21Z"
-last_activity: 2026-08-01
-last_activity_desc: Completed raw KDE comparison fields, signed subtraction math, and the dedicated signed palette.
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-08-02T06:57:03Z"
+last_activity: 2026-08-02
+last_activity_desc: Completed 04-03-PLAN.md.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -28,30 +28,36 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: 2 of 5 (raw KDE comparison math and signed palette)
+Plan: 3 of 5 (matched vertical absolute panes and linked cameras)
 Status: In progress
-Last activity: 2026-08-01 — Completed 04-02-PLAN.md.
+Last activity: 2026-08-02 — Completed 04-03-PLAN.md.
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
-- Average duration: 11 min
-- Total execution time: 22 min
+- Total plans completed: 3
+- Average duration: 2h 22m
+- Total execution time: 7h 07m
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 4 | 2 | 5 | 11 min |
+| Phase 4 | 3 | 5 | 2h 22m |
 
 **Recent Trend:**
 
 - Last 5 plans: -
 - Trend: Stable
+
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 04-stkde-3d-a-b-comparison-mode P03 | 6h 45m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -82,6 +88,9 @@ Recent decisions affecting current work:
 - [Phase 4 Plan 04-02] Complete raw KDE fields remain separate from sparse thresholded display cells, and `KdeField` is consumed through the public `@/lib/kde` barrel.
 - [Phase 4 Plan 04-02] Signed comparison rejects missing or mismatched fields and uses a stable positive fallback only for valid all-zero domains.
 - [Phase 4 Plan 04-02] Red-neutral-blue signed colors are centralized separately from the existing sequential absolute palettes.
+- [Phase 4 Plan 04-03] Absolute A/B panes share one stage-owned map capture and raw KDE domain while focused local indexes remain separate from source identity.
+- [Phase 4 Plan 04-03] Full-source trajectories and timestamped events are passed explicitly into focused panes; trajectory visibility is not suppressed solely by focus mode.
+- [Phase 4 Plan 04-03] Camera linking is imperative and guarded: relinking snaps B to A, unlinking preserves divergence, and reset applies one front-oblique pose to both panes.
 
 ### Roadmap Evolution
 
@@ -89,11 +98,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 Plan 04-03 is the next active task: matched vertical absolute panes and linked cameras. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 Plan 04-04 is the next active task: signed difference mode, exact-pair presets, and invalidation wiring. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
-The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted STKDE-3D, burst-volume, signal-source, store, preset, and evolution tests pass.
+The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted Phase 4 tests, typecheck, lint, and production build pass. Browser/WebGL review remains for the new fixed-height pane composition and live camera interaction.
 
 ## Deferred Items
 
@@ -103,8 +112,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-01T23:56:21Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-08-02T06:57:03Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
 
 ## Quick Tasks Completed
