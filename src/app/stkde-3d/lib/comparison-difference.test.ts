@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { computeSliceKde } from '@/lib/kde';
 import type { KdeField } from '@/lib/kde';
 import {
   computeSharedAbsoluteDomain,
@@ -29,6 +30,27 @@ describe('comparison KDE math', () => {
     expect(convertKdeFieldToDisplayCells(a, domain[1], 0.1)).toEqual([
       { x: 25, z: -25, intensity: 0.5, support: 1 },
     ]);
+  });
+
+  test('accepts raw fields whose maximum is rounded by Float32 storage', () => {
+    const params = {
+      gridSize: 48,
+      smoothingMeters: 150,
+      kernelRadiusCells: 4,
+      threshold: 0.2,
+    };
+    const fieldA = computeSliceKde([
+      { x: 5.0508369924500585, z: -31.94834478199482 },
+      { x: 5.008547357283533, z: -24.10332034341991 },
+    ], params).field;
+    const fieldB = computeSliceKde([{ x: -25, z: 25 }], params).field;
+    const observedMaximum = Math.max(...Array.from(fieldA.values));
+
+    expect(fieldA.maxIntensity).toBe(observedMaximum);
+    expect(() => computeSharedAbsoluteDomain(fieldA, fieldB)).not.toThrow();
+    expect(computeSharedAbsoluteDomain(fieldA, fieldB)[1]).toBe(
+      Math.max(observedMaximum, Math.max(...Array.from(fieldB.values))),
+    );
   });
 
   test('subtracts raw values below a display cutoff', () => {

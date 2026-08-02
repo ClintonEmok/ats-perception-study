@@ -52,7 +52,7 @@ export function computeSliceKde(
   }
 
   const intensity = new Float32Array(gridRows * gridCols);
-  let maxIntensity = 0;
+  let storedMaxIntensity = 0;
   let intensitySum = 0;
 
   for (let row = 0; row < gridRows; row++) {
@@ -79,12 +79,16 @@ export function computeSliceKde(
       }
 
       intensity[centerIdx] = sum;
+      // KdeField.values is Float32Array storage, so its observable maximum
+      // can differ from the pre-storage JavaScript sum by one float32 ULP.
+      // Derive the metadata from the stored field that comparison consumers
+      // validate rather than from the higher-precision intermediate value.
+      storedMaxIntensity = Math.max(storedMaxIntensity, intensity[centerIdx] ?? 0);
       intensitySum += sum;
-      if (sum > maxIntensity) maxIntensity = sum;
     }
   }
 
-  const safeMax = Math.max(1, maxIntensity);
+  const safeMax = Math.max(1, storedMaxIntensity);
   const cells: KdeCell[] = [];
 
   for (let row = 0; row < gridRows; row++) {
@@ -112,7 +116,7 @@ export function computeSliceKde(
     gridSize: gridRows,
     cellWidth,
     cellHeight,
-    maxIntensity,
+    maxIntensity: storedMaxIntensity,
   };
 
   return { cells, maxIntensity: safeMax, meanIntensity, field };
