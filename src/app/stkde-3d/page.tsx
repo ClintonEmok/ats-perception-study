@@ -11,6 +11,7 @@ import { SliceInspector } from './components/SliceInspector';
 import type { StkdeHeatmapRenderer } from './components/StkdeSliceStack';
 import { KdeTuningPanel } from './components/KdeTuningPanel';
 import { StkdeComparisonControls } from './components/StkdeComparisonControls';
+import { StkdeComparisonStage } from './components/StkdeComparisonStage';
 import {
   COMPARISON_MESSAGES,
   enterComparison,
@@ -382,6 +383,7 @@ export default function Stkde3DPage() {
   const activeSliceRange = activeSlice
     ? `${DATE_FORMATTER.format(new Date(activeSlice.startEpoch * 1000))} - ${DATE_FORMATTER.format(new Date(activeSlice.endEpoch * 1000))}`
     : 'No active range';
+  const hasCompletedComparison = comparison?.mode === 'absolute' && Boolean(comparison.a && comparison.b);
 
   const toComparisonSelection = (slice: Stkde3DSceneSlice): ComparisonSelectionInput => ({
     index: slice.index,
@@ -586,32 +588,56 @@ export default function Stkde3DPage() {
 
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-h-0 rounded-3xl border border-border bg-card p-2 shadow-sm backdrop-blur-sm">
-            <Stkde3DScene
-              slices={sceneSlices}
-              sliceKdes={sliceKdes}
-              sliceEvents={sliceEvents}
-              hotspotSliceResults={hotspotSliceResults}
-              hotspotMatchingOptions={hotspotMatchingOptions}
-              volumeProfile={volumeProfile}
-              heatmapRenderer={heatmapRenderer}
-              kdeGridSize={kdeParams.gridSize}
-              activeIndex={activeIndex}
-              viewMode={isFocusedView ? 'focus' : 'stack'}
-              showRawEvents={showRawEvents}
-              showHotspotTrajectories={showHotspotTrajectories}
-              activeSliceOpacity={activeSliceOpacity}
-              nonActiveSliceOpacity={nonActiveSliceOpacity}
-              timeDomain={timeDomain}
-              runtime={sceneRuntime}
-              comparisonSelectedSourceSliceIds={[
-                comparison?.a?.sourceSliceId,
-                comparison?.b?.sourceSliceId,
-              ].filter((sourceSliceId): sourceSliceId is string => Boolean(sourceSliceId))}
-              comparisonSelectedSourceIndices={[
-                comparison?.a?.sourceSliceIndex,
-                comparison?.b?.sourceSliceIndex,
-              ].filter((sourceSliceIndex): sourceSliceIndex is number => typeof sourceSliceIndex === 'number')}
-            />
+             {hasCompletedComparison && comparison.a && comparison.b ? (
+               <StkdeComparisonStage
+                 selectionA={comparison.a}
+                 selectionB={comparison.b}
+                 sourceSlices={sceneSlices}
+                 sliceEvents={sliceEvents}
+                 sliceKdeResults={sliceKdeResults}
+                 hotspotSliceResults={hotspotSliceResults}
+                 hotspotMatchingOptions={hotspotMatchingOptions}
+                 volumeProfile={volumeProfile}
+                 heatmapRenderer={heatmapRenderer}
+                 kdeThreshold={kdeParams.threshold}
+                 kdeGridSize={kdeParams.gridSize}
+                 showRawEvents={showRawEvents}
+                 showHotspotTrajectories={showHotspotTrajectories}
+                 activeSliceOpacity={activeSliceOpacity}
+                 nonActiveSliceOpacity={nonActiveSliceOpacity}
+                 timeDomain={timeDomain}
+                 runtime={sceneRuntime}
+                 linkedCameras={comparison.linkedCameras}
+                 onLinkedCamerasChange={(linked) => setComparison((current) => current ? { ...current, linkedCameras: linked } : current)}
+               />
+             ) : (
+               <Stkde3DScene
+                 slices={sceneSlices}
+                 sliceKdes={sliceKdes}
+                 sliceEvents={sliceEvents}
+                 hotspotSliceResults={hotspotSliceResults}
+                 hotspotMatchingOptions={hotspotMatchingOptions}
+                 volumeProfile={volumeProfile}
+                 heatmapRenderer={heatmapRenderer}
+                 kdeGridSize={kdeParams.gridSize}
+                 activeIndex={activeIndex}
+                 viewMode={isFocusedView ? 'focus' : 'stack'}
+                 showRawEvents={showRawEvents}
+                 showHotspotTrajectories={showHotspotTrajectories}
+                 activeSliceOpacity={activeSliceOpacity}
+                 nonActiveSliceOpacity={nonActiveSliceOpacity}
+                 timeDomain={timeDomain}
+                 runtime={sceneRuntime}
+                 comparisonSelectedSourceSliceIds={[
+                   comparison?.a?.sourceSliceId,
+                   comparison?.b?.sourceSliceId,
+                 ].filter((sourceSliceId): sourceSliceId is string => Boolean(sourceSliceId))}
+                 comparisonSelectedSourceIndices={[
+                   comparison?.a?.sourceSliceIndex,
+                   comparison?.b?.sourceSliceIndex,
+                 ].filter((sourceSliceIndex): sourceSliceIndex is number => typeof sourceSliceIndex === 'number')}
+               />
+             )}
           </div>
 
           <aside className="min-h-0 space-y-4 overflow-y-auto rounded-3xl border border-border bg-card/90 p-4 shadow-sm backdrop-blur-md">

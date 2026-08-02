@@ -1,32 +1,46 @@
 'use client';
 
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
 import { getStkdePaletteGradient } from '../lib/palette';
 
-export function StkdeIntensityLegend({ mode = 'field' }: { mode?: 'field' | 'legacy' }) {
+export function StkdeIntensityLegend({
+  mode = 'field',
+  domain,
+}: {
+  mode?: 'field' | 'legacy';
+  domain?: [number, number];
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
-    <aside className="pointer-events-none max-w-[18rem] rounded-2xl border border-slate-700/70 bg-slate-950/78 px-3 py-2.5 text-[10px] text-slate-300 shadow-[0_20px_60px_-34px_rgba(15,23,42,0.9)] backdrop-blur-md">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="font-semibold uppercase tracking-[0.2em] text-slate-200">STKDE intensity</div>
-          <p className="mt-1 max-w-[24ch] leading-4 text-slate-400">
-            Brighter colors mean denser space-time concentration after smoothing.
-          </p>
+    <aside className="pointer-events-auto w-[15rem] rounded-[var(--radius)] border border-border bg-card/95 px-2.5 py-2 text-[10px] text-muted-foreground shadow-sm backdrop-blur-md">
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 rounded-[var(--radius)] text-left text-foreground outline-none transition hover:text-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="font-semibold uppercase tracking-[0.2em]">STKDE intensity</span>
+        {isExpanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+      </button>
+
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full border border-border bg-muted" style={{ background: getStkdePaletteGradient(mode) }} />
+
+      {isExpanded ? (
+        <div className="mt-1.5 space-y-1 text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <span>sparse</span>
+            <span>hot</span>
+          </div>
+          {domain ? (
+            <div className="flex items-center justify-between font-mono normal-case tracking-normal tabular-nums">
+              <span>{domain[0].toPrecision(3)}</span>
+              <span>{domain[1].toPrecision(3)}</span>
+            </div>
+          ) : null}
         </div>
-        <div className="shrink-0 rounded-full border border-slate-700/80 bg-slate-900/80 px-2 py-1 text-[9px] uppercase tracking-[0.16em] text-slate-400">
-          normalized
-        </div>
-      </div>
-
-      <div className="mt-2 h-2 overflow-hidden rounded-full border border-slate-700/80 bg-slate-900" style={{ background: getStkdePaletteGradient(mode) }} />
-
-      <div className="mt-1.5 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-slate-500">
-        <span>sparse</span>
-        <span>hot</span>
-      </div>
-
-      <p className="mt-2 leading-4 text-slate-400">
-        The cube shows when crimes cluster in both space and time, not just raw counts. Taller stacked slices indicate longer active windows.
-      </p>
+      ) : null}
     </aside>
   );
 }
