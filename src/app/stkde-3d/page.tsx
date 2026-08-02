@@ -446,6 +446,7 @@ export default function Stkde3DPage() {
     setSelectedComparisonPresetId('');
     setActiveComparisonPresetId(null);
     setComparisonPresetError(null);
+    setComparison((current) => (current ? invalidateComparison() : null));
     setCaseStudyPresetId(nextCaseStudyPresetId);
   };
 
