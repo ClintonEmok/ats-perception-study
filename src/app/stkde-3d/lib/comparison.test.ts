@@ -102,7 +102,7 @@ describe('temporary STKDE comparison state', () => {
       selectComparisonSlice(activateComparisonSlot(enterComparison(), 'A'), selection(0)),
       selection(9),
     );
-    const presetReady = { ...completed, activeSlot: null as const };
+    const presetReady = { ...completed, activeSlot: null };
     const reset = resetComparison();
     const invalidated = invalidateComparison();
 
