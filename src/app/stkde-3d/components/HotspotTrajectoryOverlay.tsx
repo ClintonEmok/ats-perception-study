@@ -9,37 +9,40 @@ import type { EvolvingSlice } from '../lib/types';
 import { createCameraFocusTarget, useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
 
 interface HotspotTrajectoryOverlayProps {
-  slices: Array<EvolvingSlice & { sourceSliceId?: string }>;
+  slices: Array<EvolvingSlice & { sourceSliceId?: string; sourceSliceIndex?: number }>;
   sliceResults?: Record<string, StkdeSurfaceResponse> | null;
-  viewMode?: 'stack' | 'focus';
+  sourceSlices?: readonly (EvolvingSlice & { sourceSliceId?: string; sourceSliceIndex?: number })[];
+  sourceSliceResults?: Record<string, StkdeSurfaceResponse> | null;
   resolveEpochY: (epochSec: number) => number;
   matchingOptions?: HotspotMatchingOptions;
 }
 
-const TRACK_COLORS = ['#67e8f9', '#60a5fa', '#a78bfa', '#34d399', '#f472b6'];
+const TRACK_COLORS = ['#7c3f28', '#a16207', '#365e66', '#5b4b8a', '#3f6b50'];
 
 export function HotspotTrajectoryOverlay({
   slices,
   sliceResults,
-  viewMode,
+  sourceSlices,
+  sourceSliceResults,
   resolveEpochY,
   matchingOptions,
 }: HotspotTrajectoryOverlayProps) {
   const { onClusterHover, onClusterSelect, cameraFocus } = useStkde3DSceneRuntime();
+  const trajectorySlices = sourceSlices ?? slices;
+  const trajectoryResults = sourceSliceResults ?? sliceResults;
   const sliceById = useMemo(() => {
-    const map = new Map<string, EvolvingSlice & { sourceSliceId?: string }>();
-    for (const slice of slices) {
+    const map = new Map<string, EvolvingSlice & { sourceSliceId?: string; sourceSliceIndex?: number }>();
+    for (const slice of trajectorySlices) {
       const key = slice.sourceSliceId ?? String(slice.index);
       map.set(key, slice);
     }
     return map;
-  }, [slices]);
+  }, [trajectorySlices]);
 
   const tracks = useMemo(() => {
-    if (viewMode === 'focus') return [];
-    return buildHotspotEvolution(sliceResults, matchingOptions).tracks
+    return buildHotspotEvolution(trajectoryResults, matchingOptions).tracks
       .filter((track) => track.snapshots.length >= 2);
-  }, [matchingOptions, sliceResults, viewMode]);
+  }, [matchingOptions, trajectoryResults]);
 
   if (tracks.length === 0) return null;
 
@@ -87,8 +90,11 @@ export function HotspotTrajectoryOverlay({
                   onClusterHover({
                     hotspotId: rendered.snapshot.hotspotId,
                     trackId: track.id,
-                    snapshotIndex: rendered.snapshotIndex ?? pointIndex,
-                    sourceSliceId: rendered.snapshot.sliceId,
+                   snapshotIndex: rendered.snapshotIndex ?? pointIndex,
+                   sourceSliceId: rendered.snapshot.sliceId,
+                    sourceSliceIndex: sliceById.get(rendered.snapshot.sliceId)?.sourceSliceIndex
+                      ?? sliceById.get(rendered.snapshot.sliceId)?.index
+                      ?? 0,
                     startEpoch: rendered.snapshot.peakStartEpochSec,
                     endEpoch: rendered.snapshot.peakEndEpochSec,
                     centroidLat: rendered.snapshot.centroidLat,
@@ -108,8 +114,11 @@ export function HotspotTrajectoryOverlay({
                   const payload = {
                     hotspotId: rendered.snapshot.hotspotId,
                     trackId: track.id,
-                    snapshotIndex: rendered.snapshotIndex ?? pointIndex,
-                    sourceSliceId: rendered.snapshot.sliceId,
+                     snapshotIndex: rendered.snapshotIndex ?? pointIndex,
+                     sourceSliceId: rendered.snapshot.sliceId,
+                     sourceSliceIndex: sliceById.get(rendered.snapshot.sliceId)?.sourceSliceIndex
+                       ?? sliceById.get(rendered.snapshot.sliceId)?.index
+                       ?? 0,
                     startEpoch: rendered.snapshot.peakStartEpochSec,
                     endEpoch: rendered.snapshot.peakEndEpochSec,
                     centroidLat: rendered.snapshot.centroidLat,

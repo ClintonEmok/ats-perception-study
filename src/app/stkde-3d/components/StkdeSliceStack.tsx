@@ -7,6 +7,8 @@ import { easeInOutCubic, interpolateKdeCells } from '@/lib/motion/easing';
 import { START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 import { getLegacyStkdeIntensityColor, getStkdeIntensityColor } from '../lib/palette';
 import type { KdeCell, EvolvingSlice } from '../lib/types';
+import { convertKdeFieldToDisplayCells } from '@/app/stkde-3d/lib/comparison-difference';
+import type { KdeField } from '@/lib/kde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { createCameraFocusTarget, useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
 
@@ -158,6 +160,9 @@ interface StkdeSliceStackProps {
   heightScale?: number;
   heatmapRenderer?: StkdeHeatmapRenderer;
   kdeGridSize?: number;
+  sliceKdeFields?: Array<KdeField | undefined>;
+  absoluteDomain?: [number, number];
+  absoluteThreshold?: number;
   comparisonSelectedSourceSliceIds?: readonly string[];
   comparisonSelectedSourceIndices?: readonly number[];
 }
@@ -194,6 +199,9 @@ export function StkdeSliceStack({
   heightScale = 1,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
+  sliceKdeFields,
+  absoluteDomain,
+  absoluteThreshold = 0,
   comparisonSelectedSourceSliceIds = [],
   comparisonSelectedSourceIndices = [],
 }: StkdeSliceStackProps) {
@@ -366,16 +374,24 @@ export function StkdeSliceStack({
     };
   }, [commitResize, dragState, gl.domElement, resolvePointerY, yToEpoch]);
 
+  const renderSliceKdes = useMemo(() => {
+    if (!sliceKdeFields || !absoluteDomain) return sliceKdes;
+
+    return sliceKdeFields.map((field, index) => field
+      ? convertKdeFieldToDisplayCells(field, absoluteDomain[1], absoluteThreshold)
+      : sliceKdes[index] ?? []);
+  }, [absoluteDomain, absoluteThreshold, sliceKdeFields, sliceKdes]);
+
   const textures = useMemo(() => {
     const newTextures = new Map<number, THREE.CanvasTexture>();
-    for (let i = 0; i < sliceKdes.length; i += 1) {
-       const tex = buildHeatmapTexture(sliceKdes[i] ?? [], heatmapRenderer, kdeGridSize);
+    for (let i = 0; i < renderSliceKdes.length; i += 1) {
+       const tex = buildHeatmapTexture(renderSliceKdes[i] ?? [], heatmapRenderer, kdeGridSize);
       if (tex) {
         newTextures.set(i, tex);
       }
     }
     return newTextures;
-  }, [heatmapRenderer, kdeGridSize, sliceKdes]);
+  }, [heatmapRenderer, kdeGridSize, renderSliceKdes]);
 
   const [transition, setTransition] = useState<SliceTransition | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -421,8 +437,8 @@ export function StkdeSliceStack({
 
   const transitionTexture = useMemo(() => {
     if (!transition || !isPlaying || !isInterpolated) return null;
-    const fromCells = sliceKdes[transition.fromIndex];
-    const toCells = sliceKdes[transition.toIndex];
+    const fromCells = renderSliceKdes[transition.fromIndex];
+    const toCells = renderSliceKdes[transition.toIndex];
     return buildInterpolatedTexture(
       fromCells,
       toCells,
@@ -430,7 +446,7 @@ export function StkdeSliceStack({
       heatmapRenderer,
       kdeGridSize,
     );
-  }, [heatmapRenderer, isInterpolated, isPlaying, kdeGridSize, sliceKdes, transition, transitionProgress]);
+  }, [heatmapRenderer, isInterpolated, isPlaying, kdeGridSize, renderSliceKdes, transition, transitionProgress]);
 
   useEffect(() => {
     return () => {

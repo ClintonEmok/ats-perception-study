@@ -31,3 +31,18 @@ export function buildRawEventPositions(
 
   return flattened;
 }
+
+export function resolveSourceEvents<TEvent>(
+  sourceSliceIndex: number | undefined,
+  selectedEvents: readonly TEvent[] | null | undefined,
+  sliceEvents: readonly (readonly TEvent[])[],
+  renderedSliceIndex: number,
+): readonly TEvent[] {
+  if (selectedEvents) return selectedEvents;
+
+  if (typeof sourceSliceIndex === 'number' && sliceEvents[sourceSliceIndex]) {
+    return sliceEvents[sourceSliceIndex]!;
+  }
+
+  return sliceEvents[renderedSliceIndex] ?? [];
+}

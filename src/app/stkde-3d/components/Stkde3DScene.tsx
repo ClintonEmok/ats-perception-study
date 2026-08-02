@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -8,6 +8,7 @@ import Map, { MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { StkdeSurfaceResponse } from '@/lib/stkde/contracts';
 import type { HotspotMatchingOptions } from '@/lib/hotspot-evolution';
+import type { KdeField } from '@/lib/kde';
 import type { KdeCell, MockCrimeEvent } from '../lib/types';
 import { AdaptiveWarpAxis } from './AdaptiveWarpAxis';
 import { HotspotTrajectoryOverlay } from './HotspotTrajectoryOverlay';
@@ -15,7 +16,7 @@ import { StkdeSliceStack } from './StkdeSliceStack';
 import { BurstVolumeRenderer } from './BurstVolumeRenderer';
 import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
-import { buildRawEventPositions } from '../lib/raw-events';
+import { buildRawEventPositions, resolveSourceEvents } from '../lib/raw-events';
 import { CHICAGO_BOUNDS } from '../lib/chicago-bounds';
 import {
   createStkde3DSceneRuntime,
@@ -102,6 +103,14 @@ function MapTileSource({
   );
 }
 
+export function Stkde3DMapCapture({
+  onTextureReady,
+}: {
+  onTextureReady: (texture: THREE.CanvasTexture | null) => void;
+}) {
+  return <MapTileSource onTextureReady={onTextureReady} />;
+}
+
 interface Stkde3DSceneProps {
   slices: Array<Stkde3DSceneSlice>;
   sliceKdes: KdeCell[][];
@@ -128,6 +137,17 @@ interface Stkde3DSceneProps {
   runtime?: Stkde3DSceneRuntime;
   comparisonSelectedSourceSliceIds?: readonly string[];
   comparisonSelectedSourceIndices?: readonly number[];
+  sourceSlices?: readonly Stkde3DSceneSlice[];
+  sourceSliceResults?: Record<string, StkdeSurfaceResponse> | null;
+  selectedSourceEvents?: readonly MockCrimeEvent[] | null;
+  selectedSourceIndex?: number;
+  sliceKdeFields?: Array<KdeField | undefined>;
+  absoluteDomain?: [number, number];
+  absoluteThreshold?: number;
+  mapTexture?: THREE.CanvasTexture | null;
+  renderMapSource?: boolean;
+  cameraControlsRef?: MutableRefObject<CameraControls | null>;
+  onCameraUpdate?: () => void;
 }
 
 function RawEventPoints({
@@ -136,21 +156,30 @@ function RawEventPoints({
   activeIndex,
   resolveEpochY,
   resolveSliceY,
+  selectedEvents,
+  selectedSourceIndex,
 }: Pick<Stkde3DSceneProps, 'slices' | 'sliceEvents' | 'activeIndex'> & {
   resolveEpochY: (epochSec: number) => number;
   resolveSliceY: (slice: Stkde3DSceneSlice) => number;
+  selectedEvents?: readonly MockCrimeEvent[] | null;
+  selectedSourceIndex?: number;
 }) {
   const positions = useMemo(() => {
-    if (sliceEvents.length === 0 || slices.length === 0) {
+    if (slices.length === 0) {
       return new Float32Array();
     }
 
     const slice = slices[activeIndex];
     if (!slice) return new Float32Array();
 
-    const events = sliceEvents[slice.index] ?? [];
+    const events = resolveSourceEvents(
+      selectedSourceIndex ?? slice.sourceSliceIndex,
+      selectedEvents,
+      sliceEvents,
+      slice.index,
+    );
     return buildRawEventPositions(events, resolveEpochY, resolveSliceY(slice));
-  }, [activeIndex, resolveEpochY, resolveSliceY, sliceEvents, slices]);
+  }, [activeIndex, resolveEpochY, resolveSliceY, selectedEvents, selectedSourceIndex, sliceEvents, slices]);
 
   if (positions.length === 0) return null;
 
@@ -190,16 +219,26 @@ function SceneContent({
   cameraFocusTarget,
   heatmapRenderer = 'legacy',
   kdeGridSize = 32,
+  sliceKdeFields,
+  absoluteDomain,
+  absoluteThreshold,
   comparisonSelectedSourceSliceIds = [],
   comparisonSelectedSourceIndices = [],
+  sourceSlices,
+  sourceSliceResults,
+  selectedSourceEvents,
+  selectedSourceIndex,
+  cameraControlsRef,
+  onCameraUpdate,
 }: Pick<
   Stkde3DSceneProps,
   'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'hotspotMatchingOptions' | 'activeIndex' | 'viewMode' |
-  'showRawEvents' | 'showHotspotTrajectories' | 'sliceOpacity' | 'activeSliceOpacity' | 'nonActiveSliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize' | 'comparisonSelectedSourceSliceIds' | 'comparisonSelectedSourceIndices'
+  'showRawEvents' | 'showHotspotTrajectories' | 'sliceOpacity' | 'activeSliceOpacity' | 'nonActiveSliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize' | 'sliceKdeFields' | 'absoluteDomain' | 'absoluteThreshold' | 'comparisonSelectedSourceSliceIds' | 'comparisonSelectedSourceIndices' | 'sourceSlices' | 'sourceSliceResults' | 'selectedSourceEvents' | 'selectedSourceIndex' | 'cameraControlsRef' | 'onCameraUpdate'
 > & {
   cameraFocusTarget: Stkde3DCameraFocusTarget | null;
 }) {
-  const controlsRef = useRef<CameraControls>(null);
+  const internalControlsRef = useRef<CameraControls>(null);
+  const controlsRef = cameraControlsRef ?? internalControlsRef;
   const {
     resolveSliceY,
     resolveEpochY,
@@ -275,6 +314,9 @@ function SceneContent({
         heightScale={heightScale}
         heatmapRenderer={heatmapRenderer}
         kdeGridSize={kdeGridSize}
+        sliceKdeFields={sliceKdeFields}
+        absoluteDomain={absoluteDomain}
+        absoluteThreshold={absoluteThreshold}
         comparisonSelectedSourceSliceIds={comparisonSelectedSourceSliceIds}
         comparisonSelectedSourceIndices={comparisonSelectedSourceIndices}
       />
@@ -288,11 +330,12 @@ function SceneContent({
       ) : null}
 
       {showHotspotTrajectories ? (
-        <HotspotTrajectoryOverlay
-          slices={viewMode === 'focus' ? focusedSlices : slices}
-          sliceResults={hotspotSliceResults}
-          viewMode={viewMode}
-          resolveEpochY={resolveEpochY}
+          <HotspotTrajectoryOverlay
+            slices={viewMode === 'focus' ? focusedSlices : slices}
+            sliceResults={hotspotSliceResults}
+            sourceSlices={sourceSlices ?? slices}
+            sourceSliceResults={sourceSliceResults ?? hotspotSliceResults}
+            resolveEpochY={resolveEpochY}
           matchingOptions={hotspotMatchingOptions}
         />
       ) : null}
@@ -302,6 +345,8 @@ function SceneContent({
           slices={slices}
           sliceEvents={sliceEvents}
           activeIndex={activeIndex}
+          selectedEvents={selectedSourceEvents}
+          selectedSourceIndex={selectedSourceIndex}
           resolveEpochY={resolveEpochY}
           resolveSliceY={resolveSliceY}
         />
@@ -313,6 +358,7 @@ function SceneContent({
         smoothTime={0.3}
         minDistance={30}
         maxDistance={500}
+        onUpdate={onCameraUpdate}
       />
     </>
   );
@@ -344,8 +390,19 @@ export function Stkde3DScene({
   onCreateDraftAtPoint,
   comparisonSelectedSourceSliceIds = [],
   comparisonSelectedSourceIndices = [],
+  sourceSlices,
+  sourceSliceResults,
+  selectedSourceEvents,
+  selectedSourceIndex,
+  sliceKdeFields,
+  absoluteDomain,
+  absoluteThreshold,
+  mapTexture,
+  renderMapSource = true,
+  cameraControlsRef,
+  onCameraUpdate,
 }: Stkde3DSceneProps) {
-  const [mapTexture, setMapTexture] = useState<THREE.CanvasTexture | null>(null);
+  const [ownedMapTexture, setOwnedMapTexture] = useState<THREE.CanvasTexture | null>(null);
   const [cameraFocusTarget, setCameraFocusTarget] = useState<Stkde3DCameraFocusTarget | null>(null);
   const sceneRuntime = useMemo(
     () => runtime ?? createStkde3DSceneRuntime({
@@ -367,14 +424,16 @@ export function Stkde3DScene({
   }), [sceneRuntime]);
   useEffect(() => {
     return () => {
-      mapTexture?.dispose();
+      ownedMapTexture?.dispose();
     };
-  }, [mapTexture]);
+  }, [ownedMapTexture]);
+
+  const resolvedMapTexture = renderMapSource ? ownedMapTexture : mapTexture ?? null;
 
   return (
     <Stkde3DSceneProvider runtime={interactiveRuntime}>
       <div className="relative h-full w-full overflow-hidden bg-transparent">
-        <MapTileSource onTextureReady={setMapTexture} />
+        {renderMapSource ? <MapTileSource onTextureReady={setOwnedMapTexture} /> : null}
         <div className="absolute inset-0 z-10">
           <Canvas
             camera={{ position: CAMERA_POSITION, fov: 38 }}
@@ -408,12 +467,21 @@ export function Stkde3DScene({
               burstVolumeModel={burstVolumeModel}
               heatmapRenderer={heatmapRenderer}
               kdeGridSize={kdeGridSize}
+              sliceKdeFields={sliceKdeFields}
+              absoluteDomain={absoluteDomain}
+              absoluteThreshold={absoluteThreshold}
               comparisonSelectedSourceSliceIds={comparisonSelectedSourceSliceIds}
               comparisonSelectedSourceIndices={comparisonSelectedSourceIndices}
+              sourceSlices={sourceSlices}
+              sourceSliceResults={sourceSliceResults}
+              selectedSourceEvents={selectedSourceEvents}
+              selectedSourceIndex={selectedSourceIndex}
+              cameraControlsRef={cameraControlsRef}
+              onCameraUpdate={onCameraUpdate}
               cameraFocusTarget={cameraFocusTarget}
             />
 
-            {mapTexture ? (
+            {resolvedMapTexture ? (
               <group position={[0, MAP_PLANE_Y, 0]} renderOrder={-20}>
                 <mesh position={[0, -0.72, 0]}>
                   <boxGeometry args={[98.4, 1.25, 98.4]} />
@@ -429,7 +497,7 @@ export function Stkde3DScene({
                 <mesh rotation={[-Math.PI / 2, 0, 0]}>
                   <planeGeometry args={[96, 96]} />
                   <meshBasicMaterial
-                    map={mapTexture}
+                     map={resolvedMapTexture}
                     transparent
                     opacity={0.92}
                     depthWrite={false}
