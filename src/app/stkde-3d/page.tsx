@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Focus, Pause, Play } from 'lucide-react';
-import { generateStkde3dMockData, generateStkde3dRealData } from './lib/mock-data';
+import {
+  loadConfiguredMockStkde3dDataset,
+  loadStkde3dDataset,
+  type Stkde3dDataset,
+  type Stkde3dDatasetPreset,
+} from './lib/dataset-loader';
 import { computeSliceKde, KDE_SCENE_SPAN_METERS } from '@/lib/kde';
 import { Stkde3DScene } from './components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from './components/Stkde3DSceneProvider';
@@ -34,7 +39,6 @@ import { buildStandaloneAdaptiveTimeMaps } from './lib/standalone-adaptive-time'
 import { buildAllocationMetrics, buildDurationVolumeProfile } from './lib/volume-encoding';
 import { buildHotspotEvolution, getAdaptiveMatchToleranceMeters, type HotspotMatchingMode, type HotspotMatchingOptions } from '@/lib/hotspot-evolution';
 import type { KdeParams } from '@/lib/kde';
-import type { CrimeRecord } from '@/types/crime';
 import type { EvolvingSlice } from './lib/types';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
@@ -49,17 +53,12 @@ const REAL_DATA_RANGE = {
   limit: 1200,
 };
 
-const MAX_DATA_PAGES = 100;
-
 type CaseStudyPresetId = ComparisonDatasetPresetId;
 
-type CaseStudyPreset = {
+type CaseStudyPreset = Stkde3dDatasetPreset & {
   id: CaseStudyPresetId;
   label: string;
   rangeLabel: string;
-  startEpoch: number;
-  endEpoch: number;
-  limit: number;
 };
 
 const toUtcEpoch = (date: string, endOfDay = false): number => Math.floor(
@@ -107,19 +106,12 @@ const EXPERIMENTAL_KDE_PARAMS: KdeParams = {
   threshold: 0.2,
 };
 
-type DatasetState = {
-  slices: ReturnType<typeof generateStkde3dMockData>['slices'];
-  sliceEvents: ReturnType<typeof generateStkde3dMockData>['sliceEvents'];
-  source: 'real' | 'mock';
-};
+type DatasetState = Stkde3dDataset;
 
-type CrimeRangeResponse = {
-  data?: CrimeRecord[];
-  meta?: {
-    hasMore?: boolean;
-    nextCursor?: string | null;
-  };
-};
+type DatasetRenderStatus = 'loading' | 'ready' | 'empty' | 'error';
+
+const USE_CONFIGURED_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true'
+  || process.env.USE_MOCK_DATA === 'true';
 
 function StandaloneSliceScrubber({
   slices,
@@ -225,6 +217,9 @@ export default function Stkde3DPage() {
   const [nonActiveSliceOpacity, setNonActiveSliceOpacity] = useState(0.35);
   const [caseStudyPresetId, setCaseStudyPresetId] = useState<CaseStudyPresetId>('full');
   const [dataset, setDataset] = useState<DatasetState | null>(null);
+  const [datasetLoadStatus, setDatasetLoadStatus] = useState<DatasetRenderStatus>('loading');
+  const [datasetLoadError, setDatasetLoadError] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
   const [comparison, setComparison] = useState<Stkde3DComparisonState | null>(null);
   const [comparisonAnnouncement, setComparisonAnnouncement] = useState<string | null>(null);
   const [selectedComparisonPresetId, setSelectedComparisonPresetId] = useState('');
@@ -240,6 +235,8 @@ export default function Stkde3DPage() {
     const preset = CASE_STUDY_PRESETS.find((candidate) => candidate.id === caseStudyPresetId) ?? CASE_STUDY_PRESETS[0]!;
 
     setDataset(null);
+    setDatasetLoadStatus('loading');
+    setDatasetLoadError(false);
     setActiveIndex(0);
     setComparison((current) => (current ? invalidateComparison() : null));
     setActiveComparisonPresetId(null);
@@ -252,56 +249,21 @@ export default function Stkde3DPage() {
 
     async function loadDataset() {
       try {
-        const records: CrimeRecord[] = [];
-        let cursor: string | null = null;
-        let hasMore = true;
-
-        for (let page = 0; page < MAX_DATA_PAGES && hasMore; page += 1) {
-          const params = new URLSearchParams({
-            startEpoch: preset.startEpoch.toString(),
-            endEpoch: preset.endEpoch.toString(),
-            bufferDays: '0',
-            limit: preset.limit.toString(),
-          });
-          if (cursor) {
-            params.set('cursor', cursor);
-          }
-
-          const response = await fetch(`/api/crimes/range?${params.toString()}`);
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const result = (await response.json()) as CrimeRangeResponse;
-          records.push(...(result.data ?? []));
-          hasMore = result.meta?.hasMore === true;
-          const nextCursor = result.meta?.nextCursor ?? null;
-          if (!hasMore || !nextCursor || nextCursor === cursor) {
-            hasMore = false;
-            break;
-          }
-          cursor = nextCursor;
-        }
-
-        if (hasMore) {
-          throw new Error(`Crime range exceeded the ${MAX_DATA_PAGES}-page limit`);
-        }
-
-        const realDataset = generateStkde3dRealData(records);
-
-        if (realDataset.slices.length === 0) {
-          throw new Error('No real crime subset returned');
-        }
+        const loadedDataset = USE_CONFIGURED_MOCK_DATA
+          ? loadConfiguredMockStkde3dDataset()
+          : await loadStkde3dDataset(preset);
 
         if (!cancelled) {
-          setDataset({ ...realDataset, source: 'real' });
+          setDataset(loadedDataset);
+          setDatasetLoadStatus(loadedDataset.slices.length === 0 ? 'empty' : 'ready');
+          setDatasetLoadError(false);
           setActiveIndex(0);
         }
       } catch {
         if (!cancelled) {
-          const fallback = generateStkde3dMockData();
-          setDataset({ ...fallback, source: 'mock' });
-          setActiveIndex(0);
+          setDataset(null);
+          setDatasetLoadStatus('error');
+          setDatasetLoadError(true);
         }
       }
     }
@@ -311,7 +273,7 @@ export default function Stkde3DPage() {
     return () => {
       cancelled = true;
     };
-  }, [caseStudyPresetId]);
+  }, [caseStudyPresetId, retryToken]);
 
   const slices = useMemo(() => dataset?.slices ?? [], [dataset]);
   const sliceEvents = useMemo(() => dataset?.sliceEvents ?? [], [dataset]);

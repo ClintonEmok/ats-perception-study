@@ -13,6 +13,7 @@ describe('/stkde-3d route focus mode', () => {
     const differenceSource = readFileSync(new URL('./components/StkdeDifferenceScene.tsx', import.meta.url), 'utf8');
     const differenceLegendSource = readFileSync(new URL('./components/StkdeSignedDifferenceLegend.tsx', import.meta.url), 'utf8');
     const cameraSource = readFileSync(new URL('./lib/comparison-camera.ts', import.meta.url), 'utf8');
+    const loaderSource = readFileSync(new URL('./lib/dataset-loader.ts', import.meta.url), 'utf8');
     const providerSource = readFileSync(new URL('./components/Stkde3DSceneProvider.tsx', import.meta.url), 'utf8');
     const sourceContextSource = readFileSync(new URL('./lib/comparison-source-context.ts', import.meta.url), 'utf8');
 
@@ -88,13 +89,16 @@ describe('/stkde-3d route focus mode', () => {
     const presetSource = readFileSync(new URL('./lib/comparison-presets.ts', import.meta.url), 'utf8');
     const fixtureSource = readFileSync(new URL('./lib/comparison-fixtures.ts', import.meta.url), 'utf8');
     const differenceSource = readFileSync(new URL('./components/StkdeDifferenceScene.tsx', import.meta.url), 'utf8');
+    const loaderSource = readFileSync(new URL('./lib/dataset-loader.ts', import.meta.url), 'utf8');
 
     expect(pageSource).toMatch(/COMPARISON_PRESETS/);
     expect(pageSource).toMatch(/resolveComparisonPreset/);
     expect(pageSource).toMatch(/pendingComparisonPresetId/);
     expect(pageSource).toMatch(/setDataset\(null\)/);
     expect(pageSource).toMatch(/invalidateComparison\(\)/);
-    expect((pageSource.match(/fetch\(`\/api\/crimes\/range/g) ?? []).length).toBe(1);
+    expect(pageSource).toMatch(/loadStkde3dDataset\(preset\)/);
+    expect(loaderSource).toMatch(/fetchImpl/);
+    expect((loaderSource.match(/\/api\/crimes\/range/g) ?? []).length).toBe(1);
     expect(controlsSource).toMatch(/Comparison preset/);
     expect(controlsSource).toMatch(/A \{preset\.intervalA\.label\} vs B \{preset\.intervalB\.label\}/);
     expect(presetSource).toMatch(/full-slice-02-vs-08/);
