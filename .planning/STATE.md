@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: phase_complete
-stopped_at: Completed 04-05-PLAN.md
-last_updated: "2026-08-02T13:26:09.141Z"
+stopped_at: Completed quick task 260802-compare-ux-feedback
+last_updated: "2026-08-02T16:57:53Z"
 last_activity: 2026-08-02
-last_activity_desc: Completed 04-05-PLAN.md.
+last_activity_desc: Completed quick task 260802-compare-ux-feedback.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -85,6 +85,9 @@ Recent decisions affecting current work:
 - [Quick 260731-juc] Active event records retain epoch-second timestamps, are keyed by source slice before brushed cube reindexing, and are clipped to the active cube domain.
 - [Quick 260731-juc] Active event points remain opt-in in dashboard mode and use the shared runtime epoch resolver; brushed volume profiles use the active adaptive allocation helper.
 - [Quick 260731-nsj] Standalone adaptive time derives a density warp from event timestamps and shares it with event Y placement, trajectories, slice surfaces, and volume allocation.
+- [Quick 260802-compare-ux-feedback] Comparison entry and preset-ready state use nullable activeSlot; slot activation is explicit and supports B-first assignment, partial replacement, duplicate rejection, ready locking, reset, and invalidation.
+- [Quick 260802-compare-ux-feedback] Absolute comparison resolves raw KDE fields through source identity into two matched static 2D maps; difference mode uses one raw-preserving signed field with display-only gamma contrast.
+- [Quick 260802-compare-ux-feedback] Comparison controls are the single native keyboard rail; visible cards show dates/counts only, while camera and overlay presentation paths remain deferred or removed from live comparison rendering.
 - [Phase 4 spec] Direct STKDE-3D comparison is active: temporary rendered-slice A/B selection, top-and-bottom matched absolute views, linked cameras, and a 2D signed KDE difference view.
 - [Baseline 2026-08-01] Phases 1-3 are complete in the implementation baseline; Phase 5 remains partial and follows standalone A/B comparison.
 - [Phase 4 Plan 04-02] Complete raw KDE fields remain separate from sparse thresholded display cells, and `KdeField` is consumed through the public `@/lib/kde` barrel.
@@ -106,11 +109,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 is complete after UI hardening, state-contract coverage, and approved browser verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 and quick task 260802-compare-ux-feedback are complete after UI hardening, state-contract coverage, and browser verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
-The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted Phase 4 tests, typecheck, lint, and production build pass. Browser/WebGL review completed successfully for the fixed-height absolute panes, live camera interaction, signed difference composition, presets, invalidation, and request reuse.
+The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted comparison tests, typecheck, lint, and production build pass. Browser review completed successfully for slot-first selection, fixed-height absolute maps, signed difference composition, presets, invalidation, responsive overflow, and request reuse. The exact mock browser command also needs the public `NEXT_PUBLIC_USE_MOCK_DATA` alias because the route is a client component.
 
 ## Deferred Items
 
@@ -137,3 +140,4 @@ Resume file: None
 | Rename active event control (`260731-i6l`) | Complete | 2026-07-31 |
 | Timestamp-safe adaptive 3D active events (`260731-juc`) | Complete | 2026-07-31 |
 | Standalone adaptive temporal warp (`260731-nsj`) | Complete | 2026-07-31 |
+| Comparison UX feedback (`260802-compare-ux-feedback`) | Complete | 2026-08-02 |
