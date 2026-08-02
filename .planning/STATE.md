@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: phase_complete
-stopped_at: Completed quick task 260802-compare-ux-feedback
-last_updated: "2026-08-02T16:57:53Z"
+stopped_at: Completed quick task 260802-ab-reference-layout
+last_updated: "2026-08-02T20:32:28Z"
 last_activity: 2026-08-02
-last_activity_desc: Completed quick task 260802-compare-ux-feedback.
+last_activity_desc: Completed quick task 260802-ab-reference-layout.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: 5 of 5 (UI hardening, state contracts, and browser verification)
+Plan: Quick task 260802-ab-reference-layout (A/B reference layout follow-up)
 Status: Phase complete
-Last activity: 2026-08-02 — Completed 04-05-PLAN.md.
+Last activity: 2026-08-02 — Completed quick task 260802-ab-reference-layout.
 
 Progress: [██████████] 100%
 
@@ -102,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 4 Plan 04-05] The range loader is the sole dataset request path; only case-study changes and explicit retries start a new lifecycle.
 - [Phase 4 Plan 04-05] Real load failures remain visible with explicit retry copy, while configured mock data is labeled rather than presented as live data.
 - [Phase 4 Plan 04-05] Stable DOM markers, deterministic fixtures, keyboard controls, and browser verification jointly cover comparison states that WebGL tests cannot fully assert.
+- [Quick 260802-ab-reference-layout] Comparison presentation uses a desktop two-column white header that stacks below sm, with the mode-specific legend retained as a substantial right-side card.
+- [Quick 260802-ab-reference-layout] Absolute maps use centered bounded aspect-[16/7] frames with explicit min-w-0, w-full, and 20rem minimums; analytical field resolution and map textures remain unchanged.
+- [Quick 260802-ab-reference-layout] Signed comparison labels are rendered as B HIGHER, 0 / NO DIFFERENCE, and A HIGHER while retaining the existing blue-neutral-red palette semantics.
 
 ### Roadmap Evolution
 
@@ -109,11 +112,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 and quick task 260802-compare-ux-feedback are complete after UI hardening, state-contract coverage, and browser verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 and quick tasks 260802-compare-ux-feedback and 260802-ab-reference-layout are complete after comparison UX, reference layout, state-contract coverage, and browser verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
-The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted comparison tests, typecheck, lint, and production build pass. Browser review completed successfully for slot-first selection, fixed-height absolute maps, signed difference composition, presets, invalidation, responsive overflow, and request reuse. The exact mock browser command also needs the public `NEXT_PUBLIC_USE_MOCK_DATA` alias because the route is a client component.
+The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted comparison tests, typecheck, lint, and production build pass. Browser review completed successfully for slot-first selection, reference-aligned absolute/signed layouts, fixed-height maps, presets, invalidation, responsive overflow, normal-stack recovery, and request reuse. The exact mock browser command also needs the public `NEXT_PUBLIC_USE_MOCK_DATA` alias because the route is a client component.
 
 ## Deferred Items
 
@@ -123,8 +126,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-02T13:26:09.132Z
-Stopped at: Completed 04-05-PLAN.md
+Last session: 2026-08-02T20:32:28Z
+Stopped at: Completed quick task 260802-ab-reference-layout
 Resume file: None
 
 ## Quick Tasks Completed
@@ -141,3 +144,4 @@ Resume file: None
 | Timestamp-safe adaptive 3D active events (`260731-juc`) | Complete | 2026-07-31 |
 | Standalone adaptive temporal warp (`260731-nsj`) | Complete | 2026-07-31 |
 | Comparison UX feedback (`260802-compare-ux-feedback`) | Complete | 2026-08-02 |
+| A/B reference layout (`260802-ab-reference-layout`) | Complete | 2026-08-02 |
