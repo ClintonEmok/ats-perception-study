@@ -9,7 +9,7 @@ This milestone turns the adaptive cube into a burst-volume analytical model. The
 - [x] **Phase 1: Burst Model Foundation** - derive burst volumes and their internal temporal samples from the existing adaptive pipeline. (Baseline verified)
 - [x] **Phase 2: Burst Volume Rendering** - render burst volumes as stacked contours with explicit boundaries and centroid paths. (Baseline verified)
 - [x] **Phase 3: Cluster Evolution** - track correspondence between samples and expose burst behavior metrics. (Baseline verified)
-- [ ] **Phase 4: STKDE-3D A/B Comparison** - compare two rendered intervals in matched absolute views and a signed KDE difference view. (Next priority)
+- [x] **Phase 4: STKDE-3D A/B Comparison** - compare two rendered intervals in matched absolute views and a signed KDE difference view. (Complete)
 - [ ] **Phase 5: Cube Integration** - route overlays through the shared model and finish the structural refactor. (Partial implementation; follows standalone comparison)
 
 ## Phase Details
@@ -80,7 +80,7 @@ Plans:
   3. A-B replaces the pair with one 2D signed KDE map centered at zero.
   4. Built-in presets reproduce the dataset, intervals, parameters, layer, mode, and camera state.
 
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans executed
 
 Plans:
 
@@ -88,7 +88,7 @@ Plans:
 - [x] 04-02-PLAN.md — Preserve raw KDE fields and add tested shared/signed comparison math.
 - [x] 04-03-PLAN.md — Render matched vertical absolute panes with linked cameras.
 - [x] 04-04-PLAN.md — Add signed difference mode, exact-pair presets, and invalidation wiring.
-- [ ] 04-05-PLAN.md — Harden UI states, contracts, verification, and browser behavior.
+- [x] 04-05-PLAN.md — Harden UI states, contracts, verification, and browser behavior.
 
 ### Phase 5: Cube Integration
 
@@ -119,5 +119,5 @@ Current execution order: 1 → 2 → 3 → 4 → 5
 | 1. Burst Model Foundation | 2/2 | Complete (baseline verified) | 2026-08-01 |
 | 2. Burst Volume Rendering | 2/2 | Complete (baseline verified) | 2026-08-01 |
 | 3. Cluster Evolution | 2/2 | Complete (baseline verified) | 2026-08-01 |
-| 4. STKDE-3D A/B Comparison | 4/5 | In Progress|  |
+| 4. STKDE-3D A/B Comparison | 5/5 | Complete | 2026-08-02 |
 | 5. Cube Integration | 0/2 | Partial baseline | - |

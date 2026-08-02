@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
-status: in_progress
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-08-02T07:20:16Z"
+status: phase_complete
+stopped_at: Completed 04-05-PLAN.md
+last_updated: "2026-08-02T13:26:09.141Z"
 last_activity: 2026-08-02
-last_activity_desc: Completed 04-04-PLAN.md.
+last_activity_desc: Completed 04-05-PLAN.md.
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,25 +28,25 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: 4 of 5 (signed difference mode, exact-pair presets, and invalidation wiring)
-Status: In progress
-Last activity: 2026-08-02 — Completed 04-04-PLAN.md.
+Plan: 5 of 5 (UI hardening, state contracts, and browser verification)
+Status: Phase complete
+Last activity: 2026-08-02 — Completed 04-05-PLAN.md.
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: 1h 50m
-- Total execution time: 7h 20m
+- Total plans completed: 5
+- Average duration: 2h 40m
+- Total execution time: 13h 21m
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 4 | 4 | 5 | 1h 50m |
+| Phase 4 | 5 | 5 | 2h 40m |
 
 **Recent Trend:**
 
@@ -59,6 +59,7 @@ Progress: [████████░░] 80%
 |------|----------|-------|-------|
 | Phase 04-stkde-3d-a-b-comparison-mode P03 | 6h 45m | 3 tasks | 11 files |
 | Phase 04 P04 | 13min | 3 tasks | 9 files |
+| Phase 04 P05 | 6h 1m | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Recent decisions affecting current work:
 - [Phase 4 Plan 04-04] Built-in comparison presets store exact dataset/index/label identity and resolve actual epoch bounds and source IDs only after rendered surfaces exist.
 - [Phase 4 Plan 04-04] Difference mode is one raw-field top-down heatmap with red-neutral-blue semantics and no temporal, event, trajectory, volume, or additive layers.
 - [Phase 4 Plan 04-04] Case-study changes invalidate temporary A/B references; shared analytical setting changes recompute the existing pair through the single dataset lifecycle.
+- [Phase 4 Plan 04-05] The range loader is the sole dataset request path; only case-study changes and explicit retries start a new lifecycle.
+- [Phase 4 Plan 04-05] Real load failures remain visible with explicit retry copy, while configured mock data is labeled rather than presented as live data.
+- [Phase 4 Plan 04-05] Stable DOM markers, deterministic fixtures, keyboard controls, and browser verification jointly cover comparison states that WebGL tests cannot fully assert.
 
 ### Roadmap Evolution
 
@@ -102,11 +106,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 Plan 04-05 is the next active task: UI hardening, state contracts, verification, and browser behavior. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 is complete after UI hardening, state-contract coverage, and approved browser verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
-The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted Phase 4 tests, typecheck, lint, and production build pass. Browser/WebGL review remains for the fixed-height absolute panes, live camera interaction, and top-down signed difference composition.
+The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted Phase 4 tests, typecheck, lint, and production build pass. Browser/WebGL review completed successfully for the fixed-height absolute panes, live camera interaction, signed difference composition, presets, invalidation, and request reuse.
 
 ## Deferred Items
 
@@ -116,8 +120,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-02T07:20:16Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-08-02T13:26:09.132Z
+Stopped at: Completed 04-05-PLAN.md
 Resume file: None
 
 ## Quick Tasks Completed
