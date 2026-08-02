@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: in_progress
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-08-02T06:57:03Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-08-02T07:16:30Z"
 last_activity: 2026-08-02
-last_activity_desc: Completed 04-03-PLAN.md.
+last_activity_desc: Completed 04-04-PLAN.md.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,25 +28,25 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: 3 of 5 (matched vertical absolute panes and linked cameras)
+Plan: 4 of 5 (signed difference mode, exact-pair presets, and invalidation wiring)
 Status: In progress
-Last activity: 2026-08-02 — Completed 04-03-PLAN.md.
+Last activity: 2026-08-02 — Completed 04-04-PLAN.md.
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
-- Average duration: 2h 22m
-- Total execution time: 7h 07m
+- Total plans completed: 4
+- Average duration: 1h 50m
+- Total execution time: 7h 20m
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 4 | 3 | 5 | 2h 22m |
+| Phase 4 | 4 | 5 | 1h 50m |
 
 **Recent Trend:**
 
@@ -58,6 +58,7 @@ Progress: [██████░░░░] 60%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 04-stkde-3d-a-b-comparison-mode P03 | 6h 45m | 3 tasks | 11 files |
+| Phase 04 P04 | 13min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 4 Plan 04-03] Absolute A/B panes share one stage-owned map capture and raw KDE domain while focused local indexes remain separate from source identity.
 - [Phase 4 Plan 04-03] Full-source trajectories and timestamped events are passed explicitly into focused panes; trajectory visibility is not suppressed solely by focus mode.
 - [Phase 4 Plan 04-03] Camera linking is imperative and guarded: relinking snaps B to A, unlinking preserves divergence, and reset applies one front-oblique pose to both panes.
+- [Phase 4 Plan 04-04] Built-in comparison presets store exact dataset/index/label identity and resolve actual epoch bounds and source IDs only after rendered surfaces exist.
+- [Phase 4 Plan 04-04] Difference mode is one raw-field top-down heatmap with red-neutral-blue semantics and no temporal, event, trajectory, volume, or additive layers.
+- [Phase 4 Plan 04-04] Case-study changes invalidate temporary A/B references; shared analytical setting changes recompute the existing pair through the single dataset lifecycle.
 
 ### Roadmap Evolution
 
@@ -98,11 +102,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 Plan 04-04 is the next active task: signed difference mode, exact-pair presets, and invalidation wiring. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 Plan 04-05 is the next active task: UI hardening, state contracts, verification, and browser behavior. Phase 5 shared-model refactoring follows afterward. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
-The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted Phase 4 tests, typecheck, lint, and production build pass. Browser/WebGL review remains for the new fixed-height pane composition and live camera interaction.
+The full test suite has four stale source-contract failures in unrelated visualization/showcase tests; targeted Phase 4 tests, typecheck, lint, and production build pass. Browser/WebGL review remains for the fixed-height absolute panes, live camera interaction, and top-down signed difference composition.
 
 ## Deferred Items
 
@@ -112,8 +116,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-02T06:57:03Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-08-02T07:16:30Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
 
 ## Quick Tasks Completed
