@@ -422,12 +422,20 @@ export default function Stkde3DPage() {
 
   const handleResetComparison = () => {
     setComparisonAnnouncement(null);
+    setPendingComparisonPresetId(null);
+    setSelectedComparisonPresetId('');
+    setActiveComparisonPresetId(null);
+    setComparisonPresetError(null);
     setComparison(resetComparison());
   };
 
   const handleBackToStack = () => {
     setIsFocusedView(false);
     setComparisonAnnouncement(COMPARISON_MESSAGES.exited);
+    setPendingComparisonPresetId(null);
+    setSelectedComparisonPresetId('');
+    setActiveComparisonPresetId(null);
+    setComparisonPresetError(null);
     setComparison(exitComparison());
   };
 

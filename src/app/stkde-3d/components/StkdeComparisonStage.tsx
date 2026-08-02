@@ -141,7 +141,7 @@ export function StkdeComparisonStage({
       data-comparison-stage
       data-comparison-mode={mode}
       data-render-status={mapTexture ? 'ready' : 'loading'}
-      data-camera-linked={linkedCameras ? 'true' : 'false'}
+      data-camera-linked={mode === 'absolute' ? (linkedCameras ? 'true' : 'false') : undefined}
       data-comparison-preset-id={comparisonPresetId ?? undefined}
     >
       <Stkde3DMapCapture onTextureReady={setMapTexture} />

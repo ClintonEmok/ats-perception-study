@@ -283,6 +283,16 @@ export function StkdeComparisonControls({
         </>
       ) : null}
 
+      {presetError && !comparison ? (
+        <button
+          type="button"
+          onClick={onResetComparison}
+          className="mt-2 min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40"
+        >
+          Reset comparison
+        </button>
+      ) : null}
+
       {!comparison && hasNoIntervals ? (
         <p className="sr-only" aria-live="polite">{COMPARISON_MESSAGES['selecting-a']}</p>
       ) : null}

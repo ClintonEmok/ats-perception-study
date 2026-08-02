@@ -81,4 +81,26 @@ describe('/stkde-3d route focus mode', () => {
     expect(inspectorSource).toMatch(/Burstiness/);
     expect(sceneSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);
   });
+
+  test('wires exact preset resolution, dataset invalidation, and signed-mode gating', () => {
+    const pageSource = readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+    const controlsSource = readFileSync(new URL('./components/StkdeComparisonControls.tsx', import.meta.url), 'utf8');
+    const presetSource = readFileSync(new URL('./lib/comparison-presets.ts', import.meta.url), 'utf8');
+    const fixtureSource = readFileSync(new URL('./lib/comparison-fixtures.ts', import.meta.url), 'utf8');
+    const differenceSource = readFileSync(new URL('./components/StkdeDifferenceScene.tsx', import.meta.url), 'utf8');
+
+    expect(pageSource).toMatch(/COMPARISON_PRESETS/);
+    expect(pageSource).toMatch(/resolveComparisonPreset/);
+    expect(pageSource).toMatch(/pendingComparisonPresetId/);
+    expect(pageSource).toMatch(/setDataset\(null\)/);
+    expect(pageSource).toMatch(/invalidateComparison\(\)/);
+    expect((pageSource.match(/fetch\(`\/api\/crimes\/range/g) ?? []).length).toBe(1);
+    expect(controlsSource).toMatch(/Comparison preset/);
+    expect(controlsSource).toMatch(/A \{preset\.intervalA\.label\} vs B \{preset\.intervalB\.label\}/);
+    expect(presetSource).toMatch(/full-slice-02-vs-08/);
+    expect(presetSource).toMatch(/fourth-of-july-slice-03-vs-09/);
+    expect(fixtureSource).toMatch(/buildComparisonSliceFixture/);
+    expect(differenceSource).toMatch(/computeSignedKdeDifference/);
+    expect(differenceSource).not.toMatch(/showRawEvents|showHotspotTrajectories|StkdeSliceStack|HotspotTrajectoryOverlay|BurstVolumeRenderer|AdaptiveWarpAxis/);
+  });
 });
