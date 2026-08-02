@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import {
   COMPARISON_MESSAGES,
   getComparisonMessage,
   type ComparisonSelection,
+  type ComparisonSlot,
   type Stkde3DComparisonState,
 } from '../lib/comparison';
 import type { ComparisonPresetDefinition } from '../lib/comparison-presets';
@@ -24,12 +26,15 @@ function selectionMatchesSlice(selection: ComparisonSelection | null, slice: Stk
   if (selection.sourceSliceId && slice.sourceSliceId) {
     return selection.sourceSliceId === slice.sourceSliceId;
   }
-  return selection.sourceSliceIndex === slice.index;
+  return selection.sourceSliceIndex === (slice.sourceSliceIndex ?? slice.index);
 }
 
-function selectionDetails(selection: ComparisonSelection | null): string {
-  if (!selection) return 'Not selected';
-  return `${selection.label ?? `Slice ${selection.sourceSliceIndex + 1}`} · ${formatEpoch(selection.startEpoch)} – ${formatEpoch(selection.endEpoch)} · ${selection.eventCount ?? 0} events`;
+function sliceKey(slice: Stkde3DSceneSlice): string {
+  return slice.sourceSliceId ?? `index-${slice.sourceSliceIndex ?? slice.index}`;
+}
+
+function intervalCopy(startEpoch: number, endEpoch: number, eventCount: number): string {
+  return `${formatEpoch(startEpoch)} – ${formatEpoch(endEpoch)} · ${eventCount} events`;
 }
 
 export function StkdeComparisonControls({
@@ -37,6 +42,7 @@ export function StkdeComparisonControls({
   comparison,
   onEnterComparison,
   onSelectSlice,
+  activateComparisonSlot,
   onResetComparison,
   onBackToStack,
   announcement,
@@ -56,6 +62,7 @@ export function StkdeComparisonControls({
   comparison: Stkde3DComparisonState | null;
   onEnterComparison: () => void;
   onSelectSlice: (slice: Stkde3DSceneSlice) => void;
+  activateComparisonSlot: (slot: ComparisonSlot) => void;
   onResetComparison: () => void;
   onBackToStack: () => void;
   announcement?: string | null;
@@ -71,15 +78,23 @@ export function StkdeComparisonControls({
   onRetryLoading?: () => void;
   usingMockData?: boolean;
 }) {
+  const intervalSelectRef = useRef<HTMLSelectElement>(null);
   const hasNoIntervals = renderStatus === 'empty' || (renderStatus === undefined && slices.length === 0);
   const hasTooFewIntervals = slices.length === 1 && (renderStatus === undefined || renderStatus === 'ready');
   const isSelecting = comparison?.mode === 'selecting';
-  const selectionPrompt = comparison?.activeSlot === 'A' ? 'Select interval A' : 'Select interval B';
-  const statusMessage = comparison
-    ? comparison.status === 'selecting-a' || comparison.status === 'selecting-b'
-      ? selectionPrompt
-      : getComparisonMessage(comparison)
-    : announcement ?? '';
+  const activeSlot = isSelecting ? comparison?.activeSlot ?? null : null;
+
+  useEffect(() => {
+    if (isSelecting) {
+      intervalSelectRef.current?.focus();
+    }
+  }, [comparison?.a?.sourceSliceId, comparison?.a?.sourceSliceIndex, comparison?.b?.sourceSliceId, comparison?.b?.sourceSliceIndex, isSelecting]);
+
+  const selectSlice = (value: string) => {
+    const slice = slices.find((candidate) => sliceKey(candidate) === value);
+    if (!slice || !activeSlot) return;
+    onSelectSlice(slice);
+  };
 
   return (
     <section
@@ -87,7 +102,7 @@ export function StkdeComparisonControls({
       className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground"
       data-comparison-controls
       data-comparison-preset-id={activePresetId ?? undefined}
-      data-selection-slot={isSelecting && comparison ? comparison.activeSlot : undefined}
+      data-selection-slot={activeSlot ?? undefined}
     >
       <div className="mb-2 flex items-start justify-between gap-3">
         <div>
@@ -101,8 +116,8 @@ export function StkdeComparisonControls({
         {!comparison ? (
           <button
             type="button"
-           onClick={onEnterComparison}
-           disabled={slices.length < 2}
+            onClick={onEnterComparison}
+            disabled={slices.length < 2}
             className="min-h-9 shrink-0 rounded-[var(--radius)] border border-amber-600/60 bg-amber-50 px-2.5 py-1.5 font-medium text-amber-900 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground motion-reduce:transition-none"
           >
             Compare intervals
@@ -111,19 +126,19 @@ export function StkdeComparisonControls({
       </div>
 
       {usingMockData ? (
-        <p className="mb-2 rounded-lg border border-amber-600/30 bg-amber-50/70 px-2 py-1.5 text-[10px] leading-4 text-amber-950" role="status">
+        <p className="mb-2 rounded-lg border border-amber-600/30 bg-amber-50/70 px-2 py-1.5 text-[10px] leading-4 text-amber-950" role="status" aria-live="polite">
           Using mock data
         </p>
       ) : null}
 
       {renderStatus === 'loading' ? (
-        <p className="mb-2 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-[10px] leading-4" role="status">
+        <p className="mb-2 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-[10px] leading-4" role="status" aria-live="polite">
           Loading {caseStudyLabel ?? 'case study'} data…
         </p>
       ) : null}
 
       {renderStatus === 'error' ? (
-        <div className="mb-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3" role="alert">
+        <div className="mb-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3" role="alert" aria-live="polite">
           <p className="text-[11px] leading-4 text-destructive">
             Unable to load {caseStudyLabel ?? 'case study'} data. Retry loading or choose another case study.
           </p>
@@ -142,24 +157,24 @@ export function StkdeComparisonControls({
           <label htmlFor="comparison-preset" className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
             Comparison preset
           </label>
-           <select
-             id="comparison-preset"
-             value={selectedPresetId}
-             onChange={(event) => onPresetSelect?.(event.target.value)}
-             className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] text-foreground outline-none transition focus:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+          <select
+            id="comparison-preset"
+            value={selectedPresetId}
+            onChange={(event) => onPresetSelect?.(event.target.value)}
+            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] text-foreground outline-none transition focus:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
           >
             <option value="">Choose an exact A/B pair</option>
             {presets.map((preset) => (
               <option key={preset.id} value={preset.id}>
-                {preset.label} · {preset.datasetPresetId} · A {preset.intervalA.label} vs B {preset.intervalB.label}
+                {preset.label} · A {preset.intervalA.label} vs B {preset.intervalB.label}
               </option>
             ))}
           </select>
           {pendingPresetId ? (
-            <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">Loading comparison preset…</p>
+            <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground" aria-live="polite">Loading comparison preset…</p>
           ) : null}
           {presetError ? (
-            <p className="mt-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-[10px] leading-4 text-destructive" role="alert">
+            <p className="mt-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-[10px] leading-4 text-destructive" role="alert" aria-live="polite">
               {presetError}
             </p>
           ) : null}
@@ -176,7 +191,7 @@ export function StkdeComparisonControls({
       ) : null}
 
       {hasTooFewIntervals ? (
-           <p className="rounded-xl border border-border bg-muted/30 p-3 leading-4">
+        <p className="rounded-xl border border-border bg-muted/30 p-3 leading-4">
           Comparison needs at least two rendered intervals.
         </p>
       ) : null}
@@ -187,99 +202,110 @@ export function StkdeComparisonControls({
           className="rounded-xl border border-amber-600/30 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-950"
           data-comparison-status={comparison?.status ?? 'announcement'}
         >
-          {statusMessage}
+          {comparison ? getComparisonMessage(comparison) : announcement}
         </div>
       ) : null}
 
       {comparison ? (
         <>
+          {isSelecting ? (
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1" role="group" aria-label="Choose comparison slot">
+              {(['A', 'B'] as const).map((slot) => {
+                const isActive = activeSlot === slot;
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    aria-label={`Activate comparison slot ${slot}`}
+                    aria-pressed={isActive}
+                    aria-selected={isActive}
+                    data-selection-slot={slot}
+                    onClick={() => activateComparisonSlot(slot)}
+                    className={`min-h-10 rounded-md border px-2 py-1.5 font-mono text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${isActive ? 'border-amber-600/70 bg-amber-50 text-amber-950' : 'border-transparent text-muted-foreground hover:bg-background hover:text-foreground'}`}
+                  >
+                    {slot}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {(['A', 'B'] as const).map((slot) => {
               const selection = comparison[slot === 'A' ? 'a' : 'b'];
+              const status = selection ? (comparison.mode === 'selecting' ? 'Selected' : 'Ready') : 'Pending';
+              const details = selection
+                ? intervalCopy(selection.startEpoch, selection.endEpoch, selection.eventCount ?? 0)
+                : 'No interval selected';
               return (
                 <article
                   key={slot}
-                  aria-label={`Interval ${slot}`}
+                  aria-label={`Interval ${slot}: ${details}; ${status}`}
                   className={`rounded-xl border p-2.5 ${selection ? 'border-amber-600/50 bg-amber-50/40' : 'border-border bg-muted/30'}`}
                   data-comparison-slot={slot}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-mono text-sm font-semibold text-foreground">{slot}</span>
-                    <span className="text-[10px] uppercase tracking-[0.12em]">
-                      {selection ? 'Selected' : 'Pending'}
-                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.12em]">{status}</span>
                   </div>
-                  <p className="mt-1 break-words leading-4 text-foreground">{selectionDetails(selection)}</p>
-                  {selection ? (
-                    <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                      source: {selection.sourceSliceId ?? `index-${selection.sourceSliceIndex}`}
-                    </p>
-                  ) : null}
+                  <p className="mt-1 break-words font-mono leading-4 text-foreground">{details}</p>
                 </article>
               );
             })}
           </div>
 
           {isSelecting ? (
-            <div className="mt-3">
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Rendered intervals</span>
-                <span className="font-mono text-[10px] text-muted-foreground">{slices.length} available</span>
-              </div>
-              <div className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border bg-muted/20 p-1.5">
+            <label className="mt-3 block" htmlFor="comparison-interval-picker">
+              <span className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                {activeSlot ? `Select interval ${activeSlot}` : 'Choose a comparison slot first'}
+              </span>
+              <select
+                ref={intervalSelectRef}
+                id="comparison-interval-picker"
+                value=""
+                disabled={!activeSlot || slices.length === 0}
+                onChange={(event) => selectSlice(event.target.value)}
+                aria-label={activeSlot ? `Select interval for slot ${activeSlot}` : 'Choose a comparison slot before selecting an interval'}
+                className="min-h-10 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] text-foreground outline-none transition focus:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted motion-reduce:transition-none"
+              >
+                <option value="">
+                  {activeSlot ? `Choose an interval for ${activeSlot}` : 'Choose slot A or B first'}
+                </option>
                 {slices.map((slice) => {
+                  const value = sliceKey(slice);
+                  const copy = intervalCopy(slice.startEpoch, slice.endEpoch, slice.crimeCount);
                   const selectedFor = selectionMatchesSlice(comparison.a, slice)
                     ? 'A'
                     : selectionMatchesSlice(comparison.b, slice)
                       ? 'B'
                       : null;
-                  const sourceId = slice.sourceSliceId ?? `index-${slice.index}`;
-                  const eligibility = selectedFor ? `Selected for ${selectedFor}` : `Select for ${comparison.activeSlot}`;
-                  const accessibleName = `${eligibility}: ${slice.label}, ${formatEpoch(slice.startEpoch)} to ${formatEpoch(slice.endEpoch)}, ${slice.crimeCount} events, source slice ${sourceId}`;
-
                   return (
-                    <button
-                      key={sourceId}
-                      type="button"
-                      title={accessibleName}
-                      aria-label={accessibleName}
-                      aria-pressed={Boolean(selectedFor)}
-                      onClick={() => onSelectSlice(slice)}
-                      className={`flex min-h-11 w-full items-start justify-between gap-3 rounded-lg border px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                        selectedFor
-                          ? 'border-amber-600/60 bg-amber-50 text-amber-950'
-                          : 'border-transparent bg-background hover:border-border hover:bg-card'
-                      }`}
+                    <option
+                      key={value}
+                      value={value}
+                      title={copy}
+                      data-source-slice-id={slice.sourceSliceId ?? undefined}
                     >
-                      <span className="min-w-0">
-                        <span className="block break-words font-medium text-foreground">{slice.label}</span>
-                        <span className="mt-0.5 block break-words font-mono text-[10px] text-muted-foreground">
-                          {formatEpoch(slice.startEpoch)} – {formatEpoch(slice.endEpoch)}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
-                        <span className="block">{slice.crimeCount} events</span>
-                        <span className="block">{selectedFor ?? `slot ${comparison.activeSlot}`}</span>
-                      </span>
-                    </button>
+                      {copy}{selectedFor ? ` · selected for ${selectedFor}` : ''}
+                    </option>
                   );
                 })}
-              </div>
-            </div>
+              </select>
+            </label>
           ) : null}
 
           <div className="mt-3 flex flex-wrap gap-1.5">
-             <button
-               type="button"
-               onClick={onResetComparison}
-               className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+            <button
+              type="button"
+              onClick={onResetComparison}
+              className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
             >
               Reset comparison
             </button>
-             <button
-               type="button"
-               onClick={onBackToStack}
-               className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+            <button
+              type="button"
+              onClick={onBackToStack}
+              className="min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
             >
               Back to stack
             </button>
@@ -292,7 +318,6 @@ export function StkdeComparisonControls({
                   type="button"
                   role="tab"
                   aria-selected={comparison.mode === 'absolute'}
-                  tabIndex={comparison.mode === 'absolute' ? 0 : -1}
                   onClick={() => onModeChange?.('absolute')}
                   className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${comparison.mode === 'absolute' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
                 >
@@ -302,7 +327,6 @@ export function StkdeComparisonControls({
                   type="button"
                   role="tab"
                   aria-selected={comparison.mode === 'difference'}
-                  tabIndex={comparison.mode === 'difference' ? 0 : -1}
                   onClick={() => onModeChange?.('difference')}
                   className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${comparison.mode === 'difference' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
                 >
@@ -311,7 +335,7 @@ export function StkdeComparisonControls({
               </div>
               {comparison.mode === 'difference' ? (
                 <p className="mt-2 rounded-lg border border-border bg-muted/50 px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
-                   Red = A higher · Neutral = no difference · Blue = B higher
+                  Red = A higher · Neutral = no difference · Blue = B higher
                   <br />
                   Unavailable in A − B difference view: signed heatmap only.
                 </p>
@@ -325,14 +349,14 @@ export function StkdeComparisonControls({
         <button
           type="button"
           onClick={onResetComparison}
-           className="mt-2 min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+          className="mt-2 min-h-9 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
         >
           Reset comparison
         </button>
       ) : null}
 
       {!comparison && hasNoIntervals ? (
-        <p className="sr-only" aria-live="polite">{COMPARISON_MESSAGES['selecting-a']}</p>
+        <p className="sr-only" aria-live="polite">{COMPARISON_MESSAGES['awaiting-slot']}</p>
       ) : null}
     </section>
   );

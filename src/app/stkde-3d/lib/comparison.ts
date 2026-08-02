@@ -3,8 +3,10 @@ export type ComparisonSlot = 'A' | 'B';
 export type ComparisonMode = 'selecting' | 'absolute' | 'difference';
 
 export type ComparisonStatus =
+  | 'awaiting-slot'
   | 'selecting-a'
   | 'selecting-b'
+  | 'duplicate-a'
   | 'duplicate-b'
   | 'ready'
   | 'difference'
@@ -28,7 +30,7 @@ export type ComparisonSelectionInput = Omit<ComparisonSelection, 'sourceSliceInd
 
 export type Stkde3DComparisonState = {
   mode: ComparisonMode;
-  activeSlot: ComparisonSlot;
+  activeSlot: ComparisonSlot | null;
   a: ComparisonSelection | null;
   b: ComparisonSelection | null;
   linkedCameras: boolean;
@@ -36,8 +38,10 @@ export type Stkde3DComparisonState = {
 };
 
 export const COMPARISON_MESSAGES: Record<ComparisonStatus, string> = {
+  'awaiting-slot': 'Choose comparison slot A or B',
   'selecting-a': 'Select interval A',
   'selecting-b': 'Select interval B',
+  'duplicate-a': 'Choose a different interval for A.',
   'duplicate-b': 'Choose a different interval for B.',
   ready: 'A/B comparison ready',
   difference: 'A − B difference',
@@ -47,11 +51,12 @@ export const COMPARISON_MESSAGES: Record<ComparisonStatus, string> = {
 };
 
 export function createInitialComparisonState(
-  status: ComparisonStatus = 'selecting-a',
+  status: ComparisonStatus = 'awaiting-slot',
+  activeSlot: ComparisonSlot | null = status === 'reset' || status === 'invalidated' ? 'A' : null,
 ): Stkde3DComparisonState {
   return {
     mode: 'selecting',
-    activeSlot: 'A',
+    activeSlot,
     a: null,
     b: null,
     linkedCameras: true,
@@ -61,6 +66,21 @@ export function createInitialComparisonState(
 
 export function enterComparison(): Stkde3DComparisonState {
   return createInitialComparisonState();
+}
+
+export function activateComparisonSlot(
+  state: Stkde3DComparisonState,
+  slot: ComparisonSlot,
+): Stkde3DComparisonState {
+  if (state.mode !== 'selecting') {
+    return state;
+  }
+
+  return {
+    ...state,
+    activeSlot: slot,
+    status: slot === 'A' ? 'selecting-a' : 'selecting-b',
+  };
 }
 
 export function normalizeComparisonSelection(
@@ -94,37 +114,46 @@ export function selectComparisonSlice(
 
   const selection = normalizeComparisonSelection(selectionInput);
 
-  if (state.activeSlot === 'A') {
+  if (!state.activeSlot) {
+    return state;
+  }
+
+  const otherSelection = state.activeSlot === 'A' ? state.b : state.a;
+  if (otherSelection && areComparisonSelectionsEqual(otherSelection, selection)) {
     return {
       ...state,
-      activeSlot: 'B',
-      a: selection,
-      status: 'selecting-b',
+      status: state.activeSlot === 'A' ? 'duplicate-a' : 'duplicate-b',
     };
   }
 
-  if (!state.a || areComparisonSelectionsEqual(state.a, selection)) {
-    return {
-      ...state,
-      status: 'duplicate-b',
-    };
-  }
-
-  return {
+  const nextState: Stkde3DComparisonState = {
     ...state,
-    activeSlot: 'B',
-    b: selection,
-    mode: 'absolute',
-    status: 'ready',
+    [state.activeSlot === 'A' ? 'a' : 'b']: selection,
+  };
+
+  if (nextState.a && nextState.b) {
+    return {
+      ...nextState,
+      activeSlot: null,
+      mode: 'absolute',
+      status: 'ready',
+    };
+  }
+
+  const nextActiveSlot = state.activeSlot === 'A' ? 'B' : 'A';
+  return {
+    ...nextState,
+    activeSlot: nextActiveSlot,
+    status: nextActiveSlot === 'A' ? 'selecting-a' : 'selecting-b',
   };
 }
 
 export function resetComparison(): Stkde3DComparisonState {
-  return createInitialComparisonState('reset');
+  return createInitialComparisonState('reset', 'A');
 }
 
 export function invalidateComparison(): Stkde3DComparisonState {
-  return createInitialComparisonState('invalidated');
+  return createInitialComparisonState('invalidated', 'A');
 }
 
 export function exitComparison(): null {
