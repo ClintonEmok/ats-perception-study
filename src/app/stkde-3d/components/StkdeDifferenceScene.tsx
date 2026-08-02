@@ -27,7 +27,7 @@ export function StkdeDifferenceScene({ fieldA, fieldB, mapTexture }: StkdeDiffer
   if (comparison.error || !comparison.difference) {
     return (
       <div
-        className="flex min-h-[20rem] flex-1 items-center justify-center rounded-2xl border border-border bg-background/45 px-6 text-center text-xs text-destructive"
+        className="flex min-h-[20rem] w-full min-w-0 flex-1 items-center justify-center rounded-2xl border border-border bg-white/70 px-6 text-center text-xs text-destructive"
         data-difference-field="signed-kde"
         role="alert"
       >
@@ -38,7 +38,7 @@ export function StkdeDifferenceScene({ fieldA, fieldB, mapTexture }: StkdeDiffer
 
   return (
     <div
-      className="relative min-h-[20rem] min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-background/45"
+      className="relative flex h-full min-h-[20rem] w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-white/70"
       data-difference-field="signed-kde"
       aria-label="Signed KDE difference map: KDE(A) minus KDE(B)"
     >
