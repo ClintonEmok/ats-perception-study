@@ -46,6 +46,7 @@ export function StkdeComparisonControls({
   activePresetId,
   presetError,
   onPresetSelect,
+  onModeChange,
 }: {
   slices: readonly Stkde3DSceneSlice[];
   comparison: Stkde3DComparisonState | null;
@@ -60,6 +61,7 @@ export function StkdeComparisonControls({
   activePresetId?: string | null;
   presetError?: string | null;
   onPresetSelect?: (presetId: string) => void;
+  onModeChange?: (mode: 'absolute' | 'difference') => void;
 }) {
   const hasNoIntervals = slices.length === 0;
   const hasTooFewIntervals = slices.length === 1;
@@ -246,6 +248,38 @@ export function StkdeComparisonControls({
               Back to stack
             </button>
           </div>
+
+          {comparison.a && comparison.b ? (
+            <div className="mt-3">
+              <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1" role="tablist" aria-label="Comparison view mode">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={comparison.mode === 'absolute'}
+                  onClick={() => onModeChange?.('absolute')}
+                  className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition ${comparison.mode === 'absolute' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+                >
+                  Absolute
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={comparison.mode === 'difference'}
+                  onClick={() => onModeChange?.('difference')}
+                  className={`min-h-9 rounded-md px-2 py-1.5 text-[10px] transition ${comparison.mode === 'difference' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
+                >
+                  A − B difference
+                </button>
+              </div>
+              {comparison.mode === 'difference' ? (
+                <p className="mt-2 rounded-lg border border-border bg-muted/50 px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
+                  Red = A higher · Neutral = no difference · Blue = B higher.
+                  <br />
+                  Unavailable in A − B difference view: signed heatmap only.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </>
       ) : null}
 

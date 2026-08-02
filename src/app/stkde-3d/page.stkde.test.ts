@@ -10,6 +10,8 @@ describe('/stkde-3d route focus mode', () => {
     const comparisonSource = readFileSync(new URL('./components/StkdeComparisonControls.tsx', import.meta.url), 'utf8');
     const comparisonStageSource = readFileSync(new URL('./components/StkdeComparisonStage.tsx', import.meta.url), 'utf8');
     const comparisonViewportSource = readFileSync(new URL('./components/StkdeComparisonViewport.tsx', import.meta.url), 'utf8');
+    const differenceSource = readFileSync(new URL('./components/StkdeDifferenceScene.tsx', import.meta.url), 'utf8');
+    const differenceLegendSource = readFileSync(new URL('./components/StkdeSignedDifferenceLegend.tsx', import.meta.url), 'utf8');
     const cameraSource = readFileSync(new URL('./lib/comparison-camera.ts', import.meta.url), 'utf8');
     const providerSource = readFileSync(new URL('./components/Stkde3DSceneProvider.tsx', import.meta.url), 'utf8');
     const sourceContextSource = readFileSync(new URL('./lib/comparison-source-context.ts', import.meta.url), 'utf8');
@@ -56,9 +58,18 @@ describe('/stkde-3d route focus mode', () => {
     expect(providerSource).toMatch(/comparisonSelectionEnabled/);
     expect(sourceContextSource).toMatch(/resolveComparisonSourceContext/);
     expect(comparisonStageSource).toMatch(/data-comparison-stage/);
-    expect(comparisonStageSource).toMatch(/data-comparison-mode="absolute"/);
+    expect(comparisonStageSource).toMatch(/data-comparison-mode={mode}/);
+    expect(comparisonStageSource).toMatch(/StkdeDifferenceScene/);
+    expect(comparisonStageSource).toMatch(/mode === 'difference'/);
     expect(comparisonStageSource).toMatch(/grid-rows-\[minmax\(20rem,1fr\)_minmax\(20rem,1fr\)\]/);
     expect(comparisonStageSource).toMatch(/Stkde3DMapCapture/);
+    expect(comparisonStageSource).toMatch(/StkdeSignedDifferenceLegend/);
+    expect(differenceSource).toMatch(/computeSignedKdeDifference/);
+    expect(differenceSource).toMatch(/data-difference-field="signed-kde"/);
+    expect(differenceSource).not.toMatch(/StkdeSliceStack|RawEventPoints|HotspotTrajectoryOverlay|BurstVolumeRenderer|AdaptiveWarpAxis/);
+    expect(differenceLegendSource).toMatch(/B higher/);
+    expect(differenceLegendSource).toMatch(/0 \/ no difference/);
+    expect(differenceLegendSource).toMatch(/A higher/);
     expect(comparisonViewportSource).toMatch(/resolveComparisonSourceContext/);
     expect(comparisonViewportSource).toMatch(/data-interval-slot/);
     expect(comparisonViewportSource).toMatch(/selectedSourceIndex/);

@@ -19,6 +19,7 @@ import {
   invalidateComparison,
   resetComparison,
   selectComparisonSlice,
+  setComparisonMode,
   type ComparisonSelectionInput,
   type Stkde3DComparisonState,
 } from './lib/comparison';
@@ -232,6 +233,7 @@ export default function Stkde3DPage() {
   const [comparisonPresetError, setComparisonPresetError] = useState<string | null>(null);
   const pendingPresetDatasetRef = useRef<ComparisonDatasetPresetId | null>(null);
   const selectedCaseStudy = CASE_STUDY_PRESETS.find((preset) => preset.id === caseStudyPresetId) ?? CASE_STUDY_PRESETS[0]!;
+  const isDifferenceComparison = comparison?.mode === 'difference';
 
   useEffect(() => {
     let cancelled = false;
@@ -472,6 +474,10 @@ export default function Stkde3DPage() {
     setComparison((current) => (current ? selectComparisonSlice(current, toComparisonSelection(slice)) : current));
   };
 
+  const handleComparisonModeChange = (mode: 'absolute' | 'difference') => {
+    setComparison((current) => (current ? setComparisonMode(current, mode) : current));
+  };
+
   const handleComparisonSurfaceSelect = useCallback((payload: Stkde3DSliceInteractionPayload) => {
     const sourceSlice = sceneSlices.find((slice) => (
       (payload.sourceSliceId && slice.sourceSliceId === payload.sourceSliceId)
@@ -635,6 +641,8 @@ export default function Stkde3DPage() {
             <button
               type="button"
               aria-pressed={showRawEvents}
+              aria-disabled={isDifferenceComparison}
+              disabled={isDifferenceComparison}
               onClick={() => setShowRawEvents((value) => !value)}
               className={`flex items-center gap-1.5 rounded-[var(--radius)] border px-2.5 py-1.5 transition ${
                 showRawEvents
@@ -648,6 +656,8 @@ export default function Stkde3DPage() {
             <button
               type="button"
               aria-pressed={showHotspotTrajectories}
+              aria-disabled={isDifferenceComparison}
+              disabled={isDifferenceComparison}
               onClick={() => setShowHotspotTrajectories((value) => !value)}
               className={`flex items-center gap-1.5 rounded-[var(--radius)] border px-2.5 py-1.5 transition ${
                 showHotspotTrajectories
@@ -671,9 +681,14 @@ export default function Stkde3DPage() {
               Adaptive time
             </button>
 
-            <span className="hidden max-w-[14rem] truncate px-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground xl:inline">
-              {activeSliceRange}
-            </span>
+             <span className="hidden max-w-[14rem] truncate px-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground xl:inline">
+               {activeSliceRange}
+             </span>
+            {isDifferenceComparison ? (
+              <span className="basis-full text-right text-[10px] text-muted-foreground">
+                Unavailable in A − B difference view: signed heatmap only.
+              </span>
+            ) : null}
           </div>
         </header>
 
@@ -700,9 +715,12 @@ export default function Stkde3DPage() {
                  activeSliceOpacity={activeSliceOpacity}
                  nonActiveSliceOpacity={nonActiveSliceOpacity}
                  timeDomain={timeDomain}
-                 runtime={sceneRuntime}
-                 linkedCameras={comparison.linkedCameras}
-                 onLinkedCamerasChange={(linked) => setComparison((current) => current ? { ...current, linkedCameras: linked } : current)}
+                  runtime={sceneRuntime}
+                  linkedCameras={comparison.linkedCameras}
+                  mode={comparison.mode}
+                  comparisonPresetId={activeComparisonPresetId}
+                  onModeChange={handleComparisonModeChange}
+                  onLinkedCamerasChange={(linked) => setComparison((current) => current ? { ...current, linkedCameras: linked } : current)}
                />
              ) : (
                <Stkde3DScene
@@ -772,6 +790,7 @@ export default function Stkde3DPage() {
                activePresetId={activeComparisonPresetId}
                presetError={comparisonPresetError}
                onPresetSelect={handleComparisonPresetSelect}
+               onModeChange={handleComparisonModeChange}
              />
 
             <section className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
