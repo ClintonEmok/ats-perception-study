@@ -19,6 +19,7 @@ import { StkdeComparisonControls } from './components/StkdeComparisonControls';
 import { StkdeComparisonStage } from './components/StkdeComparisonStage';
 import {
   COMPARISON_MESSAGES,
+  activateComparisonSlot,
   enterComparison,
   exitComparison,
   invalidateComparison,
@@ -446,6 +447,10 @@ export default function Stkde3DPage() {
     setComparison((current) => (current ? selectComparisonSlice(current, toComparisonSelection(slice)) : current));
   };
 
+  const handleComparisonSlotActivate = (slot: 'A' | 'B') => {
+    setComparison((current) => (current ? activateComparisonSlot(current, slot) : current));
+  };
+
   const handleComparisonModeChange = (mode: 'absolute' | 'difference') => {
     setComparison((current) => (current ? setComparisonMode(current, mode) : current));
   };
@@ -483,7 +488,7 @@ export default function Stkde3DPage() {
       const resolved = resolveComparisonPreset(preset, caseStudyPresetId, sceneSlices);
       setComparison({
         mode: preset.view,
-        activeSlot: 'B',
+        activeSlot: null,
         a: {
           ...resolved.selectionA,
           eventCount: sceneSlices[resolved.selectionA.sourceSliceIndex]?.crimeCount,
@@ -577,8 +582,8 @@ export default function Stkde3DPage() {
           </div>
 
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5 border-border text-[11px] text-muted-foreground sm:border-l sm:pl-3">
-            <button
-              type="button"
+             <button
+               type="button"
               onClick={() => setIsPlaying((value) => !value)}
               className="flex items-center gap-1.5 rounded-[var(--radius)] border border-border bg-background px-2.5 py-1.5 text-foreground transition hover:border-foreground/40"
             >
@@ -586,9 +591,9 @@ export default function Stkde3DPage() {
               {isPlaying ? 'Pause' : 'Play'}
             </button>
 
-            <button
-              type="button"
-              aria-pressed={isFocusedView}
+             <button
+               type="button"
+               aria-pressed={isFocusedView}
               disabled={comparison?.mode === 'selecting'}
               onClick={() => {
                 const nextFocusedView = !isFocusedView;
@@ -607,9 +612,9 @@ export default function Stkde3DPage() {
               {isFocusedView ? 'Single slice' : 'Stack view'}
             </button>
 
-            <button
-              type="button"
-              aria-pressed={showRawEvents}
+             {!comparison ? <button
+               type="button"
+               aria-pressed={showRawEvents}
               aria-disabled={isDifferenceComparison}
               disabled={isDifferenceComparison}
               onClick={() => setShowRawEvents((value) => !value)}
@@ -618,12 +623,12 @@ export default function Stkde3DPage() {
                   ? 'border-amber-600/60 bg-amber-100 text-amber-900'
                   : 'border-border bg-background text-foreground hover:border-amber-600/50'
               }`}
-            >
-              Active events
-            </button>
+             >
+               Active events
+             </button> : null}
 
-            <button
-              type="button"
+             {!comparison ? <button
+               type="button"
               aria-pressed={showHotspotTrajectories}
               aria-disabled={isDifferenceComparison}
               disabled={isDifferenceComparison}
@@ -633,9 +638,9 @@ export default function Stkde3DPage() {
                   ? 'border-amber-600/60 bg-amber-100 text-amber-900'
                   : 'border-border bg-background text-foreground hover:border-amber-600/50'
               }`}
-            >
-              Trajectories
-            </button>
+             >
+               Trajectories
+             </button> : null}
 
             <button
               type="button"
@@ -708,30 +713,15 @@ export default function Stkde3DPage() {
                && (comparison.mode === 'absolute' || comparison.mode === 'difference')
                && comparison.a
                && comparison.b ? (
-               <StkdeComparisonStage
-                 selectionA={comparison.a}
-                 selectionB={comparison.b}
-                 sourceSlices={sceneSlices}
-                 sliceEvents={sliceEvents}
-                 sliceKdeResults={sliceKdeResults}
-                 hotspotSliceResults={hotspotSliceResults}
-                 hotspotMatchingOptions={hotspotMatchingOptions}
-                 volumeProfile={volumeProfile}
-                 heatmapRenderer={heatmapRenderer}
-                 kdeThreshold={kdeParams.threshold}
-                 kdeGridSize={kdeParams.gridSize}
-                 showRawEvents={showRawEvents}
-                 showHotspotTrajectories={showHotspotTrajectories}
-                 activeSliceOpacity={activeSliceOpacity}
-                 nonActiveSliceOpacity={nonActiveSliceOpacity}
-                 timeDomain={timeDomain}
-                 runtime={sceneRuntime}
-                 linkedCameras={comparison.linkedCameras}
-                 mode={comparison.mode}
-                 comparisonPresetId={activeComparisonPresetId}
-                 onModeChange={handleComparisonModeChange}
-                 onLinkedCamerasChange={(linked) => setComparison((current) => current ? { ...current, linkedCameras: linked } : current)}
-               />
+                <StkdeComparisonStage
+                  selectionA={comparison.a}
+                  selectionB={comparison.b}
+                  sourceSlices={sceneSlices}
+                  sliceKdeResults={sliceKdeResults}
+                  heatmapRenderer={heatmapRenderer}
+                  mode={comparison.mode}
+                  comparisonPresetId={activeComparisonPresetId}
+                />
              ) : (
                <section
                  className="relative min-h-[41rem] min-w-0 overflow-hidden rounded-2xl border border-border bg-[#f4f1eb]"
@@ -810,9 +800,10 @@ export default function Stkde3DPage() {
 
              <StkdeComparisonControls
                slices={sceneSlices}
-              comparison={comparison}
-              onEnterComparison={handleEnterComparison}
-              onSelectSlice={handleComparisonSliceSelect}
+               comparison={comparison}
+               onEnterComparison={handleEnterComparison}
+               onSelectSlice={handleComparisonSliceSelect}
+               activateComparisonSlot={handleComparisonSlotActivate}
                onResetComparison={handleResetComparison}
                onBackToStack={handleBackToStack}
                announcement={comparisonAnnouncement}
