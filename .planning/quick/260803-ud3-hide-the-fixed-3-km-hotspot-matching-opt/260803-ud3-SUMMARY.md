@@ -91,6 +91,11 @@ None - no external service configuration required.
 - Typecheck: `pnpm typecheck` — passed.
 - Final code diff contains only the two planned dashboard files; no store or `/stkde-3d` file was changed.
 
+### Resume verification
+
+- Re-ran the focused Vitest suite, targeted ESLint, and typecheck after the interrupted-task report — all passed.
+- Source search confirms `Fixed 3 km` remains only in the intentionally untouched standalone `/stkde-3d` page; dashboard-demo Inspect contains only `Adaptive server cell`.
+
 ## Next Phase Readiness
 
 Dashboard-demo Inspect is ready with Adaptive server cell matching as its only visible choice. Existing fixed-mode compatibility remains available internally, and unrelated worktree changes were preserved.

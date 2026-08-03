@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: quick_task_complete
-stopped_at: Completed quick task 260803-ud3
-last_updated: "2026-08-03T19:58:10Z"
+stopped_at: Reverified completed quick task 260803-ud3
+last_updated: "2026-08-03T20:02:33Z"
 last_activity: 2026-08-03
-last_activity_desc: Completed quick task 260803-ud3.
+last_activity_desc: Reverified quick task 260803-ud3 after interrupted-task report; implementation remains applied.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: Quick task 260803-tdb
+Plan: Quick task 260803-ud3
 Status: Quick task complete
-Last activity: 2026-08-03 — Completed dashboard-demo adaptive hotspot matching defaults and Inspect renderer selector removal.
+Last activity: 2026-08-03 — Reverified dashboard-demo Inspect hides Fixed 3 km matching and preserves internal compatibility.
 
 Progress: [██████████] 100%
 
@@ -136,8 +136,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-03T19:58:10Z
-Stopped at: Completed quick task 260803-ud3
+Last session: 2026-08-03T20:02:33Z
+Stopped at: Reverified quick task 260803-ud3 after interrupted-task report
 Resume file: None
 
 ## Quick Tasks Completed
