@@ -11,7 +11,7 @@ import { normalizeTimeRange } from '@/lib/time-range';
 import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
 import { Stkde3DScene } from '@/app/stkde-3d/components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from '@/app/stkde-3d/components/Stkde3DSceneProvider';
-import { buildAllocationMetrics, buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
+import { buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
 import { resolveEpochFromWarpedY, resolveWarpedEpochY } from '@/app/stkde-3d/lib/timeline-axis';
 import { computeDensityMap } from '@/components/timeline/hooks/useDensityStripDerivation';
 import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
@@ -21,7 +21,6 @@ import { buildDemoSliceAuthoredWarpMap } from '@/components/dashboard-demo/lib/d
 import { useDashboardDemo3d } from '@/components/dashboard-demo/DashboardDemo3dProvider';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
 import { START_Y } from '@/app/stkde-3d/lib/timeline-axis';
-import { SliceInspector } from '@/app/stkde-3d/components/SliceInspector';
 import { applyRangeToStoresContract } from '@/components/timeline/DemoDualTimeline';
 import { deriveDemo3dInteractionCommand } from '@/components/dashboard-demo/lib/syncDemo3dInteraction';
 import { lonLatToNormalized } from '@/lib/coordinate-normalization';
@@ -203,7 +202,6 @@ export function Demo3dSpatialView() {
   const activeEventsRequestIdRef = useRef(0);
   const activeEventsAbortRef = useRef<AbortController | null>(null);
   const [canvasPointer, setCanvasPointer] = useState<{ x: number; y: number } | null>(null);
-  const [hoveredSliceId, setHoveredSliceId] = useState<string | null>(null);
   const [scanProposal, setScanProposal] = useState<Stkde3DTemporalWindowPayload | null>(null);
 
   const orderedSlices = useMemo(() => {
@@ -565,9 +563,6 @@ export function Demo3dSpatialView() {
           : -1;
         setActiveSliceIndex(nextGlobalIndex);
       },
-      onSliceHover: (payload) => {
-        setHoveredSliceId(payload?.sourceSliceId ?? null);
-      },
       onSliceSelect: ({ index, sourceSliceId }) => {
         const selectedSlice = sourceSliceId
           ? cubeSlices.find((slice) => slice.sourceSliceId === sourceSliceId)
@@ -602,12 +597,11 @@ export function Demo3dSpatialView() {
       onCreateDraftAtPoint: handleCreateDraftAtPoint,
       onCanvasPointerDown: handleCanvasPointerDown,
       onCanvasPointerMissed: () => {
-        setHoveredSliceId(null);
         setActiveSliceIndex(-1);
         setActiveSlice(null);
       },
     }),
-    [activeWarpDomain, activeWarpMap, commitTemporalRange, countedSlices, cubeSlices, cubeTimeDomain, densityMap, effectiveTimeScaleMode, effectiveWarpBlend, fullTimeDomain, handleBurstSelect, handleCanvasPointerDown, handleCreateDraftAtPoint, handleTrajectorySelect, isPlaying, sceneYToEpoch, scopedDensityMap, setActiveSlice, setActiveSliceIndex, setHoveredSliceId, updateSlice],
+    [activeWarpDomain, activeWarpMap, commitTemporalRange, countedSlices, cubeSlices, cubeTimeDomain, densityMap, effectiveTimeScaleMode, effectiveWarpBlend, fullTimeDomain, handleBurstSelect, handleCanvasPointerDown, handleCreateDraftAtPoint, handleTrajectorySelect, isPlaying, sceneYToEpoch, scopedDensityMap, setActiveSlice, setActiveSliceIndex, updateSlice],
   );
 
   const detailChip = useMemo(() => {
@@ -624,21 +618,6 @@ export function Demo3dSpatialView() {
     const sliceLabel = `${fmt.format(new Date(active.startEpoch * 1000))} – ${fmt.format(new Date(active.endEpoch * 1000))}`;
     return { domainLabel, domainDurationDays, sliceLabel, sliceDurationDays, percentage };
   }, [cubeScopeMode, cubeTimeDomain, cubeSlices, cubeActiveIndex]);
-
-  const inspectedSliceIndex = useMemo(() => {
-    if (hoveredSliceId) {
-      const hoveredIndex = cubeSlices.findIndex((slice) => slice.sourceSliceId === hoveredSliceId);
-      if (hoveredIndex >= 0) return hoveredIndex;
-    }
-    return cubeActiveIndex;
-  }, [cubeActiveIndex, cubeSlices, hoveredSliceId]);
-  const inspectedSlice = cubeSlices[inspectedSliceIndex];
-  const inspectedAllocationMetrics = useMemo(
-    () => inspectedSlice
-      ? buildAllocationMetrics({ slice: inspectedSlice, slices: cubeSlices, profile: cubeVolumeProfile })
-      : null,
-    [cubeSlices, cubeVolumeProfile, inspectedSlice],
-  );
 
   const hotspotMatchingOptions = useMemo(
     () => ({
@@ -700,18 +679,6 @@ export function Demo3dSpatialView() {
           <div className="mt-1 tabular-nums">
             {new Date(scanProposal.startEpoch * 1000).toLocaleString()} – {new Date(scanProposal.endEpoch * 1000).toLocaleString()}
           </div>
-        </div>
-      ) : null}
-
-      {inspectedSlice ? (
-        <div className="absolute right-3 top-16 z-20 w-72">
-          <SliceInspector
-            slice={inspectedSlice}
-            serverEventCount={inspectedSlice.serverEventCount}
-            burstiness={inspectedSlice.burstScore}
-            allocationMetrics={inspectedAllocationMetrics}
-            burstVolumeModel={burstVolumeModel}
-          />
         </div>
       ) : null}
 

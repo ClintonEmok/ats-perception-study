@@ -184,13 +184,18 @@ describe('/dashboard-demo shell', () => {
     expect(demoAnalysisStoreSource).toMatch(/setHotspotMatchingMode: \(mode: DemoHotspotMatchingMode\) => void/);
     expect(demoInspectPanelSource).toMatch(/StkdeIntensityLegend mode=\{heatmapRenderer\}/);
     expect(demoInspectPanelSource).not.toMatch(/Field renderer|Legacy renderer|setRenderer/);
+    expect(demoInspectPanelSource).not.toMatch(/SliceInspector/);
     expect(demoInspectPanelSource).toMatch(/Unavailable/);
     expect(demoInspectPanelSource).toMatch(/SliceScrubber/);
     expect(demoStkdePanelSource).toMatch(/STKDE_PARAM_LIMITS/);
     expect(demoStkdePanelSource).toMatch(/setParams|setScopeMode|refresh/);
     expect(demoStkdePanelSource).toMatch(/StkdeIntensityLegend/);
     expect(demoSpatialSource).toMatch(/projectStkdeResponseToSceneSlices/);
+    expect(demoSpatialSource).toMatch(/<Stkde3DScene/);
+    expect(demoSpatialSource).toMatch(/buildDurationVolumeProfile/);
     expect(demoSpatialSource).toMatch(/selectedSourceEvents/);
+    expect(demoSpatialSource).toMatch(/showHotspotTrajectories=\{showHotspotTrajectories\}/);
+    expect(demoSpatialSource).not.toMatch(/SliceInspector|buildAllocationMetrics|inspectedAllocationMetrics/);
     expect(demoSpatialSource).toMatch(/isInterpolated: false/);
     expect(demoSpatialSource).not.toMatch(/computeSliceKde|kdeSlice\.worker/);
     expect(demo3dProviderSource).toMatch(/inspectIsPlaying|setActiveSliceIndex/);

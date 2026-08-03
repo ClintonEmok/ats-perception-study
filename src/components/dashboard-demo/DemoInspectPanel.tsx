@@ -4,7 +4,6 @@ import { Focus, Pause, Play } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { SliceScrubber } from '@/app/stkde-3d/components/SliceScrubber';
-import { SliceInspector } from '@/app/stkde-3d/components/SliceInspector';
 import { StkdeIntensityLegend } from '@/app/stkde-3d/components/StkdeIntensityLegend';
 import { useDashboardDemo3d } from './DashboardDemo3dProvider';
 import { normalizedToEpochSeconds } from '@/lib/time-domain';
@@ -151,8 +150,7 @@ export function DemoInspectPanel() {
             <p className="mt-1">Sparse server surfaces have no positional correspondence, so interpolation is disabled (saved setting: {inspectInterpolation ? 'on' : 'off'}).</p>
           </div>
 
-           {isFocusedView && activeSlice ? <SliceInspector slice={activeSlice} serverEventCount={activeSlice.serverEventCount} burstiness={activeSlice.burstiness} /> : null}
-          <StkdeIntensityLegend mode={heatmapRenderer} domain={[0, 1]} />
+           <StkdeIntensityLegend mode={heatmapRenderer} domain={[0, 1]} />
         </CardContent>
       </Card>
     </div>
