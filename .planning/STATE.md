@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: quick_task_complete
-stopped_at: Completed quick task 260804-01p
-last_updated: "2026-08-03T22:50:44Z"
+stopped_at: Completed quick task 260804-1y2
+last_updated: "2026-08-03T23:36:46Z"
 last_activity: 2026-08-04
-last_activity_desc: Completed quick task 260804-01p; dashboard-demo slice authoring now uses one pending-draft workflow and the 3D stage owns the single intensity legend.
+last_activity_desc: Completed quick task 260804-1y2; dashboard 3D STKDE intensity legend is compact and collapsed by default while shared consumers remain expanded.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: Quick task 260804-01p
+Plan: Quick task 260804-1y2
 Status: Quick task complete
-Last activity: 2026-08-04 — Completed dashboard-demo rail, slice workflow, and intensity-legend consolidation.
+Last activity: 2026-08-04 — Completed dashboard-demo compact STKDE intensity legend task.
 
 Progress: [██████████] 100%
 
@@ -118,6 +118,7 @@ Recent decisions affecting current work:
 - [Quick 260804-01p] The dashboard rail is exactly Overview, STKDE, Slices, Inspect 3D, and Compare; Overview is the fresh default while scan remains the STKDE reset value.
 - [Quick 260804-01p] Detect, manual, and canvas-created dashboard ranges continue through pendingGeneratedBins before active application; case studies remain diagnostic shortcuts outside that pipeline.
 - [Quick 260804-01p] Demo3dSpatialView owns the single dashboard STKDE intensity legend, while STKDE and Inspect panels retain their controls without duplicate legends.
+- [Quick 260804-1y2] The shared STKDE intensity legend defaults to full and expanded; only Demo3dSpatialView opts into explicit compact, default-collapsed presentation through native button disclosure.
 
 ### Roadmap Evolution
 
@@ -141,8 +142,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-03T22:50:44Z
-Stopped at: Completed quick task 260804-01p
+Last session: 2026-08-03T23:36:46Z
+Stopped at: Completed quick task 260804-1y2
 Resume file: None
 
 ## Quick Tasks Completed
@@ -166,3 +167,4 @@ Resume file: None
 | Hide Fixed hotspot matching from dashboard Inspect (`260803-ud3`) | Complete | 2026-08-03 |
 | Hide dashboard-demo slice allocation inspector (`260803-unc`) | Complete | 2026-08-03 |
 | Refactor dashboard-demo user-created slices and final rail (`260804-01p`) | Complete | 2026-08-04 |
+| Make dashboard STKDE intensity legend compact (`260804-1y2`) | Complete | 2026-08-04 |
