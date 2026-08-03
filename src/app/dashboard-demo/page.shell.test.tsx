@@ -47,6 +47,10 @@ describe('/dashboard-demo shell', () => {
       new URL('../../components/dashboard-demo/Demo3dSpatialView.tsx', import.meta.url),
       'utf8'
     );
+    const intensityLegendSource = readFileSync(
+      new URL('../stkde-3d/components/StkdeIntensityLegend.tsx', import.meta.url),
+      'utf8'
+    );
     const demoCompareHookSource = readFileSync(
       new URL('../../components/dashboard-demo/lib/useDemoCompareData.ts', import.meta.url),
       'utf8'
@@ -202,6 +206,12 @@ describe('/dashboard-demo shell', () => {
     expect(demoSpatialSource).toMatch(/projectStkdeResponseToSceneSlices/);
     expect(demoSpatialSource).toMatch(/<Stkde3DScene/);
     expect(demoSpatialSource).toMatch(/<StkdeIntensityLegend mode=\{heatmapRenderer\} domain=\{\[0, 1\]\} compact defaultExpanded=\{false\}/);
+    expect(intensityLegendSource).toMatch(/compact\?: boolean/);
+    expect(intensityLegendSource).toMatch(/defaultExpanded\?: boolean/);
+    expect(intensityLegendSource).toMatch(/compact = false/);
+    expect(intensityLegendSource).toMatch(/defaultExpanded = true/);
+    expect(intensityLegendSource).toMatch(/aria-expanded/);
+    expect(intensityLegendSource).toMatch(/focus-visible:ring-2/);
     expect(demoSpatialSource).toMatch(/buildDurationVolumeProfile/);
     expect(demoSpatialSource).toMatch(/selectedSourceEvents/);
     expect(demoSpatialSource).toMatch(/showHotspotTrajectories=\{showHotspotTrajectories\}/);
