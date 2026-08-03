@@ -4,11 +4,11 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
-status: phase_complete
-stopped_at: Completed quick task 20260803-adaptive-temporal-allocation
-last_updated: "2026-08-03T23:59:00Z"
+status: quick_task_complete
+stopped_at: Completed quick task 260803-qm2
+last_updated: "2026-08-03T17:57:39Z"
 last_activity: 2026-08-03
-last_activity_desc: Completed quick task 20260803-adaptive-temporal-allocation.
+last_activity_desc: Completed quick task 260803-qm2.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14)
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Dashboard-demo adaptive temporal allocation
+**Current focus:** Dashboard-demo STKDE accounting and case-study presets
 
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: Quick task 20260803-adaptive-temporal-allocation
+Plan: Quick task 260803-qm2
 Status: Quick task complete
-Last activity: 2026-08-03 — Completed dashboard-demo adaptive temporal allocation.
+Last activity: 2026-08-03 — Completed dashboard-demo STKDE accounting and case-study presets.
 
 Progress: [██████████] 100%
 
@@ -106,6 +106,9 @@ Recent decisions affecting current work:
 - [Quick 260802-ab-reference-layout] Absolute maps use centered bounded aspect-[16/7] frames with explicit min-w-0, w-full, and 20rem minimums; analytical field resolution and map textures remain unchanged.
 - [Quick 260802-ab-reference-layout] Signed comparison labels are rendered as B HIGHER, 0 / NO DIFFERENCE, and A HIGHER while retaining the existing blue-neutral-red palette semantics.
 - [Quick 20260803-adaptive-temporal-allocation] Dashboard authored allocation converts normalized slices to epoch space, averages the existing density map, applies bounded manual warp hints, and uses the shared cumulative comparable-warp allocator for both timeline and 3D consumers.
+- [Quick 260803-qm2] Dashboard per-slice event counts resolve only through canonical source IDs; missing keyed results remain unknown while server zero remains zero.
+- [Quick 260803-qm2] Full, Fourth of July, Spring Break, and New Year's definitions live in one dependency-free shared module consumed by both standalone and dashboard routes.
+- [Quick 260803-qm2] Case-study selection replaces the canonical generated-applied stack with ten ranges and synchronizes dashboard epoch/normalized time, both scale stores, applied-slices scope, pending drafts, comparison state, and screenshot-ready 3D Inspect mode.
 
 ### Roadmap Evolution
 
@@ -129,8 +132,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-03T23:59:00Z
-Stopped at: Completed quick task 20260803-adaptive-temporal-allocation
+Last session: 2026-08-03T17:57:39Z
+Stopped at: Completed quick task 260803-qm2
 Resume file: None
 
 ## Quick Tasks Completed
@@ -149,3 +152,4 @@ Resume file: None
 | Comparison UX feedback (`260802-compare-ux-feedback`) | Complete | 2026-08-02 |
 | A/B reference layout (`260802-ab-reference-layout`) | Complete | 2026-08-02 |
 | Dashboard adaptive temporal allocation (`20260803-adaptive-temporal-allocation`) | Complete | 2026-08-03 |
+| Dashboard STKDE accounting and case studies (`260803-qm2`) | Complete | 2026-08-03 |
