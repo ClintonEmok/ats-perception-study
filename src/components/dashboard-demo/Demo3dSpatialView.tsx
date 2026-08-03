@@ -10,6 +10,7 @@ import { epochSecondsToNormalized } from '@/lib/time-domain';
 import { normalizeTimeRange } from '@/lib/time-range';
 import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
 import { Stkde3DScene } from '@/app/stkde-3d/components/Stkde3DScene';
+import { StkdeIntensityLegend } from '@/app/stkde-3d/components/StkdeIntensityLegend';
 import { createStkde3DSceneRuntime } from '@/app/stkde-3d/components/Stkde3DSceneProvider';
 import { buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
 import { resolveEpochFromWarpedY, resolveWarpedEpochY } from '@/app/stkde-3d/lib/timeline-axis';
@@ -705,6 +706,9 @@ export function Demo3dSpatialView() {
         selectedSourceEvents={showRawEvents ? activeEvents : null}
         selectedSourceIndex={activeSourceSlice?.sourceSliceIndex}
       />
+      <div className="absolute right-3 top-16 z-20 w-[18rem] max-w-[calc(100%-1.5rem)]">
+        <StkdeIntensityLegend mode={heatmapRenderer} domain={[0, 1]} />
+      </div>
       {showRawEvents && activeEventsError ? (
         <div className="absolute bottom-3 right-3 z-20 rounded-md border border-destructive/30 bg-background/90 px-3 py-2 text-[11px] text-destructive" role="alert">
           Active events unavailable: {activeEventsError}

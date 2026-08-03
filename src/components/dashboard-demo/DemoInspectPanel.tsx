@@ -4,7 +4,6 @@ import { Focus, Pause, Play } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { SliceScrubber } from '@/app/stkde-3d/components/SliceScrubber';
-import { StkdeIntensityLegend } from '@/app/stkde-3d/components/StkdeIntensityLegend';
 import { useDashboardDemo3d } from './DashboardDemo3dProvider';
 import { normalizedToEpochSeconds } from '@/lib/time-domain';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
@@ -46,7 +45,6 @@ export function DemoInspectPanel() {
   const showRawEvents = useDashboardDemoCoordinationStore((state) => state.showRawEvents);
   const showHotspotTrajectories = useDashboardDemoCoordinationStore((state) => state.showHotspotTrajectories);
   const hotspotMatchingMode = useDashboardDemoCoordinationStore((state) => state.hotspotMatchingMode);
-  const heatmapRenderer = useDashboardDemoCoordinationStore((state) => state.heatmapRenderer);
   const inspectInterpolation = useDashboardDemoCoordinationStore((state) => state.inspectInterpolation);
   const crimeFetchStatus = useDashboardDemoCoordinationStore((state) => state.crimeFetchStatus);
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
@@ -150,8 +148,7 @@ export function DemoInspectPanel() {
             <p className="mt-1">Sparse server surfaces have no positional correspondence, so interpolation is disabled (saved setting: {inspectInterpolation ? 'on' : 'off'}).</p>
           </div>
 
-           <StkdeIntensityLegend mode={heatmapRenderer} domain={[0, 1]} />
-        </CardContent>
+         </CardContent>
       </Card>
     </div>
   );

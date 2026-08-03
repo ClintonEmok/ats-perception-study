@@ -3,7 +3,6 @@
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { StkdeIntensityLegend } from '@/app/stkde-3d/components/StkdeIntensityLegend';
 import { STKDE_PARAM_LIMITS, type StkdeParams } from '@/store/useStkdeStore';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useDashboardDemo3d } from './DashboardDemo3dProvider';
@@ -113,7 +112,6 @@ export function StkdeAnalysisPanel() {
         {!isLoading && !error && response && responseMetadata?.cellCount === 0 ? <p className="mt-2">No STKDE cells for this interval.</p> : null}
       </section>
 
-      <StkdeIntensityLegend mode="field" domain={[0, 1]} />
     </section>
   );
 }
