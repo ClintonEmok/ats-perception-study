@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useDemoStkde } from './lib/useDemoStkde';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
@@ -19,6 +19,12 @@ export function DashboardDemo3dProvider({ children }: { children: ReactNode }) {
   const visibleSliceCount = useSliceDomainStore(
     (state) => state.slices.filter((slice) => slice.isVisible && slice.type === 'range').length,
   );
+  const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
+  const slices = useSliceDomainStore((state) => state.slices);
+  const visibleSliceIds = useMemo(
+    () => slices.filter((slice) => slice.isVisible && slice.type === 'range').map((slice) => slice.id),
+    [slices],
+  );
 
   useEffect(() => {
     if (!isPlaying || isScrubbing || visibleSliceCount === 0) return undefined;
@@ -29,6 +35,11 @@ export function DashboardDemo3dProvider({ children }: { children: ReactNode }) {
 
     return () => window.clearTimeout(timeout);
   }, [activeSliceIndex, isPlaying, isScrubbing, playbackSpeed, setActiveSliceIndex, visibleSliceCount]);
+
+  useEffect(() => {
+    const sourceSliceId = visibleSliceIds[activeSliceIndex];
+    if (sourceSliceId) setActiveSlice(sourceSliceId);
+  }, [activeSliceIndex, setActiveSlice, visibleSliceIds]);
 
   return (
     <DashboardDemo3dContext.Provider value={stkde}>

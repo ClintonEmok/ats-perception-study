@@ -20,6 +20,8 @@ export type DemoWarpSource = 'density' | 'slice-authored';
 export type DemoStkdeScopeMode = 'applied-slices' | 'full-viewport';
 export type DemoVolumeNormalizationMode = 'window' | 'reference';
 export type DemoCubeScopeMode = 'full' | 'brushed';
+export type DemoHotspotMatchingMode = 'fixed' | 'adaptive';
+export type DemoHeatmapRenderer = 'field' | 'legacy';
 
 const DEFAULT_START_EPOCH = 978307200;
 const DEFAULT_END_EPOCH = 1767571200;
@@ -106,6 +108,12 @@ interface DashboardDemoCoordinationState {
   inspectInterpolation: boolean;
   inspectIsScrubbing: boolean;
   inspectSliceOpacity: number;
+  inspectActiveSliceOpacity: number;
+  inspectNonActiveSliceOpacity: number;
+  showRawEvents: boolean;
+  showHotspotTrajectories: boolean;
+  hotspotMatchingMode: DemoHotspotMatchingMode;
+  heatmapRenderer: DemoHeatmapRenderer;
   cubeScopeMode: DemoCubeScopeMode;
   volumeScaleSeconds: number;
   volumeExaggeration: number;
@@ -140,6 +148,14 @@ interface DashboardDemoCoordinationState {
   setViewMode: (mode: DemoSliceViewMode) => void;
   setInspectIsPlaying: (playing: boolean) => void;
   setInspectSliceOpacity: (opacity: number) => void;
+  setInspectActiveSliceOpacity: (opacity: number) => void;
+  setInspectNonActiveSliceOpacity: (opacity: number) => void;
+  setShowRawEvents: (show: boolean) => void;
+  toggleShowRawEvents: () => void;
+  setShowHotspotTrajectories: (show: boolean) => void;
+  toggleShowHotspotTrajectories: () => void;
+  setHotspotMatchingMode: (mode: DemoHotspotMatchingMode) => void;
+  setHeatmapRenderer: (renderer: DemoHeatmapRenderer) => void;
   setInspectInterpolation: (enabled: boolean) => void;
   toggleInspectInterpolation: () => void;
   setInspectIsScrubbing: (scrubbing: boolean) => void;
@@ -209,6 +225,12 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   inspectInterpolation: true,
   inspectIsScrubbing: false,
   inspectSliceOpacity: 1,
+  inspectActiveSliceOpacity: 1,
+  inspectNonActiveSliceOpacity: 0.35,
+  showRawEvents: false,
+  showHotspotTrajectories: true,
+  hotspotMatchingMode: 'fixed' as DemoHotspotMatchingMode,
+  heatmapRenderer: 'field' as DemoHeatmapRenderer,
   cubeScopeMode: 'full',
   volumeScaleSeconds: DEFAULT_VOLUME_SCALE_SECONDS,
   volumeExaggeration: DEFAULT_VOLUME_EXAGGERATION,
@@ -250,7 +272,15 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   setActiveSliceIndex: (activeSliceIndex) => set({ activeSliceIndex }),
   setViewMode: (viewMode) => set({ viewMode }),
   setInspectIsPlaying: (inspectIsPlaying) => set({ inspectIsPlaying }),
-  setInspectSliceOpacity: (inspectSliceOpacity) => set({ inspectSliceOpacity }),
+  setInspectSliceOpacity: (inspectSliceOpacity) => set({ inspectSliceOpacity: Math.min(1.5, Math.max(0, inspectSliceOpacity)) }),
+  setInspectActiveSliceOpacity: (inspectActiveSliceOpacity) => set({ inspectActiveSliceOpacity: Math.min(1, Math.max(0, inspectActiveSliceOpacity)) }),
+  setInspectNonActiveSliceOpacity: (inspectNonActiveSliceOpacity) => set({ inspectNonActiveSliceOpacity: Math.min(1, Math.max(0, inspectNonActiveSliceOpacity)) }),
+  setShowRawEvents: (showRawEvents) => set({ showRawEvents }),
+  toggleShowRawEvents: () => set((state) => ({ showRawEvents: !state.showRawEvents })),
+  setShowHotspotTrajectories: (showHotspotTrajectories) => set({ showHotspotTrajectories }),
+  toggleShowHotspotTrajectories: () => set((state) => ({ showHotspotTrajectories: !state.showHotspotTrajectories })),
+  setHotspotMatchingMode: (hotspotMatchingMode) => set({ hotspotMatchingMode }),
+  setHeatmapRenderer: (heatmapRenderer) => set({ heatmapRenderer }),
   setInspectInterpolation: (inspectInterpolation) => set({ inspectInterpolation }),
   toggleInspectInterpolation: () => set((state) => ({ inspectInterpolation: !state.inspectInterpolation })),
   setInspectIsScrubbing: (inspectIsScrubbing) => set({ inspectIsScrubbing }),
@@ -270,9 +300,15 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
     set({
       inspectIsPlaying: false,
       inspectPlaybackSpeed: 1,
-      inspectInterpolation: true,
-      inspectIsScrubbing: false,
-      cubeScopeMode: 'full',
+       inspectInterpolation: true,
+       inspectIsScrubbing: false,
+       cubeScopeMode: 'full',
+       showRawEvents: false,
+       showHotspotTrajectories: true,
+       hotspotMatchingMode: 'fixed',
+       heatmapRenderer: 'field',
+       inspectActiveSliceOpacity: 1,
+       inspectNonActiveSliceOpacity: 0.35,
     }),
   setCrimeFetchStatus: (crimeFetchStatus) => set({ crimeFetchStatus }),
   setSliceCrimeCounts: (sliceCrimeCounts) => set({ sliceCrimeCounts }),
@@ -341,6 +377,10 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   setDetailsOpen: (open) => set({ detailsOpen: open }),
   setComparisonSliceId: (slot, sliceId) =>
     set((state) => {
+      const otherSlot: DemoComparisonSlot = slot === 'left' ? 'right' : 'left';
+      if (sliceId !== null && state.comparisonSliceIds[otherSlot] === sliceId) {
+        return state;
+      }
       const nextIds = { ...state.comparisonSliceIds, [slot]: sliceId };
       const nextOrder = state.comparisonSelectionOrder.filter((item) => item !== slot);
       if (sliceId !== null) nextOrder.push(slot);
@@ -349,6 +389,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   pushComparisonSlice: (sliceId) =>
     set((state) => {
       const { left, right } = state.comparisonSliceIds;
+      if (left === sliceId || right === sliceId) return state;
       if (left === null) {
         return { comparisonSliceIds: { left: sliceId, right }, comparisonSelectionOrder: ['left', ...(right === null ? [] : ['right'])] as DemoComparisonSlot[] };
       }
@@ -421,8 +462,14 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
       volumeNormalizationMode: DEFAULT_VOLUME_NORMALIZATION_MODE,
       inspectIsPlaying: false,
       inspectPlaybackSpeed: 1,
-      inspectInterpolation: true,
-      inspectIsScrubbing: false,
+       inspectInterpolation: true,
+       inspectIsScrubbing: false,
+       inspectActiveSliceOpacity: 1,
+       inspectNonActiveSliceOpacity: 0.35,
+       showRawEvents: false,
+       showHotspotTrajectories: true,
+       hotspotMatchingMode: 'fixed',
+       heatmapRenderer: 'field',
       selectedHotspotId: null,
       hoveredHotspotId: null,
       spatialFilter: null,

@@ -186,7 +186,6 @@ export function Demo3dSpatialView() {
   const selectedBurstWindows = useDashboardDemoCoordinationStore((state) => state.selectedBurstWindows);
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
   const setSliceCrimeCounts = useDashboardDemoCoordinationStore((state) => state.setSliceCrimeCounts);
-  const setCrimeFetchStatus = useDashboardDemoCoordinationStore((state) => state.setCrimeFetchStatus);
   const setActiveRailTab = useDashboardDemoCoordinationStore((state) => state.setActiveRailTab);
   const setSelectedBurstWindow = useDashboardDemoCoordinationStore((state) => state.toggleBurstWindow);
   const setDetailsOpen = useDashboardDemoCoordinationStore((state) => state.setDetailsOpen);
@@ -256,6 +255,7 @@ export function Demo3dSpatialView() {
     const sourceSlice = activeSourceSlice;
 
     if (!showRawEvents || !sourceSlice) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the opt-in overlay when its owner changes
       setActiveEvents([]);
       setActiveEventsError(null);
       setStkdeActiveEventsStatus('idle');
@@ -671,7 +671,7 @@ export function Demo3dSpatialView() {
           {!stkdeIsLoading && !stkdeError && stkdeIsStale ? <p className="text-amber-700">Showing the last valid STKDE response while updating.</p> : null}
           {!stkdeIsLoading && !stkdeError && stkdeResponse && cubeSliceKdes.every((cells) => cells.length === 0) ? <p>No STKDE cells for this interval.</p> : null}
         </div>
-      )}
+      ) : null}
 
       {detailChip && (
         <div className="absolute bottom-3 left-3 z-20 rounded-md border border-border/50 bg-background/90 px-3 py-2 text-[11px] leading-relaxed shadow-md backdrop-blur-sm">

@@ -41,6 +41,12 @@ beforeEach(() => {
     inspectInterpolation: true,
     inspectIsScrubbing: false,
     inspectSliceOpacity: 1,
+    inspectActiveSliceOpacity: 1,
+    inspectNonActiveSliceOpacity: 0.35,
+    showRawEvents: false,
+    showHotspotTrajectories: true,
+    hotspotMatchingMode: 'fixed',
+    heatmapRenderer: 'field',
     cubeScopeMode: 'full',
     volumeScaleSeconds: 43_200,
     volumeExaggeration: 1.15,
@@ -208,5 +214,43 @@ describe('useDashboardDemoCoordinationStore', () => {
 
     store.setWarpFactor(-1);
     expect(useDashboardDemoCoordinationStore.getState().warpFactor).toBe(0);
+  });
+
+  test('transitions and clamps dashboard 3D overlay controls', () => {
+    const store = useDashboardDemoCoordinationStore.getState();
+
+    store.toggleShowRawEvents();
+    store.toggleShowHotspotTrajectories();
+    store.setHotspotMatchingMode('adaptive');
+    store.setHeatmapRenderer('legacy');
+    store.setInspectActiveSliceOpacity(1.8);
+    store.setInspectNonActiveSliceOpacity(-1);
+
+    expect(useDashboardDemoCoordinationStore.getState()).toMatchObject({
+      showRawEvents: true,
+      showHotspotTrajectories: false,
+      hotspotMatchingMode: 'adaptive',
+      heatmapRenderer: 'legacy',
+      inspectActiveSliceOpacity: 1,
+      inspectNonActiveSliceOpacity: 0,
+    });
+
+    store.resetTemporalSettings();
+
+    expect(useDashboardDemoCoordinationStore.getState()).toMatchObject({
+      showRawEvents: false,
+      showHotspotTrajectories: true,
+      hotspotMatchingMode: 'fixed',
+      heatmapRenderer: 'field',
+      inspectActiveSliceOpacity: 1,
+      inspectNonActiveSliceOpacity: 0.35,
+    });
+  });
+
+  test('rejects duplicate comparison IDs across slots', () => {
+    const store = useDashboardDemoCoordinationStore.getState();
+    store.setComparisonSliceId('left', 'slice-a');
+    store.setComparisonSliceId('right', 'slice-a');
+    expect(useDashboardDemoCoordinationStore.getState().comparisonSliceIds).toEqual({ left: 'slice-a', right: null });
   });
 });

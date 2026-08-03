@@ -7,6 +7,8 @@ export interface HotspotMatchingOptions {
   mode?: HotspotMatchingMode;
   gridSize?: number;
   smoothingMeters?: number;
+  /** Physical server grid width; avoids treating meters as scene-cell counts. */
+  cellWidthMeters?: number;
 }
 
 export interface TrackedHotspotSnapshot {
@@ -100,8 +102,11 @@ function clamp(value: number, min: number, max: number): number {
 export function getAdaptiveMatchToleranceMeters(
   gridSize?: number,
   smoothingMeters?: number,
+  cellWidthMeters?: number,
 ): number {
-  const cellMeters = KDE_SCENE_SPAN_METERS / sanitizeGridSize(gridSize);
+  const cellMeters = Number.isFinite(cellWidthMeters)
+    ? Math.max(1, cellWidthMeters as number)
+    : KDE_SCENE_SPAN_METERS / sanitizeGridSize(gridSize);
   const tolerance = cellMeters + sanitizeSmoothingMeters(smoothingMeters);
   return clamp(tolerance, cellMeters, cellMeters * 2);
 }
@@ -151,7 +156,11 @@ function getAdaptiveLinks(
   next: SliceEntry,
   options: HotspotMatchingOptions,
 ): HotspotLink[] {
-  const toleranceKm = getAdaptiveMatchToleranceMeters(options.gridSize, options.smoothingMeters) / 1000;
+  const toleranceKm = getAdaptiveMatchToleranceMeters(
+    options.gridSize,
+    options.smoothingMeters,
+    options.cellWidthMeters,
+  ) / 1000;
   const candidates: Array<HotspotLink & { score: number }> = [];
 
   for (let currentIndex = 0; currentIndex < current.hotspots.length; currentIndex += 1) {

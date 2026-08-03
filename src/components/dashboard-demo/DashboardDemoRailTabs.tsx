@@ -13,11 +13,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { DemoStatsPanel } from '@/components/dashboard-demo/DemoStatsPanel';
 import { DemoDetectPanel } from '@/components/dashboard-demo/DemoDetectPanel';
 import { DemoSlicePanel } from '@/components/dashboard-demo/DemoSlicePanel';
 import { DemoInspectPanel } from '@/components/dashboard-demo/DemoInspectPanel';
 import { DemoComparePanel } from '@/components/dashboard-demo/DemoComparePanel';
+import { StkdeAnalysisPanel } from '@/components/dashboard-demo/StkdeAnalysisPanel';
 import { GlobalWarpControls } from '@/components/dashboard-demo/GlobalWarpControls';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useIsEvaluationLocked } from '@/store/useEvaluationStudyStore';
@@ -29,10 +29,10 @@ type TabSpec = {
 };
 
 const TAB_SPECS: TabSpec[] = [
-  { value: 'scan', label: 'Overview', icon: BarChart3 },
+  { value: 'scan', label: 'STKDE', icon: BarChart3 },
+  { value: 'inspect', label: 'Inspect 3D', icon: Focus },
   { value: 'detect', label: 'Detect', icon: Sparkles },
   { value: 'slices', label: 'Slices', icon: Layers },
-  { value: 'inspect', label: 'Inspect', icon: Focus },
   { value: 'compare', label: 'Compare', icon: GitCompareArrows },
 ];
 
@@ -194,7 +194,14 @@ function ExpandedRail({
           </TabsList>
         </div>
 
-        <GlobalWarpControls />
+        <TabsContent value="scan" className="mt-2 px-2">
+          <StkdeAnalysisPanel />
+        </TabsContent>
+
+        <TabsContent value="inspect" className="mt-2 px-2">
+          <GlobalWarpControls />
+          <DemoInspectPanel />
+        </TabsContent>
 
         <TabsContent value="detect" className="mt-2 px-2">
           <DemoDetectPanel />
@@ -204,16 +211,8 @@ function ExpandedRail({
           <DemoSlicePanel />
         </TabsContent>
 
-        <TabsContent value="inspect" className="mt-2 px-2">
-          <DemoInspectPanel />
-        </TabsContent>
-
         <TabsContent value="compare" className="mt-2 px-2">
           <DemoComparePanel />
-        </TabsContent>
-
-        <TabsContent value="scan" className="mt-2 px-2">
-          <DemoStatsPanel />
         </TabsContent>
       </Tabs>
     </aside>

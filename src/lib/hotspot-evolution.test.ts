@@ -133,6 +133,13 @@ describe('buildHotspotEvolution', () => {
     expect(getAdaptiveMatchToleranceMeters(16, 1_000)).toBeCloseTo(1_250, 2);
   });
 
+  test('uses an explicit physical server cell width when provided', () => {
+    expect(getAdaptiveMatchToleranceMeters(undefined, 150, 500)).toBe(650);
+    expect(getAdaptiveMatchToleranceMeters(undefined, 150, 500)).not.toBe(
+      getAdaptiveMatchToleranceMeters(32, 150),
+    );
+  });
+
   test('links an adaptive candidate inside the resolution-derived tolerance', () => {
     const result = buildHotspotEvolution(
       {
