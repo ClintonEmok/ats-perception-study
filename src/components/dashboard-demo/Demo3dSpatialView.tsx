@@ -706,8 +706,8 @@ export function Demo3dSpatialView() {
         selectedSourceEvents={showRawEvents ? activeEvents : null}
         selectedSourceIndex={activeSourceSlice?.sourceSliceIndex}
       />
-      <div className="absolute right-3 top-16 z-20 w-[18rem] max-w-[calc(100%-1.5rem)]">
-        <StkdeIntensityLegend mode={heatmapRenderer} domain={[0, 1]} />
+      <div className="absolute right-3 top-16 z-20 w-fit max-w-[calc(100%-1.5rem)]">
+        <StkdeIntensityLegend mode={heatmapRenderer} domain={[0, 1]} compact defaultExpanded={false} />
       </div>
       {showRawEvents && activeEventsError ? (
         <div className="absolute bottom-3 right-3 z-20 rounded-md border border-destructive/30 bg-background/90 px-3 py-2 text-[11px] text-destructive" role="alert">
