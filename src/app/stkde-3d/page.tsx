@@ -6,8 +6,8 @@ import {
   loadConfiguredMockStkde3dDataset,
   loadStkde3dDataset,
   type Stkde3dDataset,
-  type Stkde3dDatasetPreset,
 } from './lib/dataset-loader';
+import { CASE_STUDY_PRESETS, type CaseStudyPresetId } from '@/lib/demo/case-study-presets';
 import { computeSliceKde, KDE_SCENE_SPAN_METERS } from '@/lib/kde';
 import { Stkde3DScene } from './components/Stkde3DScene';
 import { createStkde3DSceneRuntime } from './components/Stkde3DSceneProvider';
@@ -47,57 +47,6 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   year: 'numeric',
 });
-
-const REAL_DATA_RANGE = {
-  startEpoch: 978307200,
-  endEpoch: 1767225599,
-  limit: 1200,
-};
-
-type CaseStudyPresetId = ComparisonDatasetPresetId;
-
-type CaseStudyPreset = Stkde3dDatasetPreset & {
-  id: CaseStudyPresetId;
-  label: string;
-  rangeLabel: string;
-};
-
-const toUtcEpoch = (date: string, endOfDay = false): number => Math.floor(
-  Date.parse(`${date}T${endOfDay ? '23:59:59' : '00:00:00'}Z`) / 1000,
-);
-
-const CASE_STUDY_PRESETS: readonly CaseStudyPreset[] = [
-  {
-    id: 'full',
-    label: 'Full data range',
-    rangeLabel: '2001–2025 · sampled overview',
-    ...REAL_DATA_RANGE,
-  },
-  {
-    id: 'fourth-of-july',
-    label: 'Fourth of July',
-    rangeLabel: 'Jun 30–Jul 7, 2024',
-    startEpoch: toUtcEpoch('2024-06-30'),
-    endEpoch: toUtcEpoch('2024-07-07', true),
-    limit: 5000,
-  },
-  {
-    id: 'spring-break',
-    label: 'Spring Break',
-    rangeLabel: 'Mar 25–Apr 1, 2024',
-    startEpoch: toUtcEpoch('2024-03-25'),
-    endEpoch: toUtcEpoch('2024-04-01', true),
-    limit: 5000,
-  },
-  {
-    id: 'new-years',
-    label: "New Year's",
-    rangeLabel: 'Dec 28, 2023–Jan 4, 2024',
-    startEpoch: toUtcEpoch('2023-12-28'),
-    endEpoch: toUtcEpoch('2024-01-04', true),
-    limit: 5000,
-  },
-];
 
 const EXPERIMENTAL_KDE_PARAMS: KdeParams = {
   gridSize: 48,

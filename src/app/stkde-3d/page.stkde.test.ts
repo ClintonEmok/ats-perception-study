@@ -19,6 +19,7 @@ describe('/stkde-3d route focus mode', () => {
     const loaderSource = readFileSync(new URL('./lib/dataset-loader.ts', import.meta.url), 'utf8');
     const providerSource = readFileSync(new URL('./components/Stkde3DSceneProvider.tsx', import.meta.url), 'utf8');
     const sourceContextSource = readFileSync(new URL('./lib/comparison-source-context.ts', import.meta.url), 'utf8');
+    const caseStudySource = readFileSync(new URL('../../lib/demo/case-study-presets.ts', import.meta.url), 'utf8');
 
     expect(pageSource).toMatch(/Single slice/);
     expect(pageSource).toMatch(/Stack view/);
@@ -34,6 +35,13 @@ describe('/stkde-3d route focus mode', () => {
     expect(pageSource).toMatch(/setIsPlaying\(false\)/);
     expect(pageSource).toMatch(/createStkde3DSceneRuntime/);
     expect(pageSource).toMatch(/sourceSliceId/);
+    expect(pageSource).toMatch(/CASE_STUDY_PRESETS/);
+    expect(pageSource).toMatch(/case-study-presets/);
+    expect(pageSource).not.toMatch(/const CASE_STUDY_PRESETS/);
+    expect(caseStudySource).toMatch(/fourth-of-july/);
+    expect(caseStudySource).toMatch(/spring-break/);
+    expect(caseStudySource).toMatch(/new-years/);
+    expect(loaderSource).toMatch(/Stkde3dDatasetPreset/);
     expect(pageSource).toMatch(/timeDomain/);
     expect(pageSource).toMatch(/buildStandaloneAdaptiveTimeMaps/);
     expect(pageSource).toMatch(/StandaloneSliceScrubber/);
