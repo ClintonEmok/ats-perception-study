@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: phase_complete
-stopped_at: Completed quick task 260802-ab-reference-layout
-last_updated: "2026-08-02T20:32:28Z"
-last_activity: 2026-08-02
-last_activity_desc: Completed quick task 260802-ab-reference-layout.
+stopped_at: Completed quick task 20260803-adaptive-temporal-allocation
+last_updated: "2026-08-03T23:59:00Z"
+last_activity: 2026-08-03
+last_activity_desc: Completed quick task 20260803-adaptive-temporal-allocation.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14)
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Standalone STKDE-3D A/B Comparison
+**Current focus:** Dashboard-demo adaptive temporal allocation
 
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: Quick task 260802-ab-reference-layout (A/B reference layout follow-up)
-Status: Phase complete
-Last activity: 2026-08-02 — Completed quick task 260802-ab-reference-layout.
+Plan: Quick task 20260803-adaptive-temporal-allocation
+Status: Quick task complete
+Last activity: 2026-08-03 — Completed dashboard-demo adaptive temporal allocation.
 
 Progress: [██████████] 100%
 
@@ -105,6 +105,7 @@ Recent decisions affecting current work:
 - [Quick 260802-ab-reference-layout] Comparison presentation uses a desktop two-column white header that stacks below sm, with the mode-specific legend retained as a substantial right-side card.
 - [Quick 260802-ab-reference-layout] Absolute maps use centered bounded aspect-[16/7] frames with explicit min-w-0, w-full, and 20rem minimums; analytical field resolution and map textures remain unchanged.
 - [Quick 260802-ab-reference-layout] Signed comparison labels are rendered as B HIGHER, 0 / NO DIFFERENCE, and A HIGHER while retaining the existing blue-neutral-red palette semantics.
+- [Quick 20260803-adaptive-temporal-allocation] Dashboard authored allocation converts normalized slices to epoch space, averages the existing density map, applies bounded manual warp hints, and uses the shared cumulative comparable-warp allocator for both timeline and 3D consumers.
 
 ### Roadmap Evolution
 
@@ -112,7 +113,9 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-Phase 4 and quick tasks 260802-compare-ux-feedback and 260802-ab-reference-layout are complete after comparison UX, reference layout, state-contract coverage, and browser verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+1. **Capture Chapter 6 prototype evidence and thesis demo strategy** (docs, major) — Chapter 6 has 5 PLACEHOLDER figures; demo strategy needs linear→adaptive transition and context preservation argument.
+
+Phase 4 and quick tasks 260802-compare-ux-feedback, 260802-ab-reference-layout, and 20260803-adaptive-temporal-allocation are complete after comparison UX, reference layout, shared authored temporal allocation, and verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
@@ -126,8 +129,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-02T20:32:28Z
-Stopped at: Completed quick task 260802-ab-reference-layout
+Last session: 2026-08-03T23:59:00Z
+Stopped at: Completed quick task 20260803-adaptive-temporal-allocation
 Resume file: None
 
 ## Quick Tasks Completed
@@ -145,3 +148,4 @@ Resume file: None
 | Standalone adaptive temporal warp (`260731-nsj`) | Complete | 2026-07-31 |
 | Comparison UX feedback (`260802-compare-ux-feedback`) | Complete | 2026-08-02 |
 | A/B reference layout (`260802-ab-reference-layout`) | Complete | 2026-08-02 |
+| Dashboard adaptive temporal allocation (`20260803-adaptive-temporal-allocation`) | Complete | 2026-08-03 |
