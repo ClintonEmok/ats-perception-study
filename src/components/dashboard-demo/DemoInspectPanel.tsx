@@ -138,8 +138,8 @@ export function DemoInspectPanel() {
 
           <ControlToggle label="Active events" pressed={showRawEvents} onChange={toggleRawEvents} />
           <ControlToggle label="Trajectories" pressed={showHotspotTrajectories} onChange={toggleTrajectories} />
-          <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1">
-            {(['fixed', 'adaptive'] as const).map((mode) => <button key={mode} type="button" aria-pressed={hotspotMatchingMode === mode} onClick={() => setMatchingMode(mode)} className={`rounded-md px-2 py-1.5 text-[10px] ${hotspotMatchingMode === mode ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background'}`}>{mode === 'fixed' ? 'Fixed 3 km' : 'Adaptive server cell'}</button>)}
+          <div className="grid grid-cols-1 gap-1 rounded-lg border border-border bg-muted p-1">
+            <button type="button" aria-pressed={hotspotMatchingMode === 'adaptive'} onClick={() => setMatchingMode('adaptive')} className={`rounded-md px-2 py-1.5 text-[10px] ${hotspotMatchingMode === 'adaptive' ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background'}`}>Adaptive server cell</button>
           </div>
 
           <OpacityControl label="Overall slice opacity" value={sliceOpacity} onChange={setSliceOpacity} max={1.5} />

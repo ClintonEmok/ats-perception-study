@@ -174,7 +174,14 @@ describe('/dashboard-demo shell', () => {
     expect(mapVisualizationSource).toMatch(/statsOverlay/);
     expect(demoInspectPanelSource).not.toMatch(/useCrimeData|computeSliceKde|kdeSlice\.worker/);
     expect(demoInspectPanelSource).toMatch(/showRawEvents|showHotspotTrajectories|hotspotMatchingMode|heatmapRenderer/);
-    expect(demoInspectPanelSource).toMatch(/Fixed 3 km|Adaptive server cell/);
+    expect(demoInspectPanelSource).toMatch(/Adaptive server cell/);
+    expect(demoInspectPanelSource).not.toMatch(/Fixed 3 km/);
+    expect(demoInspectPanelSource).toMatch(/const hotspotMatchingMode = useDashboardDemoCoordinationStore/);
+    expect(demoInspectPanelSource).toMatch(/const setMatchingMode = useDashboardDemoCoordinationStore/);
+    expect(demoInspectPanelSource).toMatch(/setMatchingMode\('adaptive'\)/);
+    expect(demoAnalysisStoreSource).toMatch(/type DemoHotspotMatchingMode = 'fixed' \| 'adaptive'/);
+    expect(demoAnalysisStoreSource).toMatch(/hotspotMatchingMode: DemoHotspotMatchingMode/);
+    expect(demoAnalysisStoreSource).toMatch(/setHotspotMatchingMode: \(mode: DemoHotspotMatchingMode\) => void/);
     expect(demoInspectPanelSource).toMatch(/StkdeIntensityLegend mode=\{heatmapRenderer\}/);
     expect(demoInspectPanelSource).not.toMatch(/Field renderer|Legacy renderer|setRenderer/);
     expect(demoInspectPanelSource).toMatch(/Unavailable/);
