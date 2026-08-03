@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: quick_task_complete
-stopped_at: Completed quick task 260803-tdb
-last_updated: "2026-08-03T19:23:43Z"
+stopped_at: Completed quick task 260803-ud3
+last_updated: "2026-08-03T19:58:10Z"
 last_activity: 2026-08-03
-last_activity_desc: Completed quick task 260803-tdb.
+last_activity_desc: Completed quick task 260803-ud3.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -111,6 +111,8 @@ Recent decisions affecting current work:
 - [Quick 260803-qm2] Case-study selection replaces the canonical generated-applied stack with ten ranges and synchronizes dashboard epoch/normalized time, both scale stores, applied-slices scope, pending drafts, comparison state, and screenshot-ready 3D Inspect mode.
 - [Quick 260803-tdb] Dashboard-demo initial state and resetAnalysis use adaptive hotspot matching while resetTemporalSettings remains fixed; adaptive time-scale mode is unchanged.
 - [Quick 260803-tdb] Dashboard Inspect keeps Fixed versus Adaptive hotspot matching and field-backed legend/API wiring while hiding the Field/Legacy renderer selector.
+- [Quick 260803-ud3] Dashboard Inspect exposes only Adaptive server cell matching while preserving the fixed/adaptive matching type, state, setter, and API compatibility.
+- [Quick 260803-ud3] The dashboard-only visibility change leaves renderer behavior and standalone /stkde-3d implementation untouched.
 
 ### Roadmap Evolution
 
@@ -134,8 +136,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-03T19:23:43Z
-Stopped at: Completed quick task 260803-tdb
+Last session: 2026-08-03T19:58:10Z
+Stopped at: Completed quick task 260803-ud3
 Resume file: None
 
 ## Quick Tasks Completed
@@ -156,3 +158,4 @@ Resume file: None
 | Dashboard adaptive temporal allocation (`20260803-adaptive-temporal-allocation`) | Complete | 2026-08-03 |
 | Dashboard STKDE accounting and case studies (`260803-qm2`) | Complete | 2026-08-03 |
 | Dashboard adaptive hotspot default and Inspect renderer cleanup (`260803-tdb`) | Complete | 2026-08-03 |
+| Hide Fixed hotspot matching from dashboard Inspect (`260803-ud3`) | Complete | 2026-08-03 |
