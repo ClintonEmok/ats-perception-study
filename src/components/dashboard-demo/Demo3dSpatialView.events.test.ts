@@ -8,6 +8,9 @@ describe('dashboard 3D active event wiring', () => {
     expect(source).toMatch(/toMockCrimeEvents/);
     expect(source).toMatch(/projectStkdeResponseToSceneSlices/);
     expect(source).toMatch(/sourceSliceId/);
+    expect(source).toMatch(/resolveSliceEventCount/);
+    expect(source).toMatch(/serverEventCount/);
+    expect(source).not.toMatch(/sliceResults\[slice\.id\].*eventCount.*\?\?.*0/);
     expect(source).toMatch(/selectedSourceEvents=\{showRawEvents \? activeEvents : null\}/);
     expect(source).toMatch(/showRawEvents=\{showRawEvents\}/);
     expect(source).toMatch(/buildDurationVolumeProfile\(cubeSlices/);

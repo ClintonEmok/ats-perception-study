@@ -12,6 +12,7 @@ import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 import { useTimelineDataStore } from '@/store/useTimelineDataStore';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
+import { resolveSliceEventCount } from '@/components/dashboard-demo/lib/stkde-slice-accounting';
 
 function resolveSliceEpochRange(slice: TimeSlice, minTimestampSec: number, maxTimestampSec: number): [number, number] {
   if (slice.startDateTimeMs !== undefined || slice.endDateTimeMs !== undefined) {
@@ -69,6 +70,7 @@ export function DemoInspectPanel() {
       const [startEpoch, endEpoch] = minTimestampSec !== null && maxTimestampSec !== null
         ? resolveSliceEpochRange(slice, minTimestampSec, maxTimestampSec)
         : [0, 1];
+      const serverEventCount = resolveSliceEventCount(response, slice.id);
       return {
         sourceSliceId: slice.id,
         index: 0,
@@ -77,7 +79,8 @@ export function DemoInspectPanel() {
         endEpoch,
         burstScore: slice.burstScore ?? 0,
         burstiness: slice.burstinessCoefficient ?? null,
-        crimeCount: response?.sliceResults[slice.id]?.meta.eventCount ?? 0,
+        crimeCount: serverEventCount ?? 0,
+        serverEventCount,
       };
     })
     .sort((left, right) => left.startEpoch - right.startEpoch)
@@ -152,7 +155,7 @@ export function DemoInspectPanel() {
             <p className="mt-1">Sparse server surfaces have no positional correspondence, so interpolation is disabled (saved setting: {inspectInterpolation ? 'on' : 'off'}).</p>
           </div>
 
-          {isFocusedView && activeSlice ? <SliceInspector slice={activeSlice} burstiness={activeSlice.burstiness} /> : null}
+           {isFocusedView && activeSlice ? <SliceInspector slice={activeSlice} serverEventCount={activeSlice.serverEventCount} burstiness={activeSlice.burstiness} /> : null}
           <StkdeIntensityLegend mode={heatmapRenderer} domain={[0, 1]} />
         </CardContent>
       </Card>

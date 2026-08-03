@@ -263,6 +263,51 @@ describe('useDemoStkde', () => {
     expect(latestSnapshot?.response?.meta.eventCount).toBe(2);
   });
 
+  it('sends every visible canonical range slice in the applied-slices request', async () => {
+    const pendingBodies: Array<{ filters: { slices?: Array<{ id: string; startEpochSec: number; endEpochSec: number }> } }> = [];
+    const fetchMock = vi.fn((_input, init) => {
+      pendingBodies.push(JSON.parse(String(init?.body ?? '{}')) as typeof pendingBodies[number]);
+      return new Promise<{ ok: boolean; json: () => Promise<unknown> }>(() => undefined);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    useDashboardDemoCoordinationStore.getState().setTimeRange(1_700_000_000, 1_700_086_400);
+    useSliceDomainStore.getState().addSlice({
+      time: 70,
+      name: 'Later range',
+      type: 'range',
+      range: [70, 80],
+      isVisible: true,
+    });
+    useSliceDomainStore.getState().addSlice({
+      time: 20,
+      name: 'Earlier range',
+      type: 'range',
+      range: [10, 20],
+      isVisible: true,
+    });
+    useSliceDomainStore.getState().addSlice({
+      time: 50,
+      name: 'Hidden range',
+      type: 'range',
+      range: [45, 55],
+      isVisible: false,
+    });
+    const expectedIds = useSliceDomainStore.getState().slices
+      .filter((slice) => slice.isVisible && slice.type === 'range')
+      .map((slice) => slice.id);
+
+    await mountHarness();
+    await act(async () => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+      await flushMicrotasks();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(pendingBodies[0]?.filters.slices?.map((slice) => slice.id).sort()).toEqual(expectedIds.sort());
+    expect(pendingBodies[0]?.filters.slices).toHaveLength(expectedIds.length);
+  });
+
   it('exposes loading metadata and retains the last valid response on retry errors', async () => {
     const pendingRequests: Array<{
       resolve: (payload: { ok: boolean; json: () => Promise<unknown> }) => void;

@@ -19,6 +19,7 @@ function formatSliceDate(epochSeconds: number): string {
 
 interface SliceInspectorProps {
   slice: EvolvingSlice | undefined;
+  serverEventCount?: number | null;
   sliceKde?: ReturnType<typeof computeSliceKde> | undefined;
   burstiness?: number | null;
   allocationMetrics?: AllocationMetrics | null;
@@ -57,6 +58,7 @@ function MetricRow({ label, value }: { label: string; value: string | null }) {
 
 export function SliceInspector({
   slice,
+  serverEventCount,
   burstiness,
   allocationMetrics,
   burstVolumeModel,
@@ -85,7 +87,14 @@ export function SliceInspector({
               </span>
             </div>
             <MetricRow label="Clock duration" value={formatDuration(allocationMetrics?.clockDurationSeconds ?? (slice.endEpoch - slice.startEpoch))} />
-            <MetricRow label="Events" value={slice.crimeCount.toLocaleString()} />
+            <MetricRow
+              label="Events"
+              value={serverEventCount === undefined
+                ? slice.crimeCount.toLocaleString()
+                : serverEventCount === null
+                  ? '—'
+                  : serverEventCount.toLocaleString()}
+            />
           </>
         ) : null}
 

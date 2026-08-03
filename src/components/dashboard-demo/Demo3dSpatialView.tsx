@@ -27,6 +27,7 @@ import { deriveDemo3dInteractionCommand } from '@/components/dashboard-demo/lib/
 import { lonLatToNormalized } from '@/lib/coordinate-normalization';
 import { toMockCrimeEvents } from '@/app/stkde-3d/lib/event-data';
 import { projectStkdeResponseToSceneSlices } from '@/components/dashboard-demo/lib/adaptStkdeSurfaceToKdeCells';
+import { buildSliceEventCountMap, resolveSliceEventCount } from '@/components/dashboard-demo/lib/stkde-slice-accounting';
 import type { SpatialBounds } from '@/store/useDashboardDemoFilterStore';
 import type {
   Stkde3DBurstInteractionPayload,
@@ -45,6 +46,7 @@ interface SceneSlice {
   endEpoch: number;
   burstScore: number;
   crimeCount: number;
+  serverEventCount?: number | null;
   warpWeight?: number;
   signal?: number;
 }
@@ -211,6 +213,7 @@ export function Demo3dSpatialView() {
       .filter((slice) => slice.isVisible && slice.type === 'range')
       .map((slice) => {
         const [startEpoch, endEpoch] = resolveSliceEpochRange(slice, minTimestampSec, maxTimestampSec);
+        const serverEventCount = resolveSliceEventCount(stkdeResponse, slice.id);
         return {
           sourceSliceId: slice.id,
           sourceSliceIndex: 0,
@@ -219,7 +222,11 @@ export function Demo3dSpatialView() {
           startEpoch,
           endEpoch,
           burstScore: normalizeBurstScore(slice.burstScore ?? 0),
-          crimeCount: stkdeResponse?.sliceResults[slice.id]?.meta.eventCount ?? 0,
+          // Rendering helpers still require a number, but the explicit field
+          // preserves the difference between a real zero and an unavailable
+          // keyed server result for labels and inspectors.
+          crimeCount: serverEventCount ?? 0,
+          serverEventCount,
           warpWeight: slice.warpWeight,
           signal: slice.burstinessCoefficient,
         } satisfies SceneSlice;
@@ -241,7 +248,8 @@ export function Demo3dSpatialView() {
 
   useEffect(() => {
     const counts = Object.fromEntries(
-      orderedSlices.map((slice) => [slice.sourceSliceId, stkdeResponse?.sliceResults[slice.sourceSliceId]?.meta.eventCount ?? 0]),
+      Object.entries(buildSliceEventCountMap(stkdeResponse, orderedSlices.map((slice) => slice.sourceSliceId)))
+        .map(([sourceSliceId, count]) => [sourceSliceId, count ?? 0]),
     );
     setSliceCrimeCounts(counts);
   }, [orderedSlices, setSliceCrimeCounts, stkdeResponse]);
@@ -699,6 +707,7 @@ export function Demo3dSpatialView() {
         <div className="absolute right-3 top-16 z-20 w-72">
           <SliceInspector
             slice={inspectedSlice}
+            serverEventCount={inspectedSlice.serverEventCount}
             burstiness={inspectedSlice.burstScore}
             allocationMetrics={inspectedAllocationMetrics}
             burstVolumeModel={burstVolumeModel}

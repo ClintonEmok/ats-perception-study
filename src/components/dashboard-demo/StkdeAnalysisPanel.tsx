@@ -51,21 +51,16 @@ export function StkdeAnalysisPanel() {
           </Button>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1">
-          {([
-            ['applied-slices', 'Applied slices'],
-            ['full-viewport', 'Full viewport'],
-          ] as const).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={scopeMode === value}
-              onClick={() => setScopeMode(value)}
-              className={`rounded-md px-2 py-1.5 text-[10px] transition ${scopeMode === value ? 'bg-foreground text-background shadow-sm' : 'text-muted-foreground hover:bg-background hover:text-foreground'}`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-border bg-muted px-2 py-1.5 text-[10px]">
+          <span className="text-muted-foreground">Scope</span>
+          <button
+            type="button"
+            aria-pressed={scopeMode === 'applied-slices'}
+            onClick={() => setScopeMode('applied-slices')}
+            className="rounded-md bg-foreground px-2 py-1 text-background transition"
+          >
+            Applied slices only
+          </button>
         </div>
       </header>
 

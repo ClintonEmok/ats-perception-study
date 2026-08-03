@@ -40,7 +40,7 @@ interface DemoStkdeResult {
   setSelectedHotspot: (hotspotId: string | null) => void;
   setHoveredHotspot: (hotspotId: string | null) => void;
   setStkdeParams: (patch: Partial<StkdeParams>) => void;
-  setScopeMode: (mode: 'applied-slices' | 'full-viewport') => void;
+  setScopeMode: (mode: 'applied-slices') => void;
 }
 
 function toQueryState(scopeMode: 'applied-slices' | 'full-viewport', startEpochSec: number, endEpochSec: number, params: StkdeParams): StkdeQueryState {

@@ -6,11 +6,11 @@ import { ThreeEvent, useThree } from '@react-three/fiber';
 import { easeInOutCubic, interpolateKdeCells } from '@/lib/motion/easing';
 import { START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 import { getLegacyStkdeIntensityColor, getStkdeIntensityColor } from '../lib/palette';
-import type { KdeCell, EvolvingSlice } from '../lib/types';
+import type { KdeCell } from '../lib/types';
 import { convertKdeFieldToDisplayCells } from '@/app/stkde-3d/lib/comparison-difference';
 import type { KdeField } from '@/lib/kde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
-import { createCameraFocusTarget, useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
+import { createCameraFocusTarget, useStkde3DSceneRuntime, type Stkde3DSceneSlice } from './Stkde3DSceneProvider';
 
 export { AXIS_HEIGHT, START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 const TEXTURE_SIZE = 256;
@@ -149,7 +149,7 @@ function buildInterpolatedTexture(
 }
 
 interface StkdeSliceStackProps {
-  slices: Array<EvolvingSlice & { sourceSliceId?: string; sourceSliceIndex?: number }>;
+  slices: Stkde3DSceneSlice[];
   sliceKdes: KdeCell[][];
   volumeProfile?: DurationVolumeProfileEntry[];
   activeIndex: number;
@@ -281,7 +281,9 @@ export function StkdeSliceStack({
       sourceSliceIndex: slice.sourceSliceIndex ?? slice.index,
       startEpoch: slice.startEpoch,
       endEpoch: slice.endEpoch,
-      eventCount: slice.crimeCount,
+       eventCount: slice.serverEventCount === undefined
+         ? slice.crimeCount
+         : slice.serverEventCount ?? undefined,
       focusPoint: [0, resolveSliceY(slice), 0] as [number, number, number],
     };
     if (comparisonSelectionEnabled) {
@@ -305,7 +307,9 @@ export function StkdeSliceStack({
       sourceSliceIndex: slice.sourceSliceIndex ?? slice.index,
       startEpoch: slice.startEpoch,
       endEpoch: slice.endEpoch,
-      eventCount: slice.crimeCount,
+       eventCount: slice.serverEventCount === undefined
+         ? slice.crimeCount
+         : slice.serverEventCount ?? undefined,
       focusPoint: [0, resolveSliceY(slice), 0] as [number, number, number],
     };
   }, [compact, resolveSliceY, resolveSourceSliceId, slices]);

@@ -4,7 +4,12 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { START_Y, resolveEpochFromWarpedY, resolveWarpedEpochY } from '../lib/timeline-axis';
 import type { EvolvingSlice } from '../lib/types';
 
-export type Stkde3DSceneSlice = EvolvingSlice & { sourceSliceId?: string; sourceSliceIndex?: number };
+export type Stkde3DSceneSlice = EvolvingSlice & {
+  sourceSliceId?: string;
+  sourceSliceIndex?: number;
+  /** Server-authoritative dashboard count; null means the keyed result is unavailable. */
+  serverEventCount?: number | null;
+};
 export type Stkde3DWorldPoint = [number, number, number];
 
 export interface Stkde3DCameraFocusTarget {
