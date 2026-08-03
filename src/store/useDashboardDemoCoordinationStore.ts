@@ -14,7 +14,7 @@ export type DemoBurstMetric = 'density' | 'burstiness';
 export type DemoComparisonSlot = 'left' | 'right';
 export type DemoSliceViewMode = 'stack' | 'focus';
 export type DemoCrimeFetchStatus = 'idle' | 'loading' | 'success' | 'error';
-export type DemoRailTab = 'scan' | 'detect' | 'slices' | 'inspect' | 'compare';
+export type DemoRailTab = 'overview' | 'scan' | 'slices' | 'inspect' | 'compare';
 export type DemoWarpScaleMode = 'linear' | 'adaptive';
 export type DemoWarpSource = 'density' | 'slice-authored';
 export type DemoStkdeScopeMode = 'applied-slices' | 'full-viewport';
@@ -237,7 +237,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   volumeNormalizationMode: DEFAULT_VOLUME_NORMALIZATION_MODE,
   crimeFetchStatus: 'idle',
   sliceCrimeCounts: {},
-  activeRailTab: 'scan',
+  activeRailTab: 'overview',
   // Demo starts in adaptive mode so the 3D cube's non-uniform time axis
   // (the thesis's core contribution) is visible by default. The user can
   // still toggle to 'linear' for comparison via the Time scale control.

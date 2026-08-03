@@ -199,10 +199,10 @@ export const RESET_TARGETS: readonly ResetTarget[] = [
   },
   {
     id: 'coordination-store-set-rail-tab',
-    label: 'Coordination store: setActiveRailTab(scan)',
+    label: 'Coordination store: setActiveRailTab(scan / STKDE)',
     kind: 'zustand-set',
     actionName: 'setActiveRailTab',
-    notes: 'Forces the rail to open on the scan tab so all participants see the same starting surface.',
+    notes: 'Forces the rail to open on the STKDE tab (the scan value) so all participants see the same starting surface.',
   },
   {
     id: 'coordination-store-set-active-slice',

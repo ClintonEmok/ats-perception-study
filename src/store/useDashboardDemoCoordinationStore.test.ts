@@ -35,7 +35,7 @@ beforeEach(() => {
     panelNoMatch: {},
     comparisonSliceIds: { left: null, right: null },
     comparisonSelectionOrder: [],
-    activeRailTab: 'scan',
+    activeRailTab: 'overview',
     inspectIsPlaying: false,
     inspectPlaybackSpeed: 1,
     inspectInterpolation: true,
@@ -55,6 +55,15 @@ beforeEach(() => {
 });
 
 describe('useDashboardDemoCoordinationStore', () => {
+  test('opens the dashboard on the overview rail tab while retaining the STKDE scan value', () => {
+    expect(useDashboardDemoCoordinationStore.getInitialState().activeRailTab).toBe('overview');
+
+    const store = useDashboardDemoCoordinationStore.getState();
+    store.setActiveRailTab('scan');
+
+    expect(useDashboardDemoCoordinationStore.getState().activeRailTab).toBe('scan');
+  });
+
   test('keeps burst selection singleton', () => {
     const store = useDashboardDemoCoordinationStore.getState();
 

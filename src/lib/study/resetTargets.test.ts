@@ -89,7 +89,7 @@ describe('resetTargets: executeResetChecklist', () => {
     // Reset Zustand stores to known defaults so the test is independent
     // of any prior state.
     useDashboardDemoCoordinationStore.setState({
-      activeRailTab: 'scan',
+      activeRailTab: 'overview',
       activeSliceIndex: 0,
       timeScaleMode: 'linear',
       warpFactor: 0,

@@ -7,32 +7,34 @@ import {
   Focus,
   GitCompareArrows,
   Layers,
+  LayoutDashboard,
   Lock,
-  Sparkles,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { DemoDetectPanel } from '@/components/dashboard-demo/DemoDetectPanel';
 import { DemoSlicePanel } from '@/components/dashboard-demo/DemoSlicePanel';
+import { DemoStatsPanel } from '@/components/dashboard-demo/DemoStatsPanel';
 import { DemoInspectPanel } from '@/components/dashboard-demo/DemoInspectPanel';
 import { DemoComparePanel } from '@/components/dashboard-demo/DemoComparePanel';
 import { StkdeAnalysisPanel } from '@/components/dashboard-demo/StkdeAnalysisPanel';
 import { GlobalWarpControls } from '@/components/dashboard-demo/GlobalWarpControls';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
+import type { DemoRailTab } from '@/store/useDashboardDemoCoordinationStore';
 import { useIsEvaluationLocked } from '@/store/useEvaluationStudyStore';
 
 type TabSpec = {
-  value: 'scan' | 'detect' | 'slices' | 'inspect' | 'compare';
+  value: DemoRailTab;
   label: string;
   icon: typeof BarChart3;
 };
 
 const TAB_SPECS: TabSpec[] = [
+  { value: 'overview', label: 'Overview', icon: LayoutDashboard },
   { value: 'scan', label: 'STKDE', icon: BarChart3 },
-  { value: 'inspect', label: 'Inspect 3D', icon: Focus },
-  { value: 'detect', label: 'Detect', icon: Sparkles },
   { value: 'slices', label: 'Slices', icon: Layers },
+  { value: 'inspect', label: 'Inspect 3D', icon: Focus },
   { value: 'compare', label: 'Compare', icon: GitCompareArrows },
 ];
 
@@ -194,21 +196,22 @@ function ExpandedRail({
           </TabsList>
         </div>
 
+        <TabsContent value="overview" className="mt-2 px-2">
+          <DemoStatsPanel />
+        </TabsContent>
+
         <TabsContent value="scan" className="mt-2 px-2">
           <StkdeAnalysisPanel />
+        </TabsContent>
+
+        <TabsContent value="slices" className="mt-2 space-y-3 px-2">
+          <DemoDetectPanel />
+          <DemoSlicePanel />
         </TabsContent>
 
         <TabsContent value="inspect" className="mt-2 px-2">
           <GlobalWarpControls />
           <DemoInspectPanel />
-        </TabsContent>
-
-        <TabsContent value="detect" className="mt-2 px-2">
-          <DemoDetectPanel />
-        </TabsContent>
-
-        <TabsContent value="slices" className="mt-2 px-2">
-          <DemoSlicePanel />
         </TabsContent>
 
         <TabsContent value="compare" className="mt-2 px-2">
