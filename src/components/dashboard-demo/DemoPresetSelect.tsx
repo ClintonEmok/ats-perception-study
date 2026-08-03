@@ -24,15 +24,24 @@ import {
   type DemoPreset,
   type DemoPresetId,
 } from '@/lib/demo/preset-windows';
+import {
+  CASE_STUDY_PRESETS,
+  getCaseStudyPreset,
+  type CaseStudyPresetId,
+} from '@/lib/demo/case-study-presets';
 import { applyDemoPreset } from '@/components/dashboard-demo/lib/applyDemoPreset';
+import { applyDashboardCaseStudy } from '@/components/dashboard-demo/lib/applyDashboardCaseStudy';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useDashboardDemoFilterStore } from '@/store/useDashboardDemoFilterStore';
 import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
+import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
+import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 import { useTimelineDataStore } from '@/store/useTimelineDataStore';
 
 const TOOLTIP_NO_DATA = 'Load data first';
 const SELECT_PLACEHOLDER = 'Demo presets';
 const NONE_VALUE = '__demo_preset_none__';
+type DashboardPresetId = DemoPresetId | CaseStudyPresetId;
 
 interface PresetGroup {
   label: string;
@@ -54,7 +63,7 @@ const PRESET_GROUPS: ReadonlyArray<PresetGroup> = [
  * `warpFactor` for adaptive presets (same convention as
  * `GlobalWarpControls`).
  */
-export function DemoPresetSelect() {
+export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: () => void } = {}) {
   const minTimestampSec = useTimelineDataStore((state) => state.minTimestampSec);
   const maxTimestampSec = useTimelineDataStore((state) => state.maxTimestampSec);
   const isLoading = useTimelineDataStore((state) => state.isLoading);
@@ -67,9 +76,15 @@ export function DemoPresetSelect() {
   const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
   const setDemoTimeRange = useDashboardDemoTimeStore((state) => state.setRange);
   const setDemoTime = useDashboardDemoTimeStore((state) => state.setTime);
+  const setCoordinationTimeRange = useDashboardDemoCoordinationStore((state) => state.setTimeRange);
+  const setCoordinationTimeScaleMode = useDashboardDemoCoordinationStore((state) => state.setTimeScaleMode);
+  const setDemoTimeScaleMode = useDashboardDemoTimeStore((state) => state.setTimeScaleMode);
+  const setStkdeScopeMode = useDashboardDemoCoordinationStore((state) => state.setStkdeScopeMode);
+  const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
+  const clearComparisonSlices = useDashboardDemoCoordinationStore((state) => state.clearComparisonSlices);
   const currentTime = useDashboardDemoTimeStore((state) => state.currentTime);
 
-  const [activePresetId, setActivePresetId] = useState<DemoPresetId | null>(null);
+  const [activePresetId, setActivePresetId] = useState<DashboardPresetId | null>(null);
 
   const hasData = !isLoading && (dataCount ?? 0) > 0;
   const disabled = !hasData;
@@ -90,6 +105,44 @@ export function DemoPresetSelect() {
     (presetId: string) => {
       if (presetId === NONE_VALUE) {
         setActivePresetId(null);
+        return;
+      }
+
+      const caseStudyPreset = getCaseStudyPreset(presetId);
+      if (caseStudyPreset) {
+        const result = applyDashboardCaseStudy({
+          preset: caseStudyPreset,
+          minTimestampSec,
+          maxTimestampSec,
+          currentTime,
+          actions: {
+            setFilterTimeRange,
+            setCoordinationTimeRange,
+            setBrushRange,
+            setDemoTimeRange,
+            setDemoTime,
+            setCoordinationTimeScaleMode,
+            setDemoTimeScaleMode,
+            setStkdeScopeMode,
+            clearPendingGeneratedBins: () => useDashboardDemoTimeslicingModeStore.getState().clearPendingGeneratedBins(),
+            replaceSlicesFromBins: (bins, domain) => useSliceDomainStore.getState().replaceSlicesFromBins(bins, domain),
+            setActiveSliceIndex,
+            clearComparisonSlices,
+            setScreenshotReadyState: () => onCaseStudyApplied?.(),
+          },
+        });
+
+        if (!result.ok) {
+          toast.error(`Cannot load ${caseStudyPreset.label}`, {
+            description: 'Timeline bounds unavailable. Wait for data to finish loading.',
+          });
+          return;
+        }
+
+        setActivePresetId(caseStudyPreset.id);
+        toast.success(`Loaded ${caseStudyPreset.label}`, {
+          description: `${caseStudyPreset.rangeLabel} · ${caseStudyPreset.screenshotMode} · 10 applied slices`,
+        });
         return;
       }
 
@@ -149,6 +202,13 @@ export function DemoPresetSelect() {
       setDemoTimeRange,
       setFilterTimeRange,
       setTimeScaleMode,
+      setCoordinationTimeRange,
+      setCoordinationTimeScaleMode,
+      setDemoTimeScaleMode,
+      setStkdeScopeMode,
+      setActiveSliceIndex,
+      clearComparisonSlices,
+      onCaseStudyApplied,
       setWarpFactor,
       warpFactor,
     ],
@@ -182,9 +242,26 @@ export function DemoPresetSelect() {
                 </span>
               </SelectItem>
             ))}
-          </SelectGroup>
-        ))}
-      </SelectContent>
+           </SelectGroup>
+         ))}
+         <SelectGroup>
+           <SelectLabel>Case studies</SelectLabel>
+           {CASE_STUDY_PRESETS.map((preset) => (
+             <SelectItem
+               key={preset.id}
+               value={preset.id}
+               data-testid={`demo-preset-option-${preset.id}`}
+             >
+               <span className="flex items-center gap-2">
+                 <span>{preset.label}</span>
+                 <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                   {preset.rangeLabel}
+                 </span>
+               </span>
+             </SelectItem>
+           ))}
+         </SelectGroup>
+       </SelectContent>
     </Select>
   );
 
@@ -209,7 +286,7 @@ export function DemoPresetSelect() {
             data-testid="demo-preset-chip"
             className="font-mono text-[10px]"
           >
-            {DEMO_PRESETS[visiblePresetId]?.chip ?? visiblePresetId}
+             {getCaseStudyPreset(visiblePresetId)?.label ?? DEMO_PRESETS[visiblePresetId as DemoPresetId]?.chip ?? visiblePresetId}
           </Badge>
         ) : null}
       </div>

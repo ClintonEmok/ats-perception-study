@@ -104,6 +104,9 @@ describe('/dashboard-demo shell', () => {
     expect(shellSource).toMatch(/Show map viewport/);
     expect(shellSource).toMatch(/Show 3D viewport/);
     expect(shellSource).toMatch(/DashboardDemo3dProvider/);
+    expect(shellSource).toMatch(/DemoPresetSelect/);
+    expect(shellSource).toMatch(/setActiveViewport\('3d'\)/);
+    expect(shellSource).toMatch(/setActiveRailTab\('inspect'\)/);
     expect(shellSource).not.toMatch(/DemoStkdeTrigger|useDemoStkde/);
     expect(demo3dProviderSource).toMatch(/useDemoStkde/);
     expect(demo3dProviderSource).toMatch(/DashboardDemo3dContext/);
@@ -204,6 +207,12 @@ describe('/dashboard-demo shell', () => {
     // rather than touching the demo stores inline — this pins the helper
     // as the single source of truth for the preset-to-store sync contract.
     expect(demoPresetSelectSource).toMatch(/applyDemoPreset/);
+    expect(demoPresetSelectSource).toMatch(/applyDashboardCaseStudy/);
+    expect(demoPresetSelectSource).toMatch(/CASE_STUDY_PRESETS/);
+    expect(demoPresetSelectSource).toMatch(/Case studies/);
+    expect(demoPresetSelectSource).toMatch(/replaceSlicesFromBins/);
+    expect(demoPresetSelectSource).toMatch(/useSliceDomainStore\.getState\(\)/);
+    expect(demoPresetSelectSource).not.toMatch(/loadStkde3dDataset|loadConfiguredMockStkde3dDataset|computeSliceKde/);
     expect(demoSlicePanelSource).toMatch(/useSliceDomainStore/);
     expect(demoSlicePanelSource).toMatch(/useDashboardDemoCoordinationStore/);
     expect(demoSlicePanelSource).toMatch(/useDashboardDemoTimeStore/);

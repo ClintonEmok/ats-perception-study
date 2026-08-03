@@ -15,6 +15,7 @@ import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoord
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
 import { useDashboardDemoMapLayerStore } from '@/store/useDashboardDemoMapLayerStore';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
+import { DemoPresetSelect } from '@/components/dashboard-demo/DemoPresetSelect';
 
 type DemoViewport = 'map' | '3d' | 'compare';
 
@@ -77,8 +78,14 @@ export function DashboardDemoShell() {
         aria-label="dashboard demo workspace"
       >
         <div className={`flex h-full min-w-0 flex-col transition-[padding] duration-200 ${railCollapsed ? 'pr-12' : 'pr-80'}`}>
-        <section className="relative min-h-0 flex-1 overflow-hidden bg-background" aria-label="dashboard demo shared viewport">
-          <div className="absolute right-4 top-4 z-40 flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1 shadow-sm backdrop-blur">
+         <section className="relative min-h-0 flex-1 overflow-hidden bg-background" aria-label="dashboard demo shared viewport">
+           <div className="absolute left-4 top-4 z-40">
+             <DemoPresetSelect onCaseStudyApplied={() => {
+               setActiveViewport('3d');
+               setActiveRailTab('inspect');
+             }} />
+           </div>
+           <div className="absolute right-4 top-4 z-40 flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1 shadow-sm backdrop-blur">
             <Button
               type="button"
               onClick={() => setActiveViewport('map')}
