@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: quick_task_complete
-stopped_at: Completed quick task 260803-qm2
-last_updated: "2026-08-03T17:57:39Z"
+stopped_at: Completed quick task 260803-tdb
+last_updated: "2026-08-03T19:23:43Z"
 last_activity: 2026-08-03
-last_activity_desc: Completed quick task 260803-qm2.
+last_activity_desc: Completed quick task 260803-tdb.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-14)
 
 **Core value:** Help users understand dense vs sparse spatiotemporal crime patterns by keeping the cube, map, and timeline synchronized around adaptive time scaling.
-**Current focus:** Dashboard-demo STKDE accounting and case-study presets
+**Current focus:** Dashboard-demo adaptive STKDE controls and case-study presets
 
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: Quick task 260803-qm2
+Plan: Quick task 260803-tdb
 Status: Quick task complete
-Last activity: 2026-08-03 — Completed dashboard-demo STKDE accounting and case-study presets.
+Last activity: 2026-08-03 — Completed dashboard-demo adaptive hotspot matching defaults and Inspect renderer selector removal.
 
 Progress: [██████████] 100%
 
@@ -109,6 +109,8 @@ Recent decisions affecting current work:
 - [Quick 260803-qm2] Dashboard per-slice event counts resolve only through canonical source IDs; missing keyed results remain unknown while server zero remains zero.
 - [Quick 260803-qm2] Full, Fourth of July, Spring Break, and New Year's definitions live in one dependency-free shared module consumed by both standalone and dashboard routes.
 - [Quick 260803-qm2] Case-study selection replaces the canonical generated-applied stack with ten ranges and synchronizes dashboard epoch/normalized time, both scale stores, applied-slices scope, pending drafts, comparison state, and screenshot-ready 3D Inspect mode.
+- [Quick 260803-tdb] Dashboard-demo initial state and resetAnalysis use adaptive hotspot matching while resetTemporalSettings remains fixed; adaptive time-scale mode is unchanged.
+- [Quick 260803-tdb] Dashboard Inspect keeps Fixed versus Adaptive hotspot matching and field-backed legend/API wiring while hiding the Field/Legacy renderer selector.
 
 ### Roadmap Evolution
 
@@ -132,8 +134,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-03T17:57:39Z
-Stopped at: Completed quick task 260803-qm2
+Last session: 2026-08-03T19:23:43Z
+Stopped at: Completed quick task 260803-tdb
 Resume file: None
 
 ## Quick Tasks Completed
@@ -153,3 +155,4 @@ Resume file: None
 | A/B reference layout (`260802-ab-reference-layout`) | Complete | 2026-08-02 |
 | Dashboard adaptive temporal allocation (`20260803-adaptive-temporal-allocation`) | Complete | 2026-08-03 |
 | Dashboard STKDE accounting and case studies (`260803-qm2`) | Complete | 2026-08-03 |
+| Dashboard adaptive hotspot default and Inspect renderer cleanup (`260803-tdb`) | Complete | 2026-08-03 |
