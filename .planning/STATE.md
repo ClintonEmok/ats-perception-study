@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: quick_task_complete
-stopped_at: Reverified completed quick task 260803-ud3
-last_updated: "2026-08-03T20:02:33Z"
+stopped_at: Completed quick task 260803-unc
+last_updated: "2026-08-03T20:27:50Z"
 last_activity: 2026-08-03
-last_activity_desc: Reverified quick task 260803-ud3 after interrupted-task report; implementation remains applied.
+last_activity_desc: Completed quick task 260803-unc; dashboard-demo allocation inspector paths are hidden and standalone behavior is unchanged.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-14)
 ## Current Position
 
 Phase: 4 of 5 (STKDE-3D A/B Comparison)
-Plan: Quick task 260803-ud3
+Plan: Quick task 260803-unc
 Status: Quick task complete
-Last activity: 2026-08-03 — Reverified dashboard-demo Inspect hides Fixed 3 km matching and preserves internal compatibility.
+Last activity: 2026-08-03 — Completed dashboard-demo allocation inspector cleanup while preserving scene and control wiring.
 
 Progress: [██████████] 100%
 
@@ -113,6 +113,8 @@ Recent decisions affecting current work:
 - [Quick 260803-tdb] Dashboard Inspect keeps Fixed versus Adaptive hotspot matching and field-backed legend/API wiring while hiding the Field/Legacy renderer selector.
 - [Quick 260803-ud3] Dashboard Inspect exposes only Adaptive server cell matching while preserving the fixed/adaptive matching type, state, setter, and API compatibility.
 - [Quick 260803-ud3] The dashboard-only visibility change leaves renderer behavior and standalone /stkde-3d implementation untouched.
+- [Quick 260803-unc] Dashboard-demo 3D and Inspect hide SliceInspector allocation cards while preserving STKDE surfaces, duration/burst volume wiring, events, trajectories, scrubber, legends, controls, and runtime synchronization.
+- [Quick 260803-unc] Standalone /stkde-3d SliceInspector and allocation behavior remain unchanged.
 
 ### Roadmap Evolution
 
@@ -122,7 +124,7 @@ Recent decisions affecting current work:
 
 1. **Capture Chapter 6 prototype evidence and thesis demo strategy** (docs, major) — Chapter 6 has 5 PLACEHOLDER figures; demo strategy needs linear→adaptive transition and context preservation argument.
 
-Phase 4 and quick tasks 260802-compare-ux-feedback, 260802-ab-reference-layout, and 20260803-adaptive-temporal-allocation are complete after comparison UX, reference layout, shared authored temporal allocation, and verification. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
+Phase 4 and quick tasks 260802-compare-ux-feedback, 260802-ab-reference-layout, 20260803-adaptive-temporal-allocation, 260803-tdb, 260803-ud3, and 260803-unc are complete after comparison UX, reference layout, shared authored temporal allocation, dashboard STKDE controls, and dashboard presentation cleanup. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
 ### Blockers/Concerns
 
@@ -136,8 +138,8 @@ The full test suite has four stale source-contract failures in unrelated visuali
 
 ## Session Continuity
 
-Last session: 2026-08-03T20:02:33Z
-Stopped at: Reverified quick task 260803-ud3 after interrupted-task report
+Last session: 2026-08-03T20:27:50Z
+Stopped at: Completed quick task 260803-unc
 Resume file: None
 
 ## Quick Tasks Completed
@@ -159,3 +161,4 @@ Resume file: None
 | Dashboard STKDE accounting and case studies (`260803-qm2`) | Complete | 2026-08-03 |
 | Dashboard adaptive hotspot default and Inspect renderer cleanup (`260803-tdb`) | Complete | 2026-08-03 |
 | Hide Fixed hotspot matching from dashboard Inspect (`260803-ud3`) | Complete | 2026-08-03 |
+| Hide dashboard-demo slice allocation inspector (`260803-unc`) | Complete | 2026-08-03 |
