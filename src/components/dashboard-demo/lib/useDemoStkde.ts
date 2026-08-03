@@ -218,7 +218,7 @@ export function useDemoStkde(): DemoStkdeResult {
               filters: {
                 bbox: DEFAULT_STKDE_BBOX,
                 ...(paddedDistricts ? { districts: paddedDistricts } : {}),
-                ...(sliceDescriptors.length > 0 ? { slices: sliceDescriptors } : {}),
+                 ...(stkdeScopeMode === 'applied-slices' && sliceDescriptors.length > 0 ? { slices: sliceDescriptors } : {}),
               },
               params: {
                 spatialBandwidthMeters: queryState.spatialBandwidthMeters,
@@ -277,7 +277,7 @@ export function useDemoStkde(): DemoStkdeResult {
       clearTimeout(timerId);
       controller.abort();
     };
-  }, [paddedDistricts, queryState, refreshTick, selectedDistricts.length, sliceDescriptors, sliceSignature, setStkdeResponse]);
+  }, [paddedDistricts, queryState, refreshTick, selectedDistricts.length, sliceDescriptors, sliceSignature, setStkdeResponse, stkdeScopeMode]);
 
   useEffect(() => {
     return () => {

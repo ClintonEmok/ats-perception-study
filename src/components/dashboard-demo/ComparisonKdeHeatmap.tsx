@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { KdeCell, SliceKdeResult } from '@/lib/kde';
+import type { KdeCell } from '@/lib/kde';
 
 type ColorScheme = 'blue' | 'orange';
 
@@ -70,23 +70,25 @@ function buildCellIntensityGrid(cells: KdeCell[]): Float32Array {
 }
 
 export interface ComparisonKdeHeatmapProps {
-  kde?: SliceKdeResult;
+  cells?: KdeCell[];
   label: string;
   crimeCount: number;
   colorScheme: ColorScheme;
   isLoading?: boolean;
+  status?: string;
   size?: number;
 }
 
 export function ComparisonKdeHeatmap({
-  kde,
+  cells,
   label,
   crimeCount,
   colorScheme,
   isLoading = false,
+  status = 'server-normalized sparse surface',
   size = VIEWPORT_SIZE,
 }: ComparisonKdeHeatmapProps) {
-  const grid = useMemo(() => (kde ? buildCellIntensityGrid(kde.cells) : null), [kde]);
+  const grid = useMemo(() => (cells ? buildCellIntensityGrid(cells) : null), [cells]);
   const backgroundFill = useMemo(() => `rgb(${interpolateColor(0, colorScheme).join(',')})`, [colorScheme]);
 
   return (
@@ -95,10 +97,11 @@ export function ComparisonKdeHeatmap({
         <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </span>
-        <span className="text-[10px] tabular-nums text-muted-foreground">
-          {crimeCount.toLocaleString()} events
-        </span>
-      </figcaption>
+          <span className="text-[10px] tabular-nums text-muted-foreground">
+            {crimeCount.toLocaleString()} events
+          </span>
+        </figcaption>
+      <div className="mb-1 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">{status}</div>
 
       <div
         className="relative overflow-hidden rounded-md border border-border/70"

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'r
 import { useDemoStkde } from './lib/useDemoStkde';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
+import { normalizedToEpochSeconds } from '@/lib/time-domain';
 
 type DashboardDemo3dValue = ReturnType<typeof useDemoStkde>;
 
@@ -21,9 +22,26 @@ export function DashboardDemo3dProvider({ children }: { children: ReactNode }) {
   );
   const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
   const slices = useSliceDomainStore((state) => state.slices);
+  const timeRange = useDashboardDemoCoordinationStore((state) => state.timeRange);
   const visibleSliceIds = useMemo(
-    () => slices.filter((slice) => slice.isVisible && slice.type === 'range').map((slice) => slice.id),
-    [slices],
+    () => slices
+      .filter((slice) => slice.isVisible && slice.type === 'range')
+      .map((slice) => {
+        const start = typeof slice.startDateTimeMs === 'number'
+          ? slice.startDateTimeMs / 1000
+          : slice.range
+            ? normalizedToEpochSeconds(Math.min(slice.range[0], slice.range[1]), timeRange.startEpoch, timeRange.endEpoch)
+            : normalizedToEpochSeconds(slice.time, timeRange.startEpoch, timeRange.endEpoch);
+        const end = typeof slice.endDateTimeMs === 'number'
+          ? slice.endDateTimeMs / 1000
+          : slice.range
+            ? normalizedToEpochSeconds(Math.max(slice.range[0], slice.range[1]), timeRange.startEpoch, timeRange.endEpoch)
+            : start;
+        return { id: slice.id, start, end };
+      })
+      .sort((left, right) => left.start - right.start || left.end - right.end || left.id.localeCompare(right.id))
+      .map((slice) => slice.id),
+    [slices, timeRange.endEpoch, timeRange.startEpoch],
   );
 
   useEffect(() => {

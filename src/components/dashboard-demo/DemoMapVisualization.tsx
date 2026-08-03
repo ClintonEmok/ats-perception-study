@@ -50,6 +50,7 @@ export function DemoMapVisualization({
   const storeSelectedHotspotId = useDashboardDemoCoordinationStore((state) => state.selectedHotspotId);
 
   const activeSliceIndex = useDashboardDemoCoordinationStore((s) => s.activeSliceIndex);
+  const activeSliceId = useSliceDomainStore((s) => s.activeSliceId);
   const slices = useSliceDomainStore((s) => s.slices);
   const minTimestampSec = useTimelineDataStore((s) => s.minTimestampSec);
   const maxTimestampSec = useTimelineDataStore((s) => s.maxTimestampSec);
@@ -61,13 +62,15 @@ export function DemoMapVisualization({
     const visible = slices
       .filter((s) => s.isVisible && s.type === 'range')
       .sort((a, b) => (a.startDateTimeMs ?? 0) - (b.startDateTimeMs ?? 0));
-    const active = visible[activeSliceIndex];
+    const active = activeSliceId
+      ? visible.find((slice) => slice.id === activeSliceId)
+      : visible[activeSliceIndex];
     if (!active) return { sliceTimeRange: null, activeSliceLabel: null };
 
     const range = resolveSliceEpochRange(active, minTimestampSec, maxTimestampSec);
     const label = active.name || `Slice ${activeSliceIndex + 1}`;
     return { sliceTimeRange: range, activeSliceLabel: label };
-  }, [activeSliceIndex, slices, minTimestampSec, maxTimestampSec]);
+  }, [activeSliceId, activeSliceIndex, slices, minTimestampSec, maxTimestampSec]);
 
   return (
     <div className="relative h-full w-full">

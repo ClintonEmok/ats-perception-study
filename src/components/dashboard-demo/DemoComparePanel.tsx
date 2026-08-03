@@ -46,6 +46,10 @@ export function DemoComparePanel() {
     rightBurstPercent,
     leftCellCount,
     rightCellCount,
+    responseStatus,
+    responseError,
+    responseIsStale,
+    signedDifferenceReason,
     setLeft,
     setRight,
     swap,
@@ -111,6 +115,15 @@ export function DemoComparePanel() {
           onChange={setRight}
           activeSlice={rightSlice}
         />
+      </div>
+
+      <div className="rounded-md border border-border/70 bg-muted/50 p-2 text-[10px] text-muted-foreground" role={responseError ? 'alert' : 'status'}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-semibold uppercase tracking-[0.16em] text-foreground">Server comparison</span>
+          <span>{responseIsStale ? 'stale' : responseStatus}</span>
+        </div>
+        {responseError ? <p className="mt-1 text-destructive">{responseError}</p> : null}
+        <p className="mt-1">{signedDifferenceReason}</p>
       </div>
 
       <ComparisonTimelineBar left={leftTimelineRange} right={rightTimelineRange} />

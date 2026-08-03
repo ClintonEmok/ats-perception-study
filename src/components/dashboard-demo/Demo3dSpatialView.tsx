@@ -656,7 +656,7 @@ export function Demo3dSpatialView() {
     return (
       <div className="flex h-full w-full items-center justify-center bg-muted/30">
         <p className="text-sm text-muted-foreground">
-          Apply generated slices to view 3D spatial distribution
+          Apply range slices to inspect STKDE evolution
         </p>
       </div>
     );
@@ -721,7 +721,6 @@ export function Demo3dSpatialView() {
         activeSliceOpacity={activeSliceOpacity}
         nonActiveSliceOpacity={nonActiveSliceOpacity}
         heatmapRenderer={heatmapRenderer}
-        kdeGridSize={Math.max(4, Math.round(100_000 / Math.max(100, stkdeParams.gridCellMeters)))}
         timeDomain={cubeTimeDomain}
         overrideWarpMap={scopedWarpMap}
         overrideWarpDomain={cubeScopeMode === 'brushed' ? cubeTimeDomain : undefined}

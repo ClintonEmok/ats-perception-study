@@ -39,6 +39,22 @@ describe('/dashboard-demo shell', () => {
       new URL('../../components/dashboard-demo/DemoInspectPanel.tsx', import.meta.url),
       'utf8'
     );
+    const demoStkdePanelSource = readFileSync(
+      new URL('../../components/dashboard-demo/StkdeAnalysisPanel.tsx', import.meta.url),
+      'utf8'
+    );
+    const demoSpatialSource = readFileSync(
+      new URL('../../components/dashboard-demo/Demo3dSpatialView.tsx', import.meta.url),
+      'utf8'
+    );
+    const demoCompareHookSource = readFileSync(
+      new URL('../../components/dashboard-demo/lib/useDemoCompareData.ts', import.meta.url),
+      'utf8'
+    );
+    const demoCompareStageSource = readFileSync(
+      new URL('../../components/dashboard-demo/DemoCompareStage.tsx', import.meta.url),
+      'utf8'
+    );
     const demoSlicePanelSource = readFileSync(
       new URL('../../components/dashboard-demo/DemoSlicePanel.tsx', import.meta.url),
       'utf8'
@@ -103,7 +119,9 @@ describe('/dashboard-demo shell', () => {
     expect(railTabsSource).toMatch(/TabsContent value="scan"/);
     expect(railTabsSource).toMatch(/TabsContent value="detect"/);
     expect(railTabsSource).toMatch(/TabsContent value="slices"/);
-    expect(railTabsSource).toMatch(/DemoStatsPanel/);
+    expect(railTabsSource).toMatch(/StkdeAnalysisPanel/);
+    expect(railTabsSource).toMatch(/label: 'STKDE'/);
+    expect(railTabsSource).toMatch(/label: 'Inspect 3D'/);
     expect(demoAnalysisStoreSource).toMatch(/useDashboardDemoCoordinationStore/);
     expect(demoAnalysisStoreSource).toMatch(/selectedDistricts/);
     expect(demoAnalysisStoreSource).toMatch(/stkdeParams/);
@@ -151,11 +169,22 @@ describe('/dashboard-demo shell', () => {
     expect(demoStatsMapOverlaySource).toMatch(/dist_label/);
     expect(demoStatsMapOverlaySource).toMatch(/selectedDistricts/);
     expect(mapVisualizationSource).toMatch(/statsOverlay/);
-    expect(demoInspectPanelSource).toMatch(/useCrimeData/);
-    expect(demoInspectPanelSource).toMatch(/computeSliceKde/);
-    expect(demoInspectPanelSource).toMatch(/sliceKde=\{activeSliceKde\}/);
-    expect(demoInspectPanelSource).toMatch(/setViewMode\('focus'\)/);
-    expect(demoInspectPanelSource).toMatch(/hasDefaultedFocusRef/);
+    expect(demoInspectPanelSource).not.toMatch(/useCrimeData|computeSliceKde|kdeSlice\.worker/);
+    expect(demoInspectPanelSource).toMatch(/showRawEvents|showHotspotTrajectories|hotspotMatchingMode|heatmapRenderer/);
+    expect(demoInspectPanelSource).toMatch(/Unavailable/);
+    expect(demoInspectPanelSource).toMatch(/SliceScrubber/);
+    expect(demoStkdePanelSource).toMatch(/STKDE_PARAM_LIMITS/);
+    expect(demoStkdePanelSource).toMatch(/setParams|setScopeMode|refresh/);
+    expect(demoStkdePanelSource).toMatch(/StkdeIntensityLegend/);
+    expect(demoSpatialSource).toMatch(/projectStkdeResponseToSceneSlices/);
+    expect(demoSpatialSource).toMatch(/selectedSourceEvents/);
+    expect(demoSpatialSource).toMatch(/isInterpolated: false/);
+    expect(demoSpatialSource).not.toMatch(/computeSliceKde|kdeSlice\.worker/);
+    expect(demo3dProviderSource).toMatch(/inspectIsPlaying|setActiveSliceIndex/);
+    expect(demoCompareHookSource).not.toMatch(/useCrimeData|computeSliceKde|StkdeComparisonStage/);
+    expect(demoCompareHookSource).toMatch(/adaptStkdeSurfaceToKdeCells/);
+    expect(demoCompareHookSource).toMatch(/signedDifferenceAvailable: false/);
+    expect(demoCompareStageSource).toMatch(/Signed difference unavailable for sparse server surfaces/);
     expect(demoDetectPanelSource).toMatch(/selectedTimeRange/);
     expect(demoDetectPanelSource).toMatch(/selectedTimeRange !== null/);
     expect(demoDetectPanelSource).toMatch(/rounded-md border px-3 py-1.5 text-\[11px\] transition-colors/);
