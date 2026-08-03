@@ -63,7 +63,6 @@ describe('/stkde-3d comparison integration contracts', () => {
     expect(controlsSource).toContain('<select');
     expect(controlsSource).not.toContain('Rendered intervals');
     expect(controlsSource).not.toContain('source:');
-    expect(controlsSource).toContain('Unavailable in A − B difference view: signed heatmap only.');
     expect(stageSource).toContain('data-comparison-stage');
     expect(stageSource).toContain('data-comparison-mode={mode}');
     expect(stageSource).toContain('A/B COMPARISON');

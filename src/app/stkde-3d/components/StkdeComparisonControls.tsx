@@ -339,15 +339,6 @@ export function StkdeComparisonControls({
                   A − B difference
                 </button>
               </div>
-              {comparison.mode === 'difference' ? (
-                <p className="mt-2 rounded-lg border border-border bg-muted/50 px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
-                   Blue = lower in A · Neutral = no change · Red = higher in A
-                   <br />
-                   Gray = no activity in either interval.
-                   <br />
-                   Unavailable in A − B difference view: signed heatmap only.
-                </p>
-              ) : null}
             </div>
           ) : null}
         </>

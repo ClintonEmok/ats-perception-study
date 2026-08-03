@@ -659,11 +659,6 @@ export default function Stkde3DPage() {
              <span className="hidden max-w-[14rem] truncate px-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground xl:inline">
                {activeSliceRange}
              </span>
-            {isDifferenceComparison ? (
-              <span className="basis-full text-right text-[10px] text-muted-foreground">
-                Unavailable in A − B difference view: signed heatmap only.
-              </span>
-            ) : null}
           </div>
         </header>
 
