@@ -45,7 +45,7 @@ beforeEach(() => {
     inspectNonActiveSliceOpacity: 0.35,
     showRawEvents: false,
     showHotspotTrajectories: true,
-    hotspotMatchingMode: 'fixed',
+    hotspotMatchingMode: 'adaptive',
     heatmapRenderer: 'field',
     cubeScopeMode: 'full',
     volumeScaleSeconds: 43_200,
@@ -221,7 +221,7 @@ describe('useDashboardDemoCoordinationStore', () => {
 
     store.toggleShowRawEvents();
     store.toggleShowHotspotTrajectories();
-    store.setHotspotMatchingMode('adaptive');
+    store.setHotspotMatchingMode('fixed');
     store.setHeatmapRenderer('legacy');
     store.setInspectActiveSliceOpacity(1.8);
     store.setInspectNonActiveSliceOpacity(-1);
@@ -229,7 +229,7 @@ describe('useDashboardDemoCoordinationStore', () => {
     expect(useDashboardDemoCoordinationStore.getState()).toMatchObject({
       showRawEvents: true,
       showHotspotTrajectories: false,
-      hotspotMatchingMode: 'adaptive',
+      hotspotMatchingMode: 'fixed',
       heatmapRenderer: 'legacy',
       inspectActiveSliceOpacity: 1,
       inspectNonActiveSliceOpacity: 0,
@@ -244,6 +244,24 @@ describe('useDashboardDemoCoordinationStore', () => {
       heatmapRenderer: 'field',
       inspectActiveSliceOpacity: 1,
       inspectNonActiveSliceOpacity: 0.35,
+    });
+  });
+
+  test('starts adaptive and resetAnalysis restores the adaptive field-backed baseline', () => {
+    const initialState = useDashboardDemoCoordinationStore.getInitialState();
+    expect(initialState.hotspotMatchingMode).toBe('adaptive');
+    expect(initialState.timeScaleMode).toBe('adaptive');
+    expect(initialState.heatmapRenderer).toBe('field');
+
+    const store = useDashboardDemoCoordinationStore.getState();
+    store.setHotspotMatchingMode('fixed');
+    store.setHeatmapRenderer('legacy');
+
+    store.resetAnalysis();
+
+    expect(useDashboardDemoCoordinationStore.getState()).toMatchObject({
+      hotspotMatchingMode: 'adaptive',
+      heatmapRenderer: 'field',
     });
   });
 
