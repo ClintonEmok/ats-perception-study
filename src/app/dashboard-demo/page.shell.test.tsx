@@ -174,6 +174,9 @@ describe('/dashboard-demo shell', () => {
     expect(mapVisualizationSource).toMatch(/statsOverlay/);
     expect(demoInspectPanelSource).not.toMatch(/useCrimeData|computeSliceKde|kdeSlice\.worker/);
     expect(demoInspectPanelSource).toMatch(/showRawEvents|showHotspotTrajectories|hotspotMatchingMode|heatmapRenderer/);
+    expect(demoInspectPanelSource).toMatch(/Fixed 3 km|Adaptive server cell/);
+    expect(demoInspectPanelSource).toMatch(/StkdeIntensityLegend mode=\{heatmapRenderer\}/);
+    expect(demoInspectPanelSource).not.toMatch(/Field renderer|Legacy renderer|setRenderer/);
     expect(demoInspectPanelSource).toMatch(/Unavailable/);
     expect(demoInspectPanelSource).toMatch(/SliceScrubber/);
     expect(demoStkdePanelSource).toMatch(/STKDE_PARAM_LIMITS/);

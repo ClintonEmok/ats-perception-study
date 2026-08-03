@@ -60,7 +60,6 @@ export function DemoInspectPanel() {
   const toggleRawEvents = useDashboardDemoCoordinationStore((state) => state.toggleShowRawEvents);
   const toggleTrajectories = useDashboardDemoCoordinationStore((state) => state.toggleShowHotspotTrajectories);
   const setMatchingMode = useDashboardDemoCoordinationStore((state) => state.setHotspotMatchingMode);
-  const setRenderer = useDashboardDemoCoordinationStore((state) => state.setHeatmapRenderer);
   const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
   const { response, isLoading, error, isStale, responseMetadata } = useDashboardDemo3d();
 
@@ -141,9 +140,6 @@ export function DemoInspectPanel() {
           <ControlToggle label="Trajectories" pressed={showHotspotTrajectories} onChange={toggleTrajectories} />
           <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1">
             {(['fixed', 'adaptive'] as const).map((mode) => <button key={mode} type="button" aria-pressed={hotspotMatchingMode === mode} onClick={() => setMatchingMode(mode)} className={`rounded-md px-2 py-1.5 text-[10px] ${hotspotMatchingMode === mode ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background'}`}>{mode === 'fixed' ? 'Fixed 3 km' : 'Adaptive server cell'}</button>)}
-          </div>
-          <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1">
-            {(['field', 'legacy'] as const).map((renderer) => <button key={renderer} type="button" aria-pressed={heatmapRenderer === renderer} onClick={() => setRenderer(renderer)} className={`rounded-md px-2 py-1.5 text-[10px] ${heatmapRenderer === renderer ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-background'}`}>{renderer === 'field' ? 'Field renderer' : 'Legacy renderer'}</button>)}
           </div>
 
           <OpacityControl label="Overall slice opacity" value={sliceOpacity} onChange={setSliceOpacity} max={1.5} />
