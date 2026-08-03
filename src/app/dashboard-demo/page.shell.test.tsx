@@ -201,7 +201,7 @@ describe('/dashboard-demo shell', () => {
     expect(demoStkdePanelSource).not.toMatch(/StkdeIntensityLegend/);
     expect(demoSpatialSource).toMatch(/projectStkdeResponseToSceneSlices/);
     expect(demoSpatialSource).toMatch(/<Stkde3DScene/);
-    expect(demoSpatialSource).toMatch(/<StkdeIntensityLegend mode=\{heatmapRenderer\} domain=\{\[0, 1\]\}/);
+    expect(demoSpatialSource).toMatch(/<StkdeIntensityLegend mode=\{heatmapRenderer\} domain=\{\[0, 1\]\} compact defaultExpanded=\{false\}/);
     expect(demoSpatialSource).toMatch(/buildDurationVolumeProfile/);
     expect(demoSpatialSource).toMatch(/selectedSourceEvents/);
     expect(demoSpatialSource).toMatch(/showHotspotTrajectories=\{showHotspotTrajectories\}/);
