@@ -25,24 +25,20 @@ import { SliceInspector } from '@/app/stkde-3d/components/SliceInspector';
 import { applyRangeToStoresContract } from '@/components/timeline/DemoDualTimeline';
 import { deriveDemo3dInteractionCommand } from '@/components/dashboard-demo/lib/syncDemo3dInteraction';
 import { lonLatToNormalized } from '@/lib/coordinate-normalization';
-import {
-  alignMockCrimeEventsToSlices,
-  buildMockCrimeEventsBySourceSliceId,
-  filterMockCrimeEventsByDomain,
-  toMockCrimeEvents,
-} from '@/app/stkde-3d/lib/event-data';
+import { toMockCrimeEvents } from '@/app/stkde-3d/lib/event-data';
+import { projectStkdeResponseToSceneSlices } from '@/components/dashboard-demo/lib/adaptStkdeSurfaceToKdeCells';
 import type { SpatialBounds } from '@/store/useDashboardDemoFilterStore';
 import type {
   Stkde3DBurstInteractionPayload,
   Stkde3DClusterInteractionPayload,
   Stkde3DTemporalWindowPayload,
 } from '@/app/stkde-3d/components/Stkde3DSceneProvider';
-import type { KdeCell } from '@/lib/kde';
 import type { CrimeRecord } from '@/types/crime';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
 
 interface SceneSlice {
   sourceSliceId: string;
+  sourceSliceIndex: number;
   index: number;
   label: string;
   startEpoch: number;
@@ -144,7 +140,13 @@ function buildSpatialBoundsFromCentroid({
 }
 
 export function Demo3dSpatialView() {
-  const { response: stkdeResponse } = useDashboardDemo3d();
+  const {
+    response: stkdeResponse,
+    isLoading: stkdeIsLoading,
+    error: stkdeError,
+    isStale: stkdeIsStale,
+    responseMetadata: stkdeMetadata,
+  } = useDashboardDemo3d();
   const slices = useSliceDomainStore((state) => state.slices);
   const minTimestampSec = useTimelineDataStore((state) => state.minTimestampSec);
   const maxTimestampSec = useTimelineDataStore((state) => state.maxTimestampSec);
@@ -161,9 +163,6 @@ export function Demo3dSpatialView() {
   const brushRange = useDashboardDemoCoordinationStore((state) => state.brushRange);
   const setBrushRange = useDashboardDemoCoordinationStore((state) => state.setBrushRange);
   const isPlaying = useDashboardDemoCoordinationStore((state) => state.inspectIsPlaying);
-  const isInterpolated = useDashboardDemoCoordinationStore((state) => state.inspectInterpolation);
-  const playbackSpeed = useDashboardDemoCoordinationStore((state) => state.inspectPlaybackSpeed);
-  const isScrubbing = useDashboardDemoCoordinationStore((state) => state.inspectIsScrubbing);
   const sliceOpacity = useDashboardDemoCoordinationStore((state) => state.inspectSliceOpacity);
   const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
   const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
@@ -175,6 +174,13 @@ export function Demo3dSpatialView() {
   const volumeExaggeration = useDashboardDemoCoordinationStore((state) => state.volumeExaggeration);
   const volumeNormalizationMode = useDashboardDemoCoordinationStore((state) => state.volumeNormalizationMode);
   const warpSource = useDashboardDemoCoordinationStore((state) => state.warpSource);
+  const showRawEvents = useDashboardDemoCoordinationStore((state) => state.showRawEvents);
+  const showHotspotTrajectories = useDashboardDemoCoordinationStore((state) => state.showHotspotTrajectories);
+  const hotspotMatchingMode = useDashboardDemoCoordinationStore((state) => state.hotspotMatchingMode);
+  const heatmapRenderer = useDashboardDemoCoordinationStore((state) => state.heatmapRenderer);
+  const activeSliceOpacity = useDashboardDemoCoordinationStore((state) => state.inspectActiveSliceOpacity);
+  const nonActiveSliceOpacity = useDashboardDemoCoordinationStore((state) => state.inspectNonActiveSliceOpacity);
+  const stkdeParams = useDashboardDemoCoordinationStore((state) => state.stkdeParams);
   // The cube intentionally renders only the active selected burst. The hook
   // returns a neutral model when the timeline has no selected burst window.
   const selectedBurstWindows = useDashboardDemoCoordinationStore((state) => state.selectedBurstWindows);
@@ -185,37 +191,36 @@ export function Demo3dSpatialView() {
   const setSelectedBurstWindow = useDashboardDemoCoordinationStore((state) => state.toggleBurstWindow);
   const setDetailsOpen = useDashboardDemoCoordinationStore((state) => state.setDetailsOpen);
   const setSelectedHotspot = useDashboardDemoCoordinationStore((state) => state.setSelectedHotspot);
+  const setStkdeActiveEventsStatus = useDashboardDemoCoordinationStore((state) => state.setCrimeFetchStatus);
   const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
   const updateSlice = useSliceDomainStore((state) => state.updateSlice);
   const addManualDraftRange = useDashboardDemoTimeslicingModeStore((state) => state.addManualDraftRange);
   const computeManualDraftBin = useDashboardDemoTimeslicingModeStore((state) => state.computeManualDraftBin);
-  const [crimesBySlice, setCrimesBySlice] = useState<CrimeRecord[][]>([]);
-  const [crimesError, setCrimesError] = useState<string | null>(null);
-  const [sliceKdes, setSliceKdes] = useState<KdeCell[][]>([]);
+  const [activeEvents, setActiveEvents] = useState<ReturnType<typeof toMockCrimeEvents>>([]);
+  const [activeEventsError, setActiveEventsError] = useState<string | null>(null);
   const hasLoadedRef = useRef(false);
-  const kdeWorkerRef = useRef<Worker | null>(null);
-  const kdeRequestIdRef = useRef(0);
-  const playbackTimeoutRef = useRef<number | null>(null);
+  const activeEventsRequestIdRef = useRef(0);
+  const activeEventsAbortRef = useRef<AbortController | null>(null);
   const [canvasPointer, setCanvasPointer] = useState<{ x: number; y: number } | null>(null);
   const [hoveredSliceId, setHoveredSliceId] = useState<string | null>(null);
   const [scanProposal, setScanProposal] = useState<Stkde3DTemporalWindowPayload | null>(null);
-  const [showRawEvents, setShowRawEvents] = useState(false);
 
   const orderedSlices = useMemo(() => {
     if (minTimestampSec === null || maxTimestampSec === null) return [];
 
     return slices
       .filter((slice) => slice.isVisible && slice.type === 'range')
-      .map((slice, originalIndex) => {
+      .map((slice) => {
         const [startEpoch, endEpoch] = resolveSliceEpochRange(slice, minTimestampSec, maxTimestampSec);
         return {
           sourceSliceId: slice.id,
-          index: originalIndex,
+          sourceSliceIndex: 0,
+          index: 0,
           label: slice.name ?? '',
           startEpoch,
           endEpoch,
           burstScore: normalizeBurstScore(slice.burstScore ?? 0),
-          crimeCount: 0,
+          crimeCount: stkdeResponse?.sliceResults[slice.id]?.meta.eventCount ?? 0,
           warpWeight: slice.warpWeight,
           signal: slice.burstinessCoefficient,
         } satisfies SceneSlice;
@@ -229,113 +234,71 @@ export function Demo3dSpatialView() {
       })
       .map((slice, index) => ({
         ...slice,
+        sourceSliceIndex: index,
         index,
         label: slice.label || `Slice ${index + 1}`,
       }));
-  }, [slices, minTimestampSec, maxTimestampSec]);
+  }, [slices, minTimestampSec, maxTimestampSec, stkdeResponse]);
 
   useEffect(() => {
-    if (orderedSlices.length === 0) {
-      return;
+    const counts = Object.fromEntries(
+      orderedSlices.map((slice) => [slice.sourceSliceId, stkdeResponse?.sliceResults[slice.sourceSliceId]?.meta.eventCount ?? 0]),
+    );
+    setSliceCrimeCounts(counts);
+  }, [orderedSlices, setSliceCrimeCounts, stkdeResponse]);
+
+  const countedSlices = orderedSlices;
+  const activeSourceSlice = countedSlices[activeIndex] ?? null;
+
+  useEffect(() => {
+    activeEventsAbortRef.current?.abort();
+    activeEventsAbortRef.current = null;
+    const sourceSlice = activeSourceSlice;
+
+    if (!showRawEvents || !sourceSlice) {
+      setActiveEvents([]);
+      setActiveEventsError(null);
+      setStkdeActiveEventsStatus('idle');
+      return undefined;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
+    activeEventsAbortRef.current = controller;
+    const requestId = ++activeEventsRequestIdRef.current;
+    setStkdeActiveEventsStatus('loading');
+    setActiveEventsError(null);
 
-    setCrimeFetchStatus('loading');
-
-    (async () => {
-      const results: CrimeRecord[][] = [];
-
-      for (const slice of orderedSlices) {
-        if (cancelled) return;
-
-        const params = new URLSearchParams({
-          startEpoch: Math.floor(slice.startEpoch).toString(),
-          endEpoch: Math.ceil(slice.endEpoch).toString(),
-          bufferDays: '0',
-          pageSize: '50000',
-        });
-
-        try {
-          const res = await fetch(`/api/crimes/range?${params.toString()}`);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const result = (await res.json()) as { data?: CrimeRecord[] };
-          const crimeBatch = result.data ?? [];
-          // console.debug(`[3DFetch] slice ${slice.label}: fetched ${crimeBatch.length} crimes`);
-          if (crimeBatch.length > 0) {
-            // console.debug(`[3DFetch]  first crime x=${crimeBatch[0]!.x.toFixed(2)} z=${crimeBatch[0]!.z.toFixed(2)}`);
-          }
-          results.push(crimeBatch);
-
-          if (!cancelled) {
-            setSliceCrimeCounts(
-              orderedSlices.reduce((acc, s, i) => {
-                acc[s.sourceSliceId] = (results[i] ?? []).length;
-                return acc;
-              }, {} as Record<string, number>),
-            );
-          }
-        } catch (err) {
-          if (!cancelled) {
-            setCrimesError(err instanceof Error ? err.message : 'Fetch failed');
-            results.push([]);
-          }
-        }
-      }
-
-      if (!cancelled) {
-        setCrimesBySlice(results);
-        setCrimesError(null);
-        setCrimeFetchStatus('success');
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [orderedSlices, setCrimeFetchStatus, setSliceCrimeCounts]);
-
-  const countedSlices = useMemo(() => {
-    if (crimesBySlice.length === 0 || orderedSlices.length === 0) {
-      return orderedSlices;
-    }
-    return orderedSlices.map((slice, i) => ({
-      ...slice,
-      crimeCount: (crimesBySlice[i] ?? []).length,
-    }));
-  }, [crimesBySlice, orderedSlices]);
-
-  const sliceEvents = useMemo(
-    () => crimesBySlice.map((events) => toMockCrimeEvents(events)),
-    [crimesBySlice],
-  );
-
-  const sliceEventsBySourceSliceId = useMemo(
-    () => buildMockCrimeEventsBySourceSliceId(orderedSlices, sliceEvents),
-    [orderedSlices, sliceEvents],
-  );
-
-  const burstVolumeModel = useMemo(() => {
-    const selectedBurstWindow = selectedBurstWindows[0];
-    return buildBurstVolumeModel({
-      burstWindow: selectedBurstWindow
-        ? {
-            id: selectedBurstWindow.id,
-            startEpochSec: selectedBurstWindow.start,
-            peakEpochSec: selectedBurstWindow.peak,
-            endEpochSec: selectedBurstWindow.end,
-            count: selectedBurstWindow.count,
-            burstScore: selectedBurstWindow.burstScore,
-            burstClass: selectedBurstWindow.burstClass,
-            label: selectedBurstWindow.burstRationale,
-          }
-        : null,
-      sliceResults: stkdeResponse?.sliceResults,
+    const params = new URLSearchParams({
+      startEpoch: Math.floor(sourceSlice.startEpoch).toString(),
+      endEpoch: Math.ceil(sourceSlice.endEpoch).toString(),
+      bufferDays: '0',
+      pageSize: '50000',
     });
-  }, [selectedBurstWindows, stkdeResponse]);
+
+    void fetch(`/api/crimes/range?${params.toString()}`, { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return (await res.json()) as { data?: CrimeRecord[] };
+      })
+      .then((result) => {
+        if (controller.signal.aborted || requestId !== activeEventsRequestIdRef.current) return;
+        setActiveEvents(toMockCrimeEvents(result.data ?? []));
+        setStkdeActiveEventsStatus('success');
+      })
+      .catch((requestError: unknown) => {
+        if (controller.signal.aborted || requestId !== activeEventsRequestIdRef.current) return;
+        setActiveEvents([]);
+        setActiveEventsError(requestError instanceof Error ? requestError.message : 'Active events fetch failed');
+        setStkdeActiveEventsStatus('error');
+      });
+
+    return () => controller.abort();
+  }, [activeSourceSlice, setStkdeActiveEventsStatus, showRawEvents]);
 
   const fullTimeDomain = useMemo<[number, number]>(() => (
     minTimestampSec !== null && maxTimestampSec !== null && maxTimestampSec > minTimestampSec
       ? [minTimestampSec, maxTimestampSec]
-      : [0, 1]
+      : [0, 100]
   ), [maxTimestampSec, minTimestampSec]);
 
   const commitTemporalRange = useCallback((range: [number, number] | null) => {
@@ -408,8 +371,8 @@ export function Demo3dSpatialView() {
   );
 
   const authoredWarpMap = useMemo(
-    () => buildDemoSliceAuthoredWarpMap(slices, fullTimeDomain, Math.max(96, slices.length * 8 || 0)),
-    [fullTimeDomain, slices],
+    () => buildDemoSliceAuthoredWarpMap(slices, densityMap, fullTimeDomain, Math.max(96, slices.length * 8 || 0)),
+    [densityMap, fullTimeDomain, slices],
   );
 
   const usingDensitySource = warpSource === 'density';
@@ -443,21 +406,29 @@ export function Demo3dSpatialView() {
       .map((slice, index) => ({ ...slice, index }));
   }, [countedSlices, cubeScopeMode, cubeTimeDomain]);
 
-  const cubeSliceKdes = useMemo(() => {
-    if (cubeScopeMode !== 'brushed') {
-      return sliceKdes;
-    }
+  const { sliceKdes: cubeSliceKdes, hotspotSliceResults: cubeHotspotSliceResults } = useMemo(
+    () => projectStkdeResponseToSceneSlices(cubeSlices, stkdeResponse),
+    [cubeSlices, stkdeResponse],
+  );
 
-    return cubeSlices.map((slice) => {
-      const sourceIndex = countedSlices.findIndex((candidate) => candidate.sourceSliceId === slice.sourceSliceId);
-      return sliceKdes[sourceIndex] ?? [];
+  const burstVolumeModel = useMemo(() => {
+    const selectedBurstWindow = selectedBurstWindows[0];
+    return buildBurstVolumeModel({
+      burstWindow: selectedBurstWindow
+        ? {
+            id: selectedBurstWindow.id,
+            startEpochSec: selectedBurstWindow.start,
+            peakEpochSec: selectedBurstWindow.peak,
+            endEpochSec: selectedBurstWindow.end,
+            count: selectedBurstWindow.count,
+            burstScore: selectedBurstWindow.burstScore,
+            burstClass: selectedBurstWindow.burstClass,
+            label: selectedBurstWindow.burstRationale,
+          }
+        : null,
+      sliceResults: cubeHotspotSliceResults,
     });
-  }, [countedSlices, cubeScopeMode, cubeSlices, sliceKdes]);
-
-  const cubeSliceEvents = useMemo(() => {
-    const alignedEvents = alignMockCrimeEventsToSlices(cubeSlices, sliceEventsBySourceSliceId);
-    return alignedEvents.map((events) => filterMockCrimeEventsByDomain(events, cubeTimeDomain));
-  }, [cubeSlices, cubeTimeDomain, sliceEventsBySourceSliceId]);
+  }, [cubeHotspotSliceResults, selectedBurstWindows]);
 
   const cubeVolumeProfile = useMemo(() => {
     if (cubeScopeMode !== 'brushed') return volumeProfile;
@@ -574,7 +545,9 @@ export function Demo3dSpatialView() {
       densityMap: scopedDensityMap ?? densityMap,
       warpMap: activeWarpMap,
       isPlaying,
-      isInterpolated,
+      // Sparse server cells do not have positional correspondence. Keep the
+      // runtime hard-gated so the shared stack cannot interpolate by index.
+      isInterpolated: false,
       sourceSliceIds: cubeSlices.map((slice) => slice.sourceSliceId),
       yToEpoch: sceneYToEpoch,
       onActiveIndexChange: (nextIndex) => {
@@ -626,7 +599,7 @@ export function Demo3dSpatialView() {
         setActiveSlice(null);
       },
     }),
-    [activeWarpDomain, activeWarpMap, commitTemporalRange, countedSlices, cubeSlices, cubeTimeDomain, densityMap, effectiveTimeScaleMode, effectiveWarpBlend, fullTimeDomain, handleBurstSelect, handleCanvasPointerDown, handleCreateDraftAtPoint, handleTrajectorySelect, isInterpolated, isPlaying, sceneYToEpoch, scopedDensityMap, setActiveSlice, setActiveSliceIndex, setHoveredSliceId, updateSlice],
+    [activeWarpDomain, activeWarpMap, commitTemporalRange, countedSlices, cubeSlices, cubeTimeDomain, densityMap, effectiveTimeScaleMode, effectiveWarpBlend, fullTimeDomain, handleBurstSelect, handleCanvasPointerDown, handleCreateDraftAtPoint, handleTrajectorySelect, isPlaying, sceneYToEpoch, scopedDensityMap, setActiveSlice, setActiveSliceIndex, setHoveredSliceId, updateSlice],
   );
 
   const detailChip = useMemo(() => {
@@ -659,66 +632,14 @@ export function Demo3dSpatialView() {
     [cubeSlices, cubeVolumeProfile, inspectedSlice],
   );
 
-  useEffect(() => {
-    if (crimesBySlice.length === 0 || orderedSlices.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-    const requestId = ++kdeRequestIdRef.current;
-
-    if (!kdeWorkerRef.current) {
-      kdeWorkerRef.current = new Worker(
-        new URL('../../workers/kdeSlice.worker.ts', import.meta.url),
-      );
-    }
-
-    const worker = kdeWorkerRef.current;
-
-    const handler = (event: MessageEvent) => {
-      const response = event.data as { requestId: number; results: Array<{ cells: Float32Array; maxIntensity: number; meanIntensity: number; cellCount: number }> };
-      if (response.requestId !== requestId) return;
-
-      const kdes: KdeCell[][] = response.results.map((r) => {
-        const cells: KdeCell[] = [];
-        const flat = r.cells;
-        for (let i = 0; i < r.cellCount; i++) {
-          cells.push({
-            x: flat[i * 4],
-            z: flat[i * 4 + 1],
-            intensity: flat[i * 4 + 2],
-            support: flat[i * 4 + 3],
-          });
-        }
-        return cells;
-      });
-
-      if (!cancelled) {
-        setSliceKdes(kdes);
-      }
-    };
-
-    worker.addEventListener('message', handler);
-
-    worker.postMessage({
-      requestId,
-      sliceGroups: crimesBySlice.map((sliceCrimes) => ({
-        points: sliceCrimes.map((c) => ({ x: c.x, z: c.z })),
-      })),
-    });
-
-    return () => {
-      cancelled = true;
-      worker.removeEventListener('message', handler);
-    };
-  }, [crimesBySlice, orderedSlices]);
-
-  useEffect(() => {
-    return () => {
-      kdeWorkerRef.current?.terminate();
-      kdeWorkerRef.current = null;
-    };
-  }, []);
+  const hotspotMatchingOptions = useMemo(
+    () => ({
+      mode: hotspotMatchingMode,
+      cellWidthMeters: stkdeParams.gridCellMeters,
+      smoothingMeters: stkdeParams.spatialBandwidthMeters,
+    }),
+    [hotspotMatchingMode, stkdeParams.gridCellMeters, stkdeParams.spatialBandwidthMeters],
+  );
 
   useEffect(() => {
     if (countedSlices.length === 0) return;
@@ -730,38 +651,6 @@ export function Demo3dSpatialView() {
     }
   }, [countedSlices.length, activeIndex, setActiveSliceIndex]);
 
-  useEffect(() => {
-    if (playbackTimeoutRef.current !== null) {
-      window.clearTimeout(playbackTimeoutRef.current);
-      playbackTimeoutRef.current = null;
-    }
-
-    if (!isPlaying || isScrubbing || countedSlices.length === 0) return undefined;
-
-    const lastIndex = countedSlices.length - 1;
-    const stepDelay = Math.max(180, Math.round(1000 / Math.max(0.25, playbackSpeed)));
-    const loopPauseMs = 260;
-    const delay = activeIndex >= lastIndex ? loopPauseMs : stepDelay;
-
-    playbackTimeoutRef.current = window.setTimeout(() => {
-      playbackTimeoutRef.current = null;
-
-      if (countedSlices.length === 0) return;
-      if (activeIndex >= countedSlices.length - 1) {
-        setActiveSliceIndex(0);
-        return;
-      }
-
-      setActiveSliceIndex(activeIndex + 1);
-    }, delay);
-
-    return () => {
-      if (playbackTimeoutRef.current !== null) {
-        window.clearTimeout(playbackTimeoutRef.current);
-        playbackTimeoutRef.current = null;
-      }
-    };
-  }, [activeIndex, countedSlices.length, isPlaying, isScrubbing, playbackSpeed, setActiveSliceIndex]);
 
   if (orderedSlices.length === 0) {
     return (
@@ -775,9 +664,12 @@ export function Demo3dSpatialView() {
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[inherit]">
-      {crimesError && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/60">
-          <p className="text-xs text-destructive">Error: {crimesError}</p>
+      {stkdeIsLoading || stkdeError || stkdeIsStale || (stkdeResponse && cubeSliceKdes.every((cells) => cells.length === 0)) ? (
+        <div className="pointer-events-none absolute left-3 top-3 z-30 max-w-sm rounded-md border border-border/70 bg-background/90 px-3 py-2 text-[11px] shadow-md backdrop-blur-sm" role={stkdeError ? 'alert' : 'status'}>
+          {stkdeIsLoading ? <p>{stkdeResponse ? 'Updating STKDE surfaces…' : 'STKDE surfaces loading…'}</p> : null}
+          {!stkdeIsLoading && stkdeError ? <p className="text-destructive">{stkdeError} — retry from the STKDE panel.</p> : null}
+          {!stkdeIsLoading && !stkdeError && stkdeIsStale ? <p className="text-amber-700">Showing the last valid STKDE response while updating.</p> : null}
+          {!stkdeIsLoading && !stkdeError && stkdeResponse && cubeSliceKdes.every((cells) => cells.length === 0) ? <p>No STKDE cells for this interval.</p> : null}
         </div>
       )}
 
@@ -818,34 +710,36 @@ export function Demo3dSpatialView() {
         slices={cubeSlices}
         sliceKdes={cubeSliceKdes}
         volumeProfile={cubeVolumeProfile}
-        sliceEvents={cubeSliceEvents}
-        hotspotSliceResults={stkdeResponse?.sliceResults ?? null}
+        sliceEvents={[]}
+        hotspotSliceResults={cubeHotspotSliceResults}
+        hotspotMatchingOptions={hotspotMatchingOptions}
         activeIndex={cubeActiveIndex}
         viewMode={viewMode}
         showRawEvents={showRawEvents}
+        showHotspotTrajectories={showHotspotTrajectories}
         sliceOpacity={sliceOpacity}
+        activeSliceOpacity={activeSliceOpacity}
+        nonActiveSliceOpacity={nonActiveSliceOpacity}
+        heatmapRenderer={heatmapRenderer}
+        kdeGridSize={Math.max(4, Math.round(100_000 / Math.max(100, stkdeParams.gridCellMeters)))}
         timeDomain={cubeTimeDomain}
         overrideWarpMap={scopedWarpMap}
         overrideWarpDomain={cubeScopeMode === 'brushed' ? cubeTimeDomain : undefined}
         burstVolumeModel={burstVolumeModel}
         runtime={sceneRuntime}
+        selectedSourceEvents={showRawEvents ? activeEvents : null}
+        selectedSourceIndex={activeSourceSlice?.sourceSliceIndex}
       />
-
-      <div className="absolute left-3 top-3 z-20">
-        <button
-          type="button"
-          aria-pressed={showRawEvents}
-          onClick={() => setShowRawEvents((value) => !value)}
-          className={`rounded-full border px-3 py-1.5 text-[11px] transition ${
-            showRawEvents
-              ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-100'
-              : 'border-border bg-background/85 text-muted-foreground hover:border-emerald-400/60 hover:text-emerald-100'
-          }`}
-          title="Show or hide event points for the active cube slice"
-        >
-          Active events
-        </button>
-      </div>
+      {showRawEvents && activeEventsError ? (
+        <div className="absolute bottom-3 right-3 z-20 rounded-md border border-destructive/30 bg-background/90 px-3 py-2 text-[11px] text-destructive" role="alert">
+          Active events unavailable: {activeEventsError}
+        </div>
+      ) : null}
+      {stkdeMetadata?.sourceLabel !== 'live' ? (
+        <div className="absolute bottom-3 right-3 z-20 rounded-md border border-amber-500/30 bg-background/90 px-3 py-2 text-[10px] text-amber-800" role="status">
+          {stkdeMetadata?.sourceLabel === 'configured-mock' ? 'Configured mock STKDE data' : 'STKDE fallback warning'}
+        </div>
+      ) : null}
     </div>
   );
 }

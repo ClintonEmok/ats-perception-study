@@ -9,13 +9,33 @@ import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoord
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
 
+export type DemoStkdeSourceLabel = 'live' | 'configured-mock' | 'fallback-warning';
+export type DemoStkdeLifecycleStatus = 'idle' | 'loading' | 'updating' | 'ready' | 'error';
+
+export interface DemoStkdeResponseMetadata {
+  eventCount: number;
+  cellCount: number;
+  hotspotCount: number;
+  truncated: boolean;
+  fallbackApplied: string | null;
+  requestedComputeMode: StkdeResponse['meta']['requestedComputeMode'] | null;
+  effectiveComputeMode: StkdeResponse['meta']['effectiveComputeMode'] | null;
+  clampsApplied: string[];
+  sourceLabel: DemoStkdeSourceLabel;
+}
+
 interface DemoStkdeResult {
   rows: StkdeHotspotRowModel[];
   summaryLabel: string;
   heatmapCellCount: number;
   response: StkdeResponse | null;
+  lastValidResponse: StkdeResponse | null;
   isLoading: boolean;
+  isStale: boolean;
+  hasValidResponse: boolean;
+  status: DemoStkdeLifecycleStatus;
   error: string | null;
+  responseMetadata: DemoStkdeResponseMetadata | null;
   refresh: () => void;
   setSelectedHotspot: (hotspotId: string | null) => void;
   setHoveredHotspot: (hotspotId: string | null) => void;
@@ -85,12 +105,37 @@ function buildSliceSignature(slices: TimeSlice[]): string {
     .join('~');
 }
 
+function resolveSourceLabel(response: StkdeResponse | null): DemoStkdeSourceLabel {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true' || process.env.USE_MOCK_DATA === 'true') {
+    return 'configured-mock';
+  }
+  return response?.meta.fallbackApplied ? 'fallback-warning' : 'live';
+}
+
+function buildResponseMetadata(response: StkdeResponse | null): DemoStkdeResponseMetadata | null {
+  if (!response) return null;
+  return {
+    eventCount: response.meta.eventCount,
+    cellCount: response.heatmap.cells.length,
+    hotspotCount: response.hotspots.length,
+    truncated: response.meta.truncated,
+    fallbackApplied: response.meta.fallbackApplied ?? null,
+    requestedComputeMode: response.meta.requestedComputeMode,
+    effectiveComputeMode: response.meta.effectiveComputeMode,
+    clampsApplied: response.meta.clampsApplied ?? [],
+    sourceLabel: resolveSourceLabel(response),
+  };
+}
+
 export function useDemoStkde(): DemoStkdeResult {
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [response, setResponse] = useState<StkdeResponse | null>(null);
+  const lastValidResponseRef = useRef<StkdeResponse | null>(null);
+  const [lastValidResponse, setLastValidResponse] = useState<StkdeResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStale, setIsStale] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -152,9 +197,10 @@ export function useDemoStkde(): DemoStkdeResult {
       abortRef.current?.abort();
       abortRef.current = controller;
 
-      const requestId = ++requestIdRef.current;
-      setIsLoading(true);
-      setError(null);
+       const requestId = ++requestIdRef.current;
+       setIsLoading(true);
+       setIsStale(lastValidResponseRef.current !== null);
+       setError(null);
 
       void (async () => {
         try {
@@ -207,13 +253,17 @@ export function useDemoStkde(): DemoStkdeResult {
             return;
           }
 
-          setResponse(data);
-          setStkdeResponse(data);
-        } catch (requestError) {
-          if (controller.signal.aborted) return;
-          setError(requestError instanceof Error ? requestError.message : 'Failed to run STKDE');
-          setResponse(null);
-          setStkdeResponse(null);
+           setResponse(data);
+           lastValidResponseRef.current = data;
+           setLastValidResponse(data);
+           setIsStale(false);
+           setStkdeResponse(data);
+         } catch (requestError) {
+           if (controller.signal.aborted) return;
+           setError(requestError instanceof Error ? requestError.message : 'Failed to run STKDE');
+           setResponse(lastValidResponseRef.current);
+           setIsStale(lastValidResponseRef.current !== null);
+           setStkdeResponse(lastValidResponseRef.current);
         } finally {
           if (requestId === requestIdRef.current) {
             setIsLoading(false);
@@ -257,13 +307,27 @@ export function useDemoStkde(): DemoStkdeResult {
     [queryState, response]
   );
 
+  const responseMetadata = useMemo(() => buildResponseMetadata(response), [response]);
+  const status: DemoStkdeLifecycleStatus = isLoading
+    ? (response ? 'updating' : 'loading')
+    : error
+      ? 'error'
+      : response
+        ? 'ready'
+        : 'idle';
+
   return {
     rows: viewModel.rows,
     summaryLabel: `${viewModel.summaryLabel} • ${selectedDistrictLabels.join(', ')}`,
     heatmapCellCount: viewModel.heatmapCellCount,
     response,
+    lastValidResponse,
     isLoading,
+    isStale,
+    hasValidResponse: response !== null,
+    status,
     error,
+    responseMetadata,
     refresh,
     setSelectedHotspot,
     setHoveredHotspot,

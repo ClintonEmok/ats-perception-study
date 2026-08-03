@@ -40,6 +40,25 @@ describe('useDemoStkde', () => {
     });
   };
 
+  const makeResponse = (eventCount: number) => ({
+    meta: {
+      eventCount,
+      computeMs: 10,
+      truncated: true,
+      requestedComputeMode: 'sampled' as const,
+      effectiveComputeMode: 'sampled' as const,
+      fallbackApplied: null,
+      clampsApplied: ['gridCellMeters:50->100'],
+    },
+    heatmap: {
+      cells: [{ lng: -87.63, lat: 41.88, intensity: 1, support: eventCount }],
+      maxIntensity: 1,
+    },
+    hotspots: [],
+    contracts: { scoreVersion: 'stkde-v1' as const },
+    sliceResults: {},
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     useSliceDomainStore.getState().clearSlices();
@@ -242,5 +261,64 @@ describe('useDemoStkde', () => {
     expect(useDashboardDemoCoordinationStore.getState().stkdeResponse?.sliceResults[initialSliceId as string].meta.eventCount).toBe(2);
     expect(latestSnapshot?.isLoading).toBe(false);
     expect(latestSnapshot?.response?.meta.eventCount).toBe(2);
+  });
+
+  it('exposes loading metadata and retains the last valid response on retry errors', async () => {
+    const pendingRequests: Array<{
+      resolve: (payload: { ok: boolean; json: () => Promise<unknown> }) => void;
+    }> = [];
+    const fetchMock = vi.fn(() => new Promise<{ ok: boolean; json: () => Promise<unknown> }>((resolve) => {
+      pendingRequests.push({ resolve });
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await mountHarness();
+
+    await act(async () => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+      await flushMicrotasks();
+    });
+
+    expect(latestSnapshot?.status).toBe('loading');
+    expect(latestSnapshot?.isLoading).toBe(true);
+
+    await act(async () => {
+      pendingRequests[0]?.resolve({ ok: true, json: async () => makeResponse(4) });
+      await flushMicrotasks();
+    });
+
+    expect(latestSnapshot?.status).toBe('ready');
+    expect(latestSnapshot?.responseMetadata).toMatchObject({
+      eventCount: 4,
+      cellCount: 1,
+      truncated: true,
+      requestedComputeMode: 'sampled',
+      sourceLabel: 'live',
+    });
+
+    await act(async () => {
+      latestSnapshot?.refresh();
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+      await flushMicrotasks();
+    });
+
+    expect(latestSnapshot?.status).toBe('updating');
+    expect(latestSnapshot?.isStale).toBe(true);
+    expect(latestSnapshot?.response?.meta.eventCount).toBe(4);
+
+    await act(async () => {
+      pendingRequests[1]?.resolve({ ok: false, json: async () => ({ error: 'server unavailable' }) });
+      await flushMicrotasks();
+    });
+
+    expect(latestSnapshot?.status).toBe('error');
+    expect(latestSnapshot?.error).toContain('server unavailable');
+    expect(latestSnapshot?.isStale).toBe(true);
+    expect(latestSnapshot?.lastValidResponse?.meta.eventCount).toBe(4);
+    expect(latestSnapshot?.responseMetadata?.clampsApplied).toEqual(['gridCellMeters:50->100']);
   });
 });
