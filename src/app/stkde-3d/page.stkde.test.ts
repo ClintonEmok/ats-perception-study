@@ -71,7 +71,7 @@ describe('/stkde-3d route focus mode', () => {
     expect(comparisonStageSource).toMatch(/data-comparison-mode={mode}/);
     expect(comparisonStageSource).toMatch(/A\/B COMPARISON/);
     expect(comparisonStageSource).toMatch(/Shared absolute domain/);
-    expect(comparisonStageSource).toMatch(/KDE\(A\) − KDE\(B\) · signed difference/);
+    expect(comparisonStageSource).toMatch(/Where did spatial intensity change\?/);
     expect(comparisonStageSource).toMatch(/StkdeDifferenceScene/);
     expect(comparisonStageSource).toMatch(/mode === 'difference'/);
     expect(comparisonStageSource).toMatch(/grid-rows-\[minmax\(20rem,1fr\)_minmax\(20rem,1fr\)\]/);
@@ -90,10 +90,10 @@ describe('/stkde-3d route focus mode', () => {
     expect(differenceSource).not.toMatch(/StkdeSliceStack|RawEventPoints|HotspotTrajectoryOverlay|BurstVolumeRenderer|AdaptiveWarpAxis|CameraControls|Top-down spatial field/);
     expect(intensityLegendSource).toMatch(/STKDE INTENSITY/);
     expect(intensityLegendSource).toMatch(/getStkdePaletteGradient/);
-    expect(differenceLegendSource).toMatch(/B HIGHER/);
-    expect(differenceLegendSource).toMatch(/0 \/ NO DIFFERENCE/);
-    expect(differenceLegendSource).toMatch(/A HIGHER/);
-    expect(differenceLegendSource).toMatch(/Blue means B higher/);
+    expect(differenceLegendSource).toMatch(/LOWER IN A/);
+    expect(differenceLegendSource).toMatch(/NO CHANGE/);
+    expect(differenceLegendSource).toMatch(/HIGHER IN A/);
+    expect(differenceLegendSource).toMatch(/NO ACTIVITY IN EITHER INTERVAL/);
     expect(comparisonViewportSource).toMatch(/data-interval-slot/);
     expect(comparisonViewportSource).toMatch(/StkdeComparisonFieldMap/);
     expect(comparisonViewportSource).toMatch(/w-full/);

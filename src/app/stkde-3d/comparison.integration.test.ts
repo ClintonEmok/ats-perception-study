@@ -68,7 +68,7 @@ describe('/stkde-3d comparison integration contracts', () => {
     expect(stageSource).toContain('data-comparison-mode={mode}');
     expect(stageSource).toContain('A/B COMPARISON');
     expect(stageSource).toContain('Shared absolute domain');
-    expect(stageSource).toContain('KDE(A) − KDE(B) · signed difference');
+    expect(stageSource).toContain('Where did spatial intensity change?');
     expect(stageSource).toContain('grid-cols-1');
     expect(stageSource).toContain('grid-rows-[minmax(20rem,1fr)_minmax(20rem,1fr)]');
     expect(stageSource).toContain('slot="A"');

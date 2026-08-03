@@ -7,6 +7,7 @@ export type ComparisonDomain = [number, number];
 export interface SignedKdeDifference {
   field: KdeField;
   values: Float32Array;
+  noActivityMask: Uint8Array;
   domain: ComparisonDomain;
   maxAbs: number;
 }
@@ -164,12 +165,16 @@ export function computeSignedKdeDifference(
 
   const values = new Float32Array(a.values.length);
   const support = new Float32Array(a.support.length);
+  const noActivityMask = new Uint8Array(a.support.length);
   let maxAbs = 0;
 
   for (let index = 0; index < values.length; index += 1) {
     const difference = (a.values[index] ?? 0) - (b.values[index] ?? 0);
     values[index] = difference;
-    support[index] = Math.max(a.support[index] ?? 0, b.support[index] ?? 0);
+    const supportA = a.support[index] ?? 0;
+    const supportB = b.support[index] ?? 0;
+    support[index] = Math.max(supportA, supportB);
+    noActivityMask[index] = supportA === 0 && supportB === 0 ? 1 : 0;
     maxAbs = Math.max(maxAbs, Math.abs(difference));
   }
 
@@ -186,6 +191,7 @@ export function computeSignedKdeDifference(
   return {
     field,
     values,
+    noActivityMask,
     maxAbs,
     domain: [-signedDomainMaximum, signedDomainMaximum],
   };

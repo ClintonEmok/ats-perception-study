@@ -46,8 +46,9 @@ export function StkdeDifferenceScene({ fieldA, fieldB, mapTexture }: StkdeDiffer
         field={comparison.difference.field}
         displayMode="difference"
         domain={comparison.difference.domain}
+        noActivityMask={comparison.difference.noActivityMask}
         mapTexture={mapTexture}
-        ariaLabel="Signed KDE difference field: red means A higher, neutral means no difference, blue means B higher"
+         ariaLabel="Signed KDE difference field: blue means lower in A, neutral means no change, red means higher in A, gray means no activity in either interval"
       />
     </div>
   );

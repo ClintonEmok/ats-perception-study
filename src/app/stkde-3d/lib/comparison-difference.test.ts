@@ -59,6 +59,7 @@ describe('comparison KDE math', () => {
     const result = computeSignedKdeDifference(a, b);
 
     expect(result.values[0]).toBeCloseTo(0.02);
+    expect(Array.from(result.noActivityMask)).toEqual([0, 1, 1, 1]);
     expect(result.maxAbs).toBeCloseTo(0.02);
     expect(result.domain[0]).toBeCloseTo(-0.02);
     expect(result.domain[1]).toBeCloseTo(0.02);
@@ -71,6 +72,7 @@ describe('comparison KDE math', () => {
     );
 
     expect(Array.from(result.values)).toEqual([1, -0.25, 0, 0]);
+    expect(Array.from(result.noActivityMask)).toEqual([0, 0, 1, 1]);
     expect(result.domain).toEqual([-1, 1]);
     expect(result.field.maxIntensity).toBe(1);
   });
@@ -80,8 +82,10 @@ describe('comparison KDE math', () => {
     const identical = computeSignedKdeDifference(createField([1, 0.5, 0, 0]), createField([1, 0.5, 0, 0]));
 
     expect(Array.from(empty.values)).toEqual([0, 0, 0, 0]);
+    expect(Array.from(empty.noActivityMask)).toEqual([1, 1, 1, 1]);
     expect(empty.domain).toEqual([-MIN_COMPARISON_DOMAIN, MIN_COMPARISON_DOMAIN]);
     expect(Array.from(identical.values)).toEqual([0, 0, 0, 0]);
+    expect(Array.from(identical.noActivityMask)).toEqual([0, 0, 1, 1]);
     expect(identical.domain).toEqual([-MIN_COMPARISON_DOMAIN, MIN_COMPARISON_DOMAIN]);
   });
 

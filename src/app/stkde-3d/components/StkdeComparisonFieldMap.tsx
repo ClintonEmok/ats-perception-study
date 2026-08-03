@@ -20,6 +20,7 @@ import {
 type ComparisonFieldDisplayMode = 'absolute' | 'difference';
 
 const COMPARISON_MAP_ASPECT = 1.72;
+const NO_ACTIVITY_COLOR = 'rgba(148, 163, 184, 0.34)';
 
 export interface StkdeComparisonFieldMapProps {
   field: KdeField | null | undefined;
@@ -27,6 +28,7 @@ export interface StkdeComparisonFieldMapProps {
   domain: ComparisonDomain;
   mapTexture?: THREE.CanvasTexture | null;
   palette?: 'field' | 'legacy';
+  noActivityMask?: Uint8Array;
   ariaLabel?: string;
 }
 
@@ -35,6 +37,7 @@ function buildFieldTexture(
   displayMode: ComparisonFieldDisplayMode,
   domain: ComparisonDomain,
   palette: 'field' | 'legacy',
+  noActivityMask?: Uint8Array,
 ): THREE.CanvasTexture | null {
   if (typeof document === 'undefined') return null;
 
@@ -49,13 +52,16 @@ function buildFieldTexture(
     for (let column = 0; column < field.gridSize; column += 1) {
       const index = row * field.gridSize + column;
       const rawValue = field.values[index] ?? 0;
+      const isNoActivity = displayMode === 'difference' && noActivityMask?.[index] === 1;
       const normalized = displayMode === 'difference'
         ? mapSignedContrast(rawValue, maxAbs)
         : mapAbsoluteIntensity(rawValue, domain);
       const alpha = displayMode === 'difference'
         ? (normalized === 0 ? 0.98 : 0.84 + Math.abs(normalized) * 0.14)
         : normalized === 0 ? 0 : 0.34 + normalized * 0.64;
-      const color = displayMode === 'difference'
+      const color = isNoActivity
+        ? NO_ACTIVITY_COLOR
+        : displayMode === 'difference'
         ? getStkdeSignedDifferenceColor(normalized, alpha)
         : palette === 'legacy'
           ? getLegacyStkdeIntensityColor(normalized, alpha)
@@ -80,11 +86,12 @@ export function StkdeComparisonFieldMap({
   domain,
   mapTexture,
   palette = 'field',
+  noActivityMask,
   ariaLabel = `${displayMode === 'difference' ? 'Signed KDE difference' : 'Absolute KDE'} map`,
 }: StkdeComparisonFieldMapProps) {
   const texture = useMemo(
-    () => (field ? buildFieldTexture(field, displayMode, domain, palette) : null),
-    [domain, displayMode, field, palette],
+    () => (field ? buildFieldTexture(field, displayMode, domain, palette, noActivityMask) : null),
+    [domain, displayMode, field, noActivityMask, palette],
   );
 
   useEffect(() => () => texture?.dispose(), [texture]);

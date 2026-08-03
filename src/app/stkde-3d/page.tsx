@@ -627,20 +627,21 @@ export default function Stkde3DPage() {
                Active events
              </button> : null}
 
-             {!comparison ? <button
+             <button
                type="button"
-              aria-pressed={showHotspotTrajectories}
-              aria-disabled={isDifferenceComparison}
-              disabled={isDifferenceComparison}
-              onClick={() => setShowHotspotTrajectories((value) => !value)}
-              className={`flex items-center gap-1.5 rounded-[var(--radius)] border px-2.5 py-1.5 transition ${
-                showHotspotTrajectories
-                  ? 'border-amber-600/60 bg-amber-100 text-amber-900'
-                  : 'border-border bg-background text-foreground hover:border-amber-600/50'
-              }`}
-             >
-               Trajectories
-             </button> : null}
+               aria-pressed={showHotspotTrajectories}
+               aria-disabled={Boolean(comparison)}
+               disabled={Boolean(comparison)}
+               title={comparison ? 'Unavailable in comparison view' : undefined}
+               onClick={() => setShowHotspotTrajectories((value) => !value)}
+               className={`flex items-center gap-1.5 rounded-[var(--radius)] border px-2.5 py-1.5 transition ${
+                 showHotspotTrajectories
+                   ? 'border-amber-600/60 bg-amber-100 text-amber-900'
+                   : 'border-border bg-background text-foreground hover:border-amber-600/50'
+               } ${comparison ? 'cursor-not-allowed opacity-50' : ''}`}
+              >
+                Trajectories
+             </button>
 
             <button
               type="button"
