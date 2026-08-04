@@ -3,6 +3,7 @@ import { buildNonUniformDraftBinsFromSelection, partitionSelectionByGranularity 
 import { fetchCrimeRecordsForPartitions } from '@/components/dashboard-demo/lib/fetchCrimeRecordsForRange';
 import type { TimeBin } from '@/lib/binning/types';
 import type { CrimeRecord } from '@/types/crime';
+import type { ReplaceSlicesFromBinsOptions } from './slice-domain/types';
 import { useSliceDomainStore } from './useSliceDomainStore';
 import { useDashboardDemoCoordinationStore } from './useDashboardDemoCoordinationStore';
 
@@ -28,6 +29,8 @@ export interface GenerationResultMetadata {
   warning: string | null;
   inputs: GenerationInputs;
 }
+
+type ApplyGeneratedBinsOptions = ReplaceSlicesFromBinsOptions;
 
 interface DashboardDemoTimeslicingState {
   mode: TimeslicingMode;
@@ -68,7 +71,7 @@ interface DashboardDemoTimeslicingState {
   mergePendingGeneratedBins: (binIds: string[]) => void;
   splitPendingGeneratedBin: (binId: string, splitPoint: number) => void;
   deletePendingGeneratedBin: (binId: string) => void;
-  applyGeneratedBins: (domain: [number, number]) => boolean;
+  applyGeneratedBins: (domain: [number, number], options?: ApplyGeneratedBinsOptions) => boolean;
   applySingleGeneratedBin: (binId: string, domain: [number, number]) => boolean;
   addManualDraftRange: (range: { startMs: number; endMs: number }) => string;
   updatePendingBinRange: (binId: string, startMs: number, endMs: number) => void;
@@ -357,7 +360,7 @@ export const useDashboardDemoTimeslicingModeStore = create<DashboardDemoTimeslic
     mergePendingGeneratedBins: (binIds) => set((state) => ({ pendingGeneratedBins: mergeBins(state.pendingGeneratedBins, binIds) })),
     splitPendingGeneratedBin: (binId, splitPoint) => set((state) => ({ pendingGeneratedBins: splitBin(state.pendingGeneratedBins, binId, splitPoint) })),
     deletePendingGeneratedBin: (binId) => set((state) => ({ pendingGeneratedBins: deleteBin(state.pendingGeneratedBins, binId) })),
-    applyGeneratedBins: (domain) => {
+    applyGeneratedBins: (domain, options) => {
       const { pendingGeneratedBins } = get();
 
       // console.log('[Store:Apply] applyGeneratedBins — bins:', pendingGeneratedBins.length, 'domain:', domain);
@@ -367,7 +370,7 @@ export const useDashboardDemoTimeslicingModeStore = create<DashboardDemoTimeslic
         return false;
       }
 
-      useSliceDomainStore.getState().replaceSlicesFromBins(pendingGeneratedBins, domain);
+      useSliceDomainStore.getState().replaceSlicesFromBins(pendingGeneratedBins, domain, options);
       useDashboardDemoCoordinationStore.getState().setWarpSource('density');
 
       // const postSliceCount = useSliceDomainStore.getState().slices.length;

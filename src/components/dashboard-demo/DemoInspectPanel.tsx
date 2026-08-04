@@ -1,6 +1,6 @@
 "use client";
 
-import { Focus, Pause, Play } from 'lucide-react';
+import { Focus, Pause, Play, RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { SliceScrubber } from '@/app/stkde-3d/components/SliceScrubber';
@@ -38,6 +38,7 @@ export function DemoInspectPanel() {
   const activeIndex = useDashboardDemoCoordinationStore((state) => state.activeSliceIndex);
   const viewMode = useDashboardDemoCoordinationStore((state) => state.viewMode);
   const isPlaying = useDashboardDemoCoordinationStore((state) => state.inspectIsPlaying);
+  const playbackDirection = useDashboardDemoCoordinationStore((state) => state.inspectPlaybackDirection);
   const playbackSpeed = useDashboardDemoCoordinationStore((state) => state.inspectPlaybackSpeed);
   const sliceOpacity = useDashboardDemoCoordinationStore((state) => state.inspectSliceOpacity);
   const activeSliceOpacity = useDashboardDemoCoordinationStore((state) => state.inspectActiveSliceOpacity);
@@ -50,6 +51,7 @@ export function DemoInspectPanel() {
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
   const setViewMode = useDashboardDemoCoordinationStore((state) => state.setViewMode);
   const togglePlayback = useDashboardDemoCoordinationStore((state) => state.toggleInspectPlayback);
+  const setPlaybackDirection = useDashboardDemoCoordinationStore((state) => state.setInspectPlaybackDirection);
   const setPlaybackSpeed = useDashboardDemoCoordinationStore((state) => state.setInspectPlaybackSpeed);
   const setSliceOpacity = useDashboardDemoCoordinationStore((state) => state.setInspectSliceOpacity);
   const setActiveSliceOpacity = useDashboardDemoCoordinationStore((state) => state.setInspectActiveSliceOpacity);
@@ -122,6 +124,15 @@ export function DemoInspectPanel() {
           <div className="flex items-center gap-1">
             <button type="button" onClick={togglePlayback} className="flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground">
               {isPlaying ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}{isPlaying ? 'Pause' : 'Play'}
+            </button>
+            <button
+              type="button"
+              aria-pressed={playbackDirection === 'reverse'}
+              onClick={() => setPlaybackDirection(playbackDirection === 'forward' ? 'reverse' : 'forward')}
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${playbackDirection === 'reverse' ? 'border-amber-400/60 bg-amber-400/10 text-amber-100' : 'border-border bg-muted text-muted-foreground hover:text-foreground'}`}
+            >
+              <RotateCcw className="size-3.5" />
+              {playbackDirection === 'reverse' ? 'Reverse' : 'Forward'}
             </button>
             <button type="button" aria-pressed={isFocusedView} onClick={() => setViewMode(isFocusedView ? 'stack' : 'focus')} className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${isFocusedView ? 'border-sky-400/60 bg-sky-400/10 text-sky-100' : 'border-border bg-muted text-muted-foreground hover:text-foreground'}`}>
               <Focus className="size-3.5" />{isFocusedView ? 'Single' : 'Stack'}

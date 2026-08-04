@@ -32,6 +32,10 @@ export interface TimeSlice {
   isVisible: boolean;
 }
 
+export interface ReplaceSlicesFromBinsOptions {
+  preserveWarpWeight?: boolean;
+}
+
 export type SliceCoreState = {
   slices: TimeSlice[];
   activeSliceId: string | null;
@@ -51,7 +55,11 @@ export type SliceCoreState = {
   toggleLock: (id: string) => void;
   toggleVisibility: (id: string) => void;
   addSliceFromBin: (bin: TimeBin, domain: [number, number]) => string | null;
-  replaceSlicesFromBins: (bins: TimeBin[], domain: [number, number]) => void;
+  replaceSlicesFromBins: (
+    bins: TimeBin[],
+    domain: [number, number],
+    options?: ReplaceSlicesFromBinsOptions,
+  ) => void;
   clearSlices: () => void;
   setActiveSlice: (id: string | null) => void;
 };

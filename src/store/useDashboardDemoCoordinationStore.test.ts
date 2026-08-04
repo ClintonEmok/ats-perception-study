@@ -163,17 +163,20 @@ describe('useDashboardDemoCoordinationStore', () => {
     const store = useDashboardDemoCoordinationStore.getState();
 
     expect(store.inspectIsPlaying).toBe(false);
+    expect(store.inspectPlaybackDirection).toBe('forward');
     expect(store.inspectPlaybackSpeed).toBe(1);
     expect(store.inspectInterpolation).toBe(true);
     expect(store.inspectIsScrubbing).toBe(false);
 
     store.setInspectIsPlaying(true);
+    store.setInspectPlaybackDirection('reverse');
     store.setInspectPlaybackSpeed(2.5);
     store.setInspectInterpolation(false);
     store.setInspectIsScrubbing(true);
 
     expect(useDashboardDemoCoordinationStore.getState()).toMatchObject({
       inspectIsPlaying: true,
+      inspectPlaybackDirection: 'reverse',
       inspectPlaybackSpeed: 2.5,
       inspectInterpolation: false,
       inspectIsScrubbing: true,
@@ -183,12 +186,14 @@ describe('useDashboardDemoCoordinationStore', () => {
 
     expect(useDashboardDemoCoordinationStore.getState()).toMatchObject({
       inspectIsPlaying: false,
+      inspectPlaybackDirection: 'forward',
       inspectPlaybackSpeed: 1,
       inspectInterpolation: true,
       inspectIsScrubbing: false,
     });
 
     store.setInspectIsPlaying(true);
+    store.setInspectPlaybackDirection('reverse');
     store.setInspectPlaybackSpeed(3);
     store.setInspectInterpolation(false);
     store.setInspectIsScrubbing(true);
@@ -196,6 +201,7 @@ describe('useDashboardDemoCoordinationStore', () => {
 
     expect(useDashboardDemoCoordinationStore.getState()).toMatchObject({
       inspectIsPlaying: false,
+      inspectPlaybackDirection: 'forward',
       inspectPlaybackSpeed: 1,
       inspectInterpolation: true,
       inspectIsScrubbing: false,
@@ -212,14 +218,14 @@ describe('useDashboardDemoCoordinationStore', () => {
     expect(useDashboardDemoCoordinationStore.getState().cubeScopeMode).toBe('brushed');
   });
 
-  test('clamps demo warp factor to the 0 to 3 range', () => {
+  test('clamps demo warp factor to the 0 to 5 range', () => {
     const store = useDashboardDemoCoordinationStore.getState();
 
     store.setWarpFactor(2.4);
     expect(useDashboardDemoCoordinationStore.getState().warpFactor).toBe(2.4);
 
-    store.setWarpFactor(4.2);
-    expect(useDashboardDemoCoordinationStore.getState().warpFactor).toBe(3);
+    store.setWarpFactor(6.2);
+    expect(useDashboardDemoCoordinationStore.getState().warpFactor).toBe(5);
 
     store.setWarpFactor(-1);
     expect(useDashboardDemoCoordinationStore.getState().warpFactor).toBe(0);

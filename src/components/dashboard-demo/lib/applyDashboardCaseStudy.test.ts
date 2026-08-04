@@ -16,7 +16,8 @@ const buildActions = (): ApplyDashboardCaseStudyActions => ({
   setDemoTimeScaleMode: vi.fn(),
   setStkdeScopeMode: vi.fn(),
   clearPendingGeneratedBins: vi.fn(),
-  replaceSlicesFromBins: vi.fn(),
+  setPendingGeneratedBins: vi.fn(),
+  applyGeneratedBins: vi.fn(() => true),
   setActiveSliceIndex: vi.fn(),
   clearComparisonSlices: vi.fn(),
   setScreenshotReadyState: vi.fn(),
@@ -55,14 +56,27 @@ describe('applyDashboardCaseStudy', () => {
     expect(actions.setDemoTimeScaleMode).toHaveBeenCalledWith('adaptive');
     expect(actions.setStkdeScopeMode).toHaveBeenCalledWith('applied-slices');
     expect(actions.clearPendingGeneratedBins).toHaveBeenCalledTimes(1);
-    expect(actions.replaceSlicesFromBins).toHaveBeenCalledWith(
+    expect(actions.setPendingGeneratedBins).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           id: 'case-study-fourth-of-july-1',
           startTime: preset.startEpoch * 1000,
         }),
       ]),
+      expect.objectContaining({
+        binCount: CASE_STUDY_SLICE_COUNT,
+        eventCount: 3,
+        warning: null,
+        inputs: expect.objectContaining({
+          crimeTypes: ['all-crime-types'],
+          neighbourhood: null,
+          granularity: 'daily',
+        }),
+      }),
+    );
+    expect(actions.applyGeneratedBins).toHaveBeenCalledWith(
       [preset.startEpoch * 1000, preset.endEpoch * 1000],
+      { preserveWarpWeight: true },
     );
     expect(result.bins).toHaveLength(CASE_STUDY_SLICE_COUNT);
     expect(result.bins.map(({ startTime, endTime }) => ({ startTime, endTime }))).toEqual(
@@ -94,6 +108,31 @@ describe('applyDashboardCaseStudy', () => {
 
     expect(result.ok).toBe(true);
     expect(actions.setDemoTime).not.toHaveBeenCalled();
+  });
+
+  it('supports hourly case-study variants through hourly generation inputs', () => {
+    const actions = buildActions();
+    const preset = CASE_STUDY_PRESETS.find((entry) => entry.id === 'fourth-of-july-hourly')!;
+
+    const result = applyDashboardCaseStudy({
+      preset,
+      minTimestampSec: preset.startEpoch,
+      maxTimestampSec: preset.endEpoch,
+      currentTime: 50,
+      eventTimestamps: [preset.startEpoch * 1000 + 1_000, preset.startEpoch * 1000 + 3_600_000 + 1_000],
+      eventTypes: ['THEFT', 'BATTERY'],
+      actions,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.bins.length).toBeGreaterThan(CASE_STUDY_SLICE_COUNT);
+    expect(actions.setPendingGeneratedBins).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        inputs: expect.objectContaining({ granularity: 'hourly' }),
+      }),
+    );
   });
 
   it('does not write any store when timeline bounds are unavailable', () => {

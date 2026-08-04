@@ -23,6 +23,7 @@ import { useBurstWindows } from '@/components/viz/BurstList';
 import { useAdaptiveStore } from '@/store/useAdaptiveStore';
 import { useAutoBurstSlices } from '@/store/useSliceStore';
 import { DualTimelineSurface } from '@/components/timeline/DualTimelineSurface';
+import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import { classifyBurstWindow } from '@/lib/binning/burst-taxonomy';
 import { useViewportCrimeData } from '@/hooks/useViewportCrimeData';
 import { useViewportStore } from '@/lib/stores/viewportStore';
@@ -326,6 +327,16 @@ export const DualTimeline: React.FC<DualTimelineProps> = ({
     domainEnd,
   });
 
+  const scopedDensityWarpMap = useMemo(
+    () => detailDensityMap && detailRangeSec[1] > detailRangeSec[0]
+      ? buildDensityWarpMap(detailDensityMap, detailRangeSec)
+      : null,
+    [detailDensityMap, detailRangeSec],
+  );
+
+  const scopedWarpMap = scopedDensityWarpMap ?? effectiveWarpMap;
+  const scopedWarpDomain = scopedDensityWarpMap ? detailRangeSec : effectiveWarpDomain;
+
   const resolvedDetailRenderMode = useMemo(() => {
     if (detailRenderMode === 'auto') {
       return detailSpanDays > DETAIL_DENSITY_RECOMPUTE_MAX_DAYS ? 'bins' : 'points';
@@ -369,8 +380,8 @@ export const DualTimeline: React.FC<DualTimelineProps> = ({
     detailInnerWidth,
     timeScaleMode: effectiveTimeScaleMode,
     warpFactor: effectiveWarpFactor,
-    warpMap: effectiveWarpMap,
-    warpDomain: effectiveWarpDomain,
+    warpMap: scopedWarpMap,
+    warpDomain: scopedWarpDomain,
     tickLabelStrategy,
     timeResolution,
   });

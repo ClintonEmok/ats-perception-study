@@ -1,4 +1,14 @@
-export type CaseStudyPresetId = 'full' | 'fourth-of-july' | 'spring-break' | 'new-years';
+export type CaseStudyGranularity = 'hourly' | 'daily';
+export type CaseStudyPartitionMode = 'fixed' | 'granular';
+
+export type CaseStudyPresetId =
+  | 'full'
+  | 'fourth-of-july'
+  | 'fourth-of-july-hourly'
+  | 'spring-break'
+  | 'spring-break-hourly'
+  | 'new-years'
+  | 'new-years-hourly';
 export type CaseStudyScreenshotMode = 'adaptive';
 
 export interface CaseStudyPreset {
@@ -9,6 +19,8 @@ export interface CaseStudyPreset {
   endEpoch: number;
   limit: number;
   screenshotMode: CaseStudyScreenshotMode;
+  granularity: CaseStudyGranularity;
+  partitionMode: CaseStudyPartitionMode;
 }
 
 export interface CaseStudySliceRange {
@@ -31,6 +43,8 @@ export const CASE_STUDY_PRESETS: readonly CaseStudyPreset[] = [
     endEpoch: 1767225599,
     limit: 1200,
     screenshotMode: 'adaptive',
+    granularity: 'daily',
+    partitionMode: 'fixed',
   },
   {
     id: 'fourth-of-july',
@@ -40,6 +54,19 @@ export const CASE_STUDY_PRESETS: readonly CaseStudyPreset[] = [
     endEpoch: toUtcEpoch('2024-07-07', true),
     limit: 5000,
     screenshotMode: 'adaptive',
+    granularity: 'daily',
+    partitionMode: 'fixed',
+  },
+  {
+    id: 'fourth-of-july-hourly',
+    label: 'Fourth of July (Hourly)',
+    rangeLabel: 'Jun 30–Jul 7, 2024 · hourly',
+    startEpoch: toUtcEpoch('2024-06-30'),
+    endEpoch: toUtcEpoch('2024-07-07', true),
+    limit: 5000,
+    screenshotMode: 'adaptive',
+    granularity: 'hourly',
+    partitionMode: 'granular',
   },
   {
     id: 'spring-break',
@@ -49,6 +76,19 @@ export const CASE_STUDY_PRESETS: readonly CaseStudyPreset[] = [
     endEpoch: toUtcEpoch('2024-04-01', true),
     limit: 5000,
     screenshotMode: 'adaptive',
+    granularity: 'daily',
+    partitionMode: 'fixed',
+  },
+  {
+    id: 'spring-break-hourly',
+    label: 'Spring Break (Hourly)',
+    rangeLabel: 'Mar 25–Apr 1, 2024 · hourly',
+    startEpoch: toUtcEpoch('2024-03-25'),
+    endEpoch: toUtcEpoch('2024-04-01', true),
+    limit: 5000,
+    screenshotMode: 'adaptive',
+    granularity: 'hourly',
+    partitionMode: 'granular',
   },
   {
     id: 'new-years',
@@ -58,6 +98,19 @@ export const CASE_STUDY_PRESETS: readonly CaseStudyPreset[] = [
     endEpoch: toUtcEpoch('2024-01-04', true),
     limit: 5000,
     screenshotMode: 'adaptive',
+    granularity: 'daily',
+    partitionMode: 'fixed',
+  },
+  {
+    id: 'new-years-hourly',
+    label: "New Year's (Hourly)",
+    rangeLabel: 'Dec 28, 2023–Jan 4, 2024 · hourly',
+    startEpoch: toUtcEpoch('2023-12-28'),
+    endEpoch: toUtcEpoch('2024-01-04', true),
+    limit: 5000,
+    screenshotMode: 'adaptive',
+    granularity: 'hourly',
+    partitionMode: 'granular',
   },
 ] as const;
 

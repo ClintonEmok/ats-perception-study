@@ -123,6 +123,15 @@ describe('createSliceCoreSlice burstiness parity', () => {
     expect(slice?.warpWeight).toBe(1.0);
   });
 
+  test('preserves an explicit generated weight when requested by a case study', () => {
+    useAdaptiveStore.setState({ activeSignalSource: 'density' });
+    const bin = buildBurstTaxonomyBin({ warpWeight: 1.8 });
+
+    useSliceDomainStore.getState().replaceSlicesFromBins([bin], [0, 100], { preserveWarpWeight: true });
+
+    expect(useSliceDomainStore.getState().slices[0]?.warpWeight).toBe(1.8);
+  });
+
   test('contextual source with no baseline returns 1.0 (stub)', () => {
     useAdaptiveStore.setState({ activeSignalSource: 'contextual' });
     const bin = buildBurstTaxonomyBin({ warpWeight: 1.8 });

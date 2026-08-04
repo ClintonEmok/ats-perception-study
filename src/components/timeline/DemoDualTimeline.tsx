@@ -45,13 +45,12 @@ import { DualTimelineSurface, type SurfaceBurstWindow } from '@/components/timel
 import { useDualTimelineViewModel } from './hooks/useDualTimelineViewModel';
 import { classifyBurstWindow } from '@/lib/binning/burst-taxonomy';
 import { useDemoBurstWindows } from '@/components/dashboard-demo/lib/useDemoBurstWindows';
+import { dashboardWarpFactorToBlend } from '@/components/dashboard-demo/lib/warp-contract';
 
 const OVERVIEW_MARGIN = { top: 8, right: 12, bottom: 10, left: 12 };
 const DETAIL_MARGIN = { top: 8, right: 12, bottom: 12, left: 12 };
 
 const clamp = clampToRange;
-
-const normalizeWarpBlend = (value: number) => Math.min(1, Math.max(0, value / 3));
 
 interface ApplyRangeToStoresContractParams {
   interactive: boolean;
@@ -180,14 +179,9 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
     return [0, 100];
   }, [maxTimestampSec, minTimestampSec]);
 
-  const hasVisibleWarpSlices = useMemo(
-    () => slices.some((slice) => slice.isVisible && (slice.warpEnabled ?? true)),
-    [slices]
-  );
-
   const authoredWarpMap = useMemo(
-    () => buildDemoSliceAuthoredWarpMap(slices, warpDomain, Math.max(96, slices.length * 8 || 0)),
-    [slices, warpDomain]
+    () => buildDemoSliceAuthoredWarpMap(slices, densityMap, warpDomain, Math.max(96, slices.length * 8 || 0)),
+    [densityMap, slices, warpDomain]
   );
 
   // Get viewport store for brush/zoom sync
@@ -285,15 +279,6 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
     setPrecomputedMaps(nextDensityMap, nextDensityWarpMap, warpDomain);
   }, [nextDensityMap, nextDensityWarpMap, setIsComputing, setPrecomputedMaps, warpDomain]);
 
-  const usingDensitySource = warpSource === 'density';
-  const shouldForceAdaptiveFromSlices = warpSource === 'slice-authored' && hasVisibleWarpSlices;
-
-  const effectiveWarpMap = usingDensitySource ? precomputedWarpMap : authoredWarpMap;
-  const effectiveWarpDomain = usingDensitySource ? precomputedMapDomain : warpDomain;
-  const effectiveWarpFactor = shouldForceAdaptiveFromSlices ? (warpFactor > 0 ? warpFactor : 1) : warpFactor;
-  const effectiveWarpBlend = useMemo(() => normalizeWarpBlend(effectiveWarpFactor), [effectiveWarpFactor]);
-  const effectiveTimeScaleMode = shouldForceAdaptiveFromSlices ? 'adaptive' : timeScaleMode;
-
   const overviewBins = useMemo<CrimeOverviewBin[]>(() => {
     if (overviewBinsFromStore.length > 0) {
       return overviewBinsFromStore;
@@ -332,6 +317,28 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
     domainStart,
     domainEnd,
   });
+
+  const authoredScopedWarpMap = useMemo(
+    () => buildDemoSliceAuthoredWarpMap(slices, detailDensityMap, warpDomain, Math.max(96, slices.length * 8 || 0), detailRangeSec),
+    [detailDensityMap, detailRangeSec, slices, warpDomain],
+  );
+
+  const scopedDensityWarpMap = useMemo(
+    () => detailDensityMap && detailRangeSec[1] > detailRangeSec[0]
+      ? buildDensityWarpMap(detailDensityMap, detailRangeSec)
+      : null,
+    [detailDensityMap, detailRangeSec],
+  );
+
+  const usingDensitySource = warpSource === 'density';
+  const effectiveWarpMap = usingDensitySource
+    ? (scopedDensityWarpMap ?? precomputedWarpMap)
+    : (authoredScopedWarpMap ?? authoredWarpMap);
+  const effectiveWarpDomain = usingDensitySource
+    ? (scopedDensityWarpMap ? detailRangeSec : precomputedMapDomain)
+    : (authoredScopedWarpMap ? detailRangeSec : warpDomain);
+  const effectiveWarpBlend = useMemo(() => dashboardWarpFactorToBlend(warpFactor), [warpFactor]);
+  const effectiveTimeScaleMode = timeScaleMode;
 
   const resolvedDetailRenderMode = useMemo(() => {
     if (detailRenderMode === 'auto') {

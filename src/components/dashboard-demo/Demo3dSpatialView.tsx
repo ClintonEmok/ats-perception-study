@@ -19,6 +19,7 @@ import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import { ADAPTIVE_BIN_COUNT, ADAPTIVE_KERNEL_WIDTH } from '@/lib/adaptive-utils';
 import { buildBurstVolumeModel } from '@/lib/stkde/burst-volume';
 import { buildDemoSliceAuthoredWarpMap } from '@/components/dashboard-demo/lib/demo-warp-map';
+import { dashboardWarpFactorToBlend } from '@/components/dashboard-demo/lib/warp-contract';
 import { useDashboardDemo3d } from '@/components/dashboard-demo/DashboardDemo3dProvider';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
 import { START_Y } from '@/app/stkde-3d/lib/timeline-axis';
@@ -57,8 +58,6 @@ function normalizeBurstScore(score: number): number {
   const clamped = Math.max(0, score);
   return clamped > 1 ? Math.min(1, clamped / 100) : clamped;
 }
-
-const normalizeWarpBlend = (warpFactor: number): number => Math.min(1, Math.max(0, warpFactor / 3));
 
 const MIN_DRAFT_WINDOW_SEC = 6 * 60 * 60;
 
@@ -372,8 +371,15 @@ export function Demo3dSpatialView() {
     [cubeScopeMode, scopedDensityMap, cubeTimeDomain],
   );
 
-  const hasVisibleWarpSlices = useMemo(
-    () => slices.some((slice) => slice.isVisible && (slice.warpEnabled ?? true)),
+  const scopedAuthoredWarpMap = useMemo(
+    () => cubeScopeMode === 'brushed'
+      ? buildDemoSliceAuthoredWarpMap(slices, scopedDensityMap, fullTimeDomain, Math.max(96, slices.length * 8 || 0), cubeTimeDomain)
+      : null,
+    [cubeScopeMode, cubeTimeDomain, fullTimeDomain, scopedDensityMap, slices],
+  );
+
+  const visibleWarpSliceCount = useMemo(
+    () => slices.filter((slice) => slice.isVisible && (slice.warpEnabled ?? true)).length,
     [slices],
   );
 
@@ -382,15 +388,15 @@ export function Demo3dSpatialView() {
     [densityMap, fullTimeDomain, slices],
   );
 
-  const usingDensitySource = warpSource === 'density';
-  const shouldForceAdaptiveFromSlices = warpSource === 'slice-authored' && hasVisibleWarpSlices;
-  const activeWarpMap = scopedWarpMap ?? (usingDensitySource ? warpMap : authoredWarpMap);
+  const usingDensitySource = warpSource === 'density' || visibleWarpSliceCount < 2;
+  const activeWarpMap = usingDensitySource
+    ? (scopedWarpMap ?? warpMap)
+    : (scopedAuthoredWarpMap ?? authoredWarpMap);
   const activeWarpDomain = cubeScopeMode === 'brushed'
     ? cubeTimeDomain
     : (usingDensitySource && mapDomain[1] > mapDomain[0] ? mapDomain : fullTimeDomain);
-  const effectiveWarpFactor = shouldForceAdaptiveFromSlices ? (warpFactor > 0 ? warpFactor : 1) : warpFactor;
-  const effectiveWarpBlend = normalizeWarpBlend(effectiveWarpFactor);
-  const effectiveTimeScaleMode = shouldForceAdaptiveFromSlices ? 'adaptive' : timeScaleMode;
+  const effectiveWarpBlend = dashboardWarpFactorToBlend(warpFactor);
+  const effectiveTimeScaleMode = timeScaleMode;
 
   const volumeProfile = useMemo(
     () => buildDurationVolumeProfile(countedSlices, {
@@ -694,6 +700,8 @@ export function Demo3dSpatialView() {
         viewMode={viewMode}
         showRawEvents={showRawEvents}
         showHotspotTrajectories={showHotspotTrajectories}
+        showAdaptiveWarpAxis={false}
+        showSliceBoundaryBackdrop={true}
         sliceOpacity={sliceOpacity}
         activeSliceOpacity={activeSliceOpacity}
         nonActiveSliceOpacity={nonActiveSliceOpacity}

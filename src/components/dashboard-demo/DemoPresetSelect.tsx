@@ -38,7 +38,6 @@ import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoord
 import { useDashboardDemoFilterStore } from '@/store/useDashboardDemoFilterStore';
 import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
-import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 import { useTimelineDataStore } from '@/store/useTimelineDataStore';
 
 const TOOLTIP_NO_DATA = 'Load data first';
@@ -147,7 +146,8 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
               setDemoTimeScaleMode,
               setStkdeScopeMode,
               clearPendingGeneratedBins: () => useDashboardDemoTimeslicingModeStore.getState().clearPendingGeneratedBins(),
-              replaceSlicesFromBins: (bins, domain) => useSliceDomainStore.getState().replaceSlicesFromBins(bins, domain),
+              setPendingGeneratedBins: (bins, metadata) => useDashboardDemoTimeslicingModeStore.getState().setPendingGeneratedBins(bins, metadata),
+              applyGeneratedBins: (domain, options) => useDashboardDemoTimeslicingModeStore.getState().applyGeneratedBins(domain, options),
               setActiveSliceIndex,
               clearComparisonSlices,
               setScreenshotReadyState: () => onCaseStudyApplied?.(),
@@ -163,7 +163,7 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
 
           setActivePresetId(caseStudyPreset.id);
           toast.success(`Loaded ${caseStudyPreset.label}`, {
-            description: `${caseStudyPreset.rangeLabel} · ${caseStudyPreset.screenshotMode} · 10 applied slices`,
+            description: `${caseStudyPreset.rangeLabel} · ${caseStudyPreset.screenshotMode} · ${result.bins.length} applied slices`,
           });
           if (fetched.sampled) {
             toast.warning('Case study uses sampled crime data', {

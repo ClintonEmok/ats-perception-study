@@ -29,6 +29,7 @@ export type {
   SliceDomainState,
   SliceSelectionState,
   TimeSlice,
+  ReplaceSlicesFromBinsOptions,
   TooltipPayload,
 } from './slice-domain/types';
 

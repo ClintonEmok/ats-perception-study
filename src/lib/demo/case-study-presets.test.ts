@@ -12,17 +12,24 @@ describe('case-study presets', () => {
     expect(CASE_STUDY_PRESETS.map((preset) => preset.id)).toEqual([
       'full',
       'fourth-of-july',
+      'fourth-of-july-hourly',
       'spring-break',
+      'spring-break-hourly',
       'new-years',
+      'new-years-hourly',
     ]);
     expect(CASE_STUDY_PRESETS.every((preset) => preset.screenshotMode === 'adaptive')).toBe(true);
-    expect(CASE_STUDY_PRESETS.map((preset) => preset.limit)).toEqual([1200, 5000, 5000, 5000]);
+    expect(CASE_STUDY_PRESETS.map((preset) => preset.limit)).toEqual([1200, 5000, 5000, 5000, 5000, 5000, 5000]);
     expect(CASE_STUDY_PRESETS.map((preset) => preset.rangeLabel)).toEqual([
       '2001–2025 · sampled overview',
       'Jun 30–Jul 7, 2024',
+      'Jun 30–Jul 7, 2024 · hourly',
       'Mar 25–Apr 1, 2024',
+      'Mar 25–Apr 1, 2024 · hourly',
       'Dec 28, 2023–Jan 4, 2024',
+      'Dec 28, 2023–Jan 4, 2024 · hourly',
     ]);
+    expect(CASE_STUDY_PRESETS.filter((preset) => preset.partitionMode === 'granular').every((preset) => preset.granularity === 'hourly')).toBe(true);
   });
 
   it('converts the known UTC boundaries without local timezone drift', () => {

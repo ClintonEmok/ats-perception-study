@@ -8,7 +8,12 @@ import {
   getBaseline168WinsorizedSync,
 } from '@/lib/signal-sources';
 import type { TimeBin } from '@/lib/binning/types';
-import type { SliceCoreState, SliceDomainStateCreator, TimeSlice } from './types';
+import type {
+  ReplaceSlicesFromBinsOptions,
+  SliceCoreState,
+  SliceDomainStateCreator,
+  TimeSlice,
+} from './types';
 
 const BURST_TOLERANCE_RATIO = 0.005;
 const MERGE_TOUCH_TOLERANCE = 0.5;
@@ -460,7 +465,7 @@ export const createSliceCoreSlice: SliceDomainStateCreator<SliceCoreState> = (se
 
     return slice.id;
   },
-  replaceSlicesFromBins: (bins, domain) => {
+  replaceSlicesFromBins: (bins, domain, options: ReplaceSlicesFromBinsOptions = {}) => {
     // console.log('[SliceCore:replaceSlicesFromBins] bins:', bins.length, 'domain:', domain);
     const nextSlices = bins
       .map<TimeSlice | null>((bin, index) => {
@@ -474,7 +479,9 @@ export const createSliceCoreSlice: SliceDomainStateCreator<SliceCoreState> = (se
         // Phase 84 (BFT-01 / BFT-02): dispatch warpWeight on the active
         // signal source (same pattern as `addSliceFromBin`).
         const source = useAdaptiveStore.getState().activeSignalSource;
-        const warpWeight = source === 'burstiness'
+        const warpWeight = options.preserveWarpWeight && Number.isFinite(bin.warpWeight)
+          ? bin.warpWeight
+          : source === 'burstiness'
           ? (burstTaxonomyPresent
             ? (bin.warpWeight ?? (bin.isNeutralPartition ? 1 : 1.25))
             : 1)

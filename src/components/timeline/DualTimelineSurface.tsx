@@ -4,6 +4,7 @@ import type { DemoDetailPeriodSelection, DemoBurstWindowSelection } from '@/stor
 import React from 'react';
 import { DensityHeatStrip } from '@/components/timeline/DensityHeatStrip';
 import type { BurstTaxonomy } from '@/lib/binning/burst-taxonomy';
+import { resolveAdaptiveSlicePalette } from './lib/adaptive-slice-palette';
 
 export interface SurfaceBurstWindow extends Omit<DemoBurstWindowSelection, 'metric'> {
   metric?: 'density';
@@ -27,6 +28,8 @@ interface SurfaceSliceGeometry {
   overlapCount: number;
   burstClass?: BurstTaxonomy;
   isNeutralPartition?: boolean;
+  warpEnabled?: boolean;
+  warpWeight?: number;
   color?: { fill?: string; stroke?: string } | string;
 }
 
@@ -365,25 +368,30 @@ export function DualTimelineSurface(props: DualTimelineSurfaceProps) {
                 const baseOpacity = geometry.isActive ? 0.68 : geometry.overlapCount >= 3 ? 0.2 : geometry.overlapCount === 2 ? 0.28 : 0.38;
                 const isSuggestionSlice = geometry.isSuggestion && !geometry.isBurst;
                 const isGeneratedAppliedSlice = geometry.isGeneratedApplied;
-                const fill = isGeneratedAppliedSlice
-                  ? 'rgba(16, 185, 129, 0.18)'
-                  : isSuggestionSlice
-                    ? 'rgba(139, 92, 246, 0.2)'
-                    : geometry.isBurst
-                      ? 'rgba(251, 146, 60, 0.26)'
-                      : resolveColorValue(geometry.color, 'fill') ?? 'rgba(148, 163, 184, 0.3)';
-                const stroke = isGeneratedAppliedSlice
-                  ? 'rgba(74, 222, 128, 0.92)'
-                  : isSuggestionSlice
-                    ? 'rgba(167, 139, 250, 0.85)'
-                    : geometry.isBurst
-                      ? 'rgba(251, 146, 60, 0.85)'
-                      : resolveColorValue(geometry.color, 'stroke') ?? 'rgba(100, 116, 139, 0.8)';
+                const adaptivePalette = timeScaleMode === 'adaptive'
+                  ? resolveAdaptiveSlicePalette(geometry)
+                  : null;
+                const fill = adaptivePalette?.fill
+                  ?? (isGeneratedAppliedSlice
+                    ? 'rgba(16, 185, 129, 0.18)'
+                    : isSuggestionSlice
+                      ? 'rgba(139, 92, 246, 0.2)'
+                      : geometry.isBurst
+                        ? 'rgba(251, 146, 60, 0.26)'
+                        : resolveColorValue(geometry.color, 'fill') ?? 'rgba(148, 163, 184, 0.3)');
+                const stroke = adaptivePalette?.stroke
+                  ?? (isGeneratedAppliedSlice
+                    ? 'rgba(74, 222, 128, 0.92)'
+                    : isSuggestionSlice
+                      ? 'rgba(167, 139, 250, 0.85)'
+                      : geometry.isBurst
+                        ? 'rgba(251, 146, 60, 0.85)'
+                        : resolveColorValue(geometry.color, 'stroke') ?? 'rgba(100, 116, 139, 0.8)');
                 return (
                   <g key={`${geometry.id}-${geometry.isActive ? activeSliceUpdatedAt : 'base'}`}>
-                    <rect x={geometry.left} y={3} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 6} rx={3} fill={fill} stroke={stroke} strokeWidth={geometry.isActive ? 2.3 : geometry.overlapCount >= 2 ? 1.5 : 1} strokeDasharray={geometry.overlapCount >= 3 || isSuggestionSlice ? '5 3' : isGeneratedAppliedSlice ? '8 2' : undefined} opacity={baseOpacity} />
-                    {geometry.overlapCount >= 2 && !geometry.isActive && <rect x={geometry.left} y={3} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 6} rx={3} fill="url(#sliceOverlapHatch)" opacity={geometry.overlapCount >= 3 ? 0.42 : 0.3} />}
-                    {geometry.isActive && <rect x={geometry.left} y={2} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 4} rx={3} fill="none" stroke={geometry.isBurst ? 'rgba(253, 186, 116, 0.95)' : 'rgba(125, 211, 252, 0.95)'} strokeWidth={2.2} opacity={0.9}><animate attributeName="opacity" values="0.55;1;0.55" dur="1.8s" repeatCount="indefinite" /></rect>}
+                    <rect x={geometry.left} y={3} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 6} rx={isGeneratedAppliedSlice ? 0 : 3} fill={fill} stroke={stroke} strokeWidth={geometry.isActive ? 2.3 : geometry.overlapCount >= 2 ? 1.5 : 1} strokeDasharray={geometry.overlapCount >= 3 || isSuggestionSlice ? '5 3' : undefined} opacity={baseOpacity} />
+                    {geometry.overlapCount >= 2 && !geometry.isActive && <rect x={geometry.left} y={3} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 6} rx={isGeneratedAppliedSlice ? 0 : 3} fill="url(#sliceOverlapHatch)" opacity={geometry.overlapCount >= 3 ? 0.42 : 0.3} />}
+                    {geometry.isActive && <rect x={geometry.left} y={2} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 4} rx={isGeneratedAppliedSlice ? 0 : 3} fill="none" stroke={geometry.isBurst ? 'rgba(253, 186, 116, 0.95)' : 'rgba(125, 211, 252, 0.95)'} strokeWidth={2.2} opacity={0.9}><animate attributeName="opacity" values="0.55;1;0.55" dur="1.8s" repeatCount="indefinite" /></rect>}
                   </g>
                 );
               })}

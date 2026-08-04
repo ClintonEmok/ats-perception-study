@@ -8,12 +8,17 @@ import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoord
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';
 import { useIsEvaluationLocked } from '@/store/useEvaluationStudyStore';
 import { cn } from '@/lib/utils';
+import {
+  DASHBOARD_WARP_FACTOR_MAX,
+  dashboardWarpFactorToBlend,
+  dashboardWarpPercentToFactor,
+} from '@/components/dashboard-demo/lib/warp-contract';
+import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
 
 const SECONDS_PER_DAY = 24 * 60 * 60;
 const TEMPORAL_RES_MIN_DAYS = 0.25;
 const TEMPORAL_RES_MAX_DAYS = 7;
 const TEMPORAL_RES_STEP_DAYS = 0.25;
-const WARP_FACTOR_MAX = 3;
 const WARP_FACTOR_PERCENT_MAX = 100;
 
 function clampDays(days: number): number {
@@ -34,6 +39,9 @@ export function GlobalWarpControls() {
 
   const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
   const setTimeScaleMode = useDashboardDemoCoordinationStore((state) => state.setTimeScaleMode);
+  const setDemoTimeScaleMode = useDashboardDemoTimeStore((state) => state.setTimeScaleMode);
+  const warpSource = useDashboardDemoCoordinationStore((state) => state.warpSource);
+  const setWarpSource = useDashboardDemoCoordinationStore((state) => state.setWarpSource);
 
   const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
   const setWarpFactor = useDashboardDemoCoordinationStore((state) => state.setWarpFactor);
@@ -44,6 +52,8 @@ export function GlobalWarpControls() {
   const hasAppliedSlices = useSliceDomainStore((state) =>
     state.slices.some((s) => s.source === 'generated-applied'),
   );
+  const slices = useSliceDomainStore((state) => state.slices);
+  const updateSlice = useSliceDomainStore((state) => state.updateSlice);
 
   const volumeScaleSeconds = useDashboardDemoCoordinationStore((state) => state.volumeScaleSeconds);
   const setVolumeScaleSeconds = useDashboardDemoCoordinationStore((state) => state.setVolumeScaleSeconds);
@@ -70,8 +80,7 @@ export function GlobalWarpControls() {
 
   const handleWarpSliderChange = useCallback(
     (value: number[]) => {
-      const next = Math.max(0, Math.min(WARP_FACTOR_MAX, value[0] ?? warpFactor));
-      setWarpFactor(next);
+      setWarpFactor(dashboardWarpPercentToFactor(value[0] ?? dashboardWarpFactorToBlend(warpFactor) * 100));
     },
     [setWarpFactor, warpFactor],
   );
@@ -79,12 +88,20 @@ export function GlobalWarpControls() {
   const handleTimeScaleToggle = useCallback(() => {
     const nextMode = timeScaleMode === 'linear' ? 'adaptive' : 'linear';
     setTimeScaleMode(nextMode);
-    if (nextMode === 'adaptive' && warpFactor === 0) {
-      setWarpFactor(1);
-    }
-  }, [setTimeScaleMode, setWarpFactor, timeScaleMode, warpFactor]);
+    setDemoTimeScaleMode(nextMode);
+  }, [setDemoTimeScaleMode, setTimeScaleMode, timeScaleMode]);
 
-  const warpPercent = Math.round((warpFactor / WARP_FACTOR_MAX) * WARP_FACTOR_PERCENT_MAX);
+  const handleWarpSourceToggle = useCallback((nextSource: 'density' | 'slice-authored') => {
+    if (nextSource === 'slice-authored') {
+      slices
+        .filter((slice) => slice.isVisible && slice.type === 'range')
+        .forEach((slice) => updateSlice(slice.id, { warpWeight: 1 }));
+    }
+
+    setWarpSource(nextSource);
+  }, [setWarpSource, slices, updateSlice]);
+
+  const warpPercent = Math.round((warpFactor / DASHBOARD_WARP_FACTOR_MAX) * WARP_FACTOR_PERCENT_MAX);
 
   return (
     <section
@@ -159,9 +176,9 @@ export function GlobalWarpControls() {
               <span className="shrink-0 text-foreground">Warp factor</span>
               <Slider
                 min={0}
-                max={WARP_FACTOR_MAX}
-                step={0.01}
-                value={[warpFactor]}
+                max={WARP_FACTOR_PERCENT_MAX}
+                step={1}
+                value={[warpPercent]}
                 onValueChange={handleWarpSliderChange}
                 aria-label="Warp factor"
                 disabled={isEvaluationLocked}
@@ -169,6 +186,31 @@ export function GlobalWarpControls() {
               <span className="w-10 shrink-0 text-right font-mono tabular-nums text-foreground">
                 {warpPercent}%
               </span>
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <span className="text-foreground">Warp source</span>
+              <div className="flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 p-0.5">
+                <Button
+                  type="button"
+                  variant={warpSource === 'density' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-6 rounded-sm px-2 text-[11px]"
+                  onClick={() => handleWarpSourceToggle('density')}
+                  disabled={isEvaluationLocked}
+                >
+                  Density
+                </Button>
+                <Button
+                  type="button"
+                  variant={warpSource === 'slice-authored' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-6 rounded-sm px-2 text-[11px]"
+                  onClick={() => handleWarpSourceToggle('slice-authored')}
+                  disabled={isEvaluationLocked}
+                >
+                  Slice-authored
+                </Button>
+              </div>
             </div>
           </>
         ) : null}

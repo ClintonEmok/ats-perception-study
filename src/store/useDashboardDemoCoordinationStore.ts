@@ -13,6 +13,7 @@ export type DemoPanelName = 'timeline' | 'map' | 'cube';
 export type DemoBurstMetric = 'density' | 'burstiness';
 export type DemoComparisonSlot = 'left' | 'right';
 export type DemoSliceViewMode = 'stack' | 'focus';
+export type DemoPlaybackDirection = 'forward' | 'reverse';
 export type DemoCrimeFetchStatus = 'idle' | 'loading' | 'success' | 'error';
 export type DemoRailTab = 'overview' | 'scan' | 'slices' | 'inspect' | 'compare';
 export type DemoWarpScaleMode = 'linear' | 'adaptive';
@@ -104,6 +105,7 @@ interface DashboardDemoCoordinationState {
   activeSliceIndex: number;
   viewMode: DemoSliceViewMode;
   inspectIsPlaying: boolean;
+  inspectPlaybackDirection: DemoPlaybackDirection;
   inspectPlaybackSpeed: number;
   inspectInterpolation: boolean;
   inspectIsScrubbing: boolean;
@@ -147,6 +149,7 @@ interface DashboardDemoCoordinationState {
   setSliceCrimeCounts: (counts: Record<string, number>) => void;
   setViewMode: (mode: DemoSliceViewMode) => void;
   setInspectIsPlaying: (playing: boolean) => void;
+  setInspectPlaybackDirection: (direction: DemoPlaybackDirection) => void;
   setInspectSliceOpacity: (opacity: number) => void;
   setInspectActiveSliceOpacity: (opacity: number) => void;
   setInspectNonActiveSliceOpacity: (opacity: number) => void;
@@ -221,6 +224,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   activeSliceIndex: 0,
   viewMode: 'stack',
   inspectIsPlaying: false,
+  inspectPlaybackDirection: 'forward',
   inspectPlaybackSpeed: 1,
   inspectInterpolation: true,
   inspectIsScrubbing: false,
@@ -272,6 +276,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   setActiveSliceIndex: (activeSliceIndex) => set({ activeSliceIndex }),
   setViewMode: (viewMode) => set({ viewMode }),
   setInspectIsPlaying: (inspectIsPlaying) => set({ inspectIsPlaying }),
+  setInspectPlaybackDirection: (inspectPlaybackDirection) => set({ inspectPlaybackDirection }),
   setInspectSliceOpacity: (inspectSliceOpacity) => set({ inspectSliceOpacity: Math.min(1.5, Math.max(0, inspectSliceOpacity)) }),
   setInspectActiveSliceOpacity: (inspectActiveSliceOpacity) => set({ inspectActiveSliceOpacity: Math.min(1, Math.max(0, inspectActiveSliceOpacity)) }),
   setInspectNonActiveSliceOpacity: (inspectNonActiveSliceOpacity) => set({ inspectNonActiveSliceOpacity: Math.min(1, Math.max(0, inspectNonActiveSliceOpacity)) }),
@@ -299,6 +304,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   resetTemporalSettings: () =>
     set({
       inspectIsPlaying: false,
+      inspectPlaybackDirection: 'forward',
       inspectPlaybackSpeed: 1,
        inspectInterpolation: true,
        inspectIsScrubbing: false,
@@ -414,7 +420,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
     set({ comparisonSliceIds: { left: null, right: null }, comparisonSelectionOrder: [] }),
   setTimeScaleMode: (mode) => set({ timeScaleMode: mode }),
   setWarpSource: (source) => set({ warpSource: source }),
-  setWarpFactor: (value) => set({ warpFactor: Math.min(3, Math.max(0, value)) }),
+  setWarpFactor: (value) => set({ warpFactor: Math.min(5, Math.max(0, value)) }),
   setPrecomputedMaps: (densityMap, warpMap, domain) =>
     set({ densityMap, warpMap, mapDomain: domain, isComputing: false }),
   setIsComputing: (value) => set({ isComputing: value }),
@@ -461,6 +467,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
       volumeExaggeration: DEFAULT_VOLUME_EXAGGERATION,
       volumeNormalizationMode: DEFAULT_VOLUME_NORMALIZATION_MODE,
       inspectIsPlaying: false,
+      inspectPlaybackDirection: 'forward',
       inspectPlaybackSpeed: 1,
        inspectInterpolation: true,
        inspectIsScrubbing: false,

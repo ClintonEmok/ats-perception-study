@@ -4,8 +4,12 @@ import {
   CASE_STUDY_SLICE_COUNT,
   type CaseStudyPreset,
 } from '@/lib/demo/case-study-presets';
-import { buildNonUniformDraftBinsFromSelection } from './demo-burst-generation';
+import {
+  buildNonUniformDraftBinsFromSelection,
+  partitionSelectionByGranularity,
+} from './demo-burst-generation';
 import type { TimeBin } from '@/lib/binning/types';
+import type { GenerationInputs, GenerationResultMetadata } from '@/store/useDashboardDemoTimeslicingModeStore';
 
 export interface ApplyDashboardCaseStudyActions {
   setFilterTimeRange: (range: [number, number]) => void;
@@ -17,7 +21,11 @@ export interface ApplyDashboardCaseStudyActions {
   setDemoTimeScaleMode: (mode: CaseStudyPreset['screenshotMode']) => void;
   setStkdeScopeMode: (mode: 'applied-slices') => void;
   clearPendingGeneratedBins: () => void;
-  replaceSlicesFromBins: (bins: TimeBin[], domain: [number, number]) => void;
+  setPendingGeneratedBins: (
+    bins: TimeBin[],
+    metadata: Omit<GenerationResultMetadata, 'generatedAt'>,
+  ) => void;
+  applyGeneratedBins: (domain: [number, number], options?: { preserveWarpWeight?: boolean }) => boolean;
   setActiveSliceIndex: (index: number) => void;
   clearComparisonSlices: () => void;
   setScreenshotReadyState: () => void;
@@ -47,8 +55,13 @@ function buildCaseStudyBins(
   eventTimestamps: number[] = [],
   eventTypes: string[] = [],
 ): TimeBin[] {
-  const ranges = buildCaseStudySliceRanges(preset, CASE_STUDY_SLICE_COUNT);
   const epochRange: [number, number] = [preset.startEpoch * 1000, preset.endEpoch * 1000];
+  const partitions = preset.partitionMode === 'fixed'
+    ? buildCaseStudySliceRanges(preset, CASE_STUDY_SLICE_COUNT).map((range) => ({
+      startTime: range.startEpoch * 1000,
+      endTime: range.endEpoch * 1000,
+    }))
+    : partitionSelectionByGranularity(epochRange, preset.granularity);
   const generated = buildNonUniformDraftBinsFromSelection({
     crimeTypes: ['all-crime-types'],
     neighbourhood: null,
@@ -56,11 +69,8 @@ function buildCaseStudyBins(
       start: epochRange[0],
       end: epochRange[1],
     },
-    granularity: 'daily',
-    partitions: ranges.map((range) => ({
-      startTime: range.startEpoch * 1000,
-      endTime: range.endEpoch * 1000,
-    })),
+    granularity: preset.granularity,
+    partitions,
     eventTimestamps,
     eventTypes,
   });
@@ -72,6 +82,16 @@ function buildCaseStudyBins(
     isModified: false,
   }));
 }
+
+const buildCaseStudyGenerationInputsForPreset = (preset: CaseStudyPreset): GenerationInputs => ({
+  crimeTypes: ['all-crime-types'],
+  neighbourhood: null,
+  timeWindow: {
+    start: null,
+    end: null,
+  },
+  granularity: preset.granularity,
+});
 
 export function applyDashboardCaseStudy({
   preset,
@@ -94,7 +114,7 @@ export function applyDashboardCaseStudy({
   const normalizedRange = caseStudyToNormalizedRange(preset, minTimestampSec, maxTimestampSec);
   const bins = buildCaseStudyBins(preset, eventTimestamps, eventTypes);
   if (!normalizedRange) return { ok: false, reason: 'no-data-bounds' };
-  if (bins.length !== CASE_STUDY_SLICE_COUNT) return { ok: false, reason: 'invalid-preset' };
+  if (bins.length === 0) return { ok: false, reason: 'invalid-preset' };
 
   actions.setFilterTimeRange(epochRange);
   actions.setCoordinationTimeRange(epochRange[0], epochRange[1]);
@@ -108,7 +128,16 @@ export function applyDashboardCaseStudy({
   actions.setDemoTimeScaleMode(preset.screenshotMode);
   actions.setStkdeScopeMode('applied-slices');
   actions.clearPendingGeneratedBins();
-  actions.replaceSlicesFromBins(bins, [epochRange[0] * 1000, epochRange[1] * 1000]);
+  actions.setPendingGeneratedBins(
+    bins,
+    {
+      binCount: bins.length,
+      eventCount: bins.reduce((sum, bin) => sum + bin.count, 0),
+      warning: null,
+      inputs: buildCaseStudyGenerationInputsForPreset(preset),
+    },
+  );
+  actions.applyGeneratedBins([epochRange[0] * 1000, epochRange[1] * 1000], { preserveWarpWeight: true });
   actions.setActiveSliceIndex(0);
   actions.clearComparisonSlices();
   actions.setScreenshotReadyState();
