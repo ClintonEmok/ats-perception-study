@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CASE_STUDY_PRESETS, CASE_STUDY_SLICE_COUNT } from '@/lib/demo/case-study-presets';
+import {
+  buildCaseStudySliceRanges,
+  CASE_STUDY_PRESETS,
+  CASE_STUDY_SLICE_COUNT,
+} from '@/lib/demo/case-study-presets';
 import { applyDashboardCaseStudy, type ApplyDashboardCaseStudyActions } from './applyDashboardCaseStudy';
 
 const buildActions = (): ApplyDashboardCaseStudyActions => ({
@@ -27,6 +31,12 @@ describe('applyDashboardCaseStudy', () => {
       minTimestampSec: 1_700_000_000,
       maxTimestampSec: 1_730_000_000,
       currentTime: 0,
+      eventTimestamps: [
+        preset.startEpoch * 1000 + 1_000,
+        preset.startEpoch * 1000 + 2_000,
+        preset.endEpoch * 1000 - 2_000,
+      ],
+      eventTypes: ['THEFT', 'THEFT', 'BATTERY'],
       actions,
     });
 
@@ -55,6 +65,16 @@ describe('applyDashboardCaseStudy', () => {
       [preset.startEpoch * 1000, preset.endEpoch * 1000],
     );
     expect(result.bins).toHaveLength(CASE_STUDY_SLICE_COUNT);
+    expect(result.bins.map(({ startTime, endTime }) => ({ startTime, endTime }))).toEqual(
+      buildCaseStudySliceRanges(preset).map((range) => ({
+        startTime: range.startEpoch * 1000,
+        endTime: range.endEpoch * 1000,
+      })),
+    );
+    expect(result.bins.reduce((sum, bin) => sum + bin.count, 0)).toBe(3);
+    expect(result.bins.every((bin) => typeof bin.burstinessCoefficient === 'number')).toBe(true);
+    expect(result.bins.every((bin) => typeof bin.burstScore === 'number')).toBe(true);
+    expect(result.bins.every((bin) => typeof bin.warpWeight === 'number')).toBe(true);
     expect(actions.setActiveSliceIndex).toHaveBeenCalledWith(0);
     expect(actions.clearComparisonSlices).toHaveBeenCalledTimes(1);
     expect(actions.setScreenshotReadyState).toHaveBeenCalledTimes(1);

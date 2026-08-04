@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { buildNonUniformDraftBinsFromSelection, partitionSelectionByGranularity } from '@/components/dashboard-demo/lib/demo-burst-generation';
+import { fetchCrimeRecordsForPartitions } from '@/components/dashboard-demo/lib/fetchCrimeRecordsForRange';
 import type { TimeBin } from '@/lib/binning/types';
 import type { CrimeRecord } from '@/types/crime';
 import { useSliceDomainStore } from './useSliceDomainStore';
@@ -156,68 +157,6 @@ const deleteBin = (bins: TimeBin[], binId: string): TimeBin[] => bins.filter((bi
 
 const hasValidTimeWindow = (value: number | null): value is number => typeof value === 'number' && Number.isFinite(value);
 
-interface CrimeFetchResult {
-  records: CrimeRecord[];
-  sampled: boolean;
-  limit: number;
-}
-
-const fetchCrimeRecordsForRange = async (
-  generationInputs: GenerationInputs,
-  startMs: number,
-  endMs: number,
-  limit: number,
-): Promise<CrimeFetchResult> => {
-  if (!hasValidTimeWindow(startMs) || !hasValidTimeWindow(endMs)) {
-    return { records: [], sampled: false, limit };
-  }
-
-  const crimeTypes = generationInputs.crimeTypes.filter((type) => type !== 'all-crime-types');
-  const records: CrimeRecord[] = [];
-  let sampled = false;
-  let cursor: string | null = null;
-
-  while (true) {
-    const searchParams = new URLSearchParams({
-      startEpoch: String(Math.floor(Math.min(startMs, endMs) / 1000)),
-      endEpoch: String(Math.floor(Math.max(startMs, endMs) / 1000)),
-      bufferDays: '0',
-      pageSize: String(limit),
-      ...(cursor ? { cursor } : {}),
-    });
-
-    if (crimeTypes.length > 0) {
-      searchParams.set('crimeTypes', crimeTypes.join(','));
-    }
-
-    if (generationInputs.neighbourhood) {
-      searchParams.set('districts', generationInputs.neighbourhood);
-    }
-
-    const response = await fetch(`/api/crimes/range?${searchParams.toString()}`);
-    if (!response.ok) {
-      throw new Error(`Burst selection crime fetch failed with status ${response.status}`);
-    }
-
-    const result = (await response.json()) as { data?: CrimeRecord[]; meta?: { sampled?: boolean; hasMore?: boolean; nextCursor?: string | null } };
-    const pageRecords = Array.isArray(result.data) ? result.data : [];
-    records.push(...pageRecords);
-    sampled = sampled || Boolean(result.meta?.sampled);
-
-    if (!result.meta?.hasMore || !result.meta?.nextCursor || pageRecords.length === 0) {
-      break;
-    }
-
-    cursor = result.meta.nextCursor;
-  }
-
-  return {
-    records,
-    sampled,
-    limit,
-  };
-};
-
 const BURST_METADATA_KEYS = [
   'burstClass',
   'burstRuleVersion',
@@ -363,13 +302,9 @@ export const useDashboardDemoTimeslicingModeStore = create<DashboardDemoTimeslic
         const activeEnd = timeWindow.end;
         const partitions = partitionSelectionByGranularity([activeStart, activeEnd], generationInputs.granularity);
         // console.log('[Store:Generate] partitions:', partitions.length, partitions.map(p => ({ s: p.startTime, e: p.endTime })));
-        const fetchResults = await Promise.all(
-          partitions.map((partition) =>
-            fetchCrimeRecordsForRange(generationInputs, partition.startTime, partition.endTime, 50000)
-          )
-        );
-        const crimeRecords = fetchResults.flatMap((result) => result.records);
-        const sampled = fetchResults.some((result) => result.sampled);
+        const fetched = await fetchCrimeRecordsForPartitions(generationInputs, partitions, 50000);
+        const crimeRecords = fetched.records;
+        const sampled = fetched.sampled;
         // console.log('[Store:Generate] crime records fetched:', crimeRecords.length, 'sampled:', sampled);
         const generated = buildNonUniformDraftBinsFromSelection({
           ...generationInputs,

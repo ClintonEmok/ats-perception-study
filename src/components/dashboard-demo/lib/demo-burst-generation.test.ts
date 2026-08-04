@@ -252,4 +252,30 @@ describe('buildNonUniformDraftBinsFromSelection', () => {
     expect(burstiestBin.warpWeight ?? 1).toBeGreaterThan(result.bins[1]?.warpWeight ?? 1);
     expect(burstiestBin.warpWeight ?? 1).toBeGreaterThan(result.bins[2]?.warpWeight ?? 1);
   });
+
+  test('uses explicit contiguous partitions instead of granularity partitions', () => {
+    const partitions = [
+      { startTime: 1_000, endTime: 2_000 },
+      { startTime: 2_000, endTime: 5_000 },
+      { startTime: 5_000, endTime: 10_000 },
+    ];
+
+    const result = buildNonUniformDraftBinsFromSelection({
+      crimeTypes: ['all-crime-types'],
+      neighbourhood: null,
+      timeWindow: { start: 1_000, end: 10_000 },
+      granularity: 'hourly',
+      partitions,
+      eventTimestamps: [1_250, 1_750, 2_500, 4_500, 6_000],
+      eventTypes: ['THEFT', 'THEFT', 'BATTERY', 'BATTERY', 'ASSAULT'],
+    });
+
+    expect(result.warning).toBeNull();
+    expect(result.eventCount).toBe(5);
+    expect(result.bins.map(({ startTime, endTime }) => ({ startTime, endTime }))).toEqual(partitions);
+    expect(result.bins.map((bin) => bin.count)).toEqual([2, 2, 1]);
+    expect(result.bins.every((bin) => typeof bin.burstinessCoefficient === 'number')).toBe(true);
+    expect(result.bins.every((bin) => typeof bin.burstScore === 'number')).toBe(true);
+    expect(result.bins.every((bin) => typeof bin.warpWeight === 'number')).toBe(true);
+  });
 });

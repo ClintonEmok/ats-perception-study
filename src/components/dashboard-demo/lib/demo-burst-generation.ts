@@ -45,6 +45,8 @@ export interface NonUniformDraftGenerationInputs {
     end: number | null;
   };
   granularity: DemoSelectionGranularity;
+  /** Optional authoritative partitions, used when a caller owns fixed boundaries. */
+  partitions?: DemoSelectionPartition[];
   eventTimestamps?: number[];
   eventTypes?: string[];
 }
@@ -114,6 +116,33 @@ export const partitionSelectionByGranularity = (
   }
 
   return partitions;
+};
+
+const resolveExplicitPartitions = (
+  selectionRange: [number, number],
+  partitions: DemoSelectionPartition[],
+): DemoSelectionPartition[] | null => {
+  if (partitions.length === 0) {
+    return null;
+  }
+
+  const [selectionStart, selectionEnd] = selectionRange;
+  let previousEnd = selectionStart;
+
+  for (const partition of partitions) {
+    if (
+      !isValidNumber(partition.startTime)
+      || !isValidNumber(partition.endTime)
+      || partition.endTime <= partition.startTime
+      || partition.startTime !== previousEnd
+    ) {
+      return null;
+    }
+
+    previousEnd = partition.endTime;
+  }
+
+  return previousEnd === selectionEnd ? partitions : null;
 };
 
 export const recommendGranularityForSelection = (
@@ -425,8 +454,10 @@ export const buildNonUniformDraftBinsFromSelection = (
     };
   }
 
-  const partitions = partitionSelectionByGranularity(activeSelection, generationInputs.granularity);
-  if (partitions.length === 0) {
+  const partitions = generationInputs.partitions === undefined
+    ? partitionSelectionByGranularity(activeSelection, generationInputs.granularity)
+    : resolveExplicitPartitions(activeSelection, generationInputs.partitions);
+  if (!partitions || partitions.length === 0) {
     return {
       bins: [],
       eventCount: 0,

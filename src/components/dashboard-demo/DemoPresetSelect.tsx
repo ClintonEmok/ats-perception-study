@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -26,11 +26,14 @@ import {
 } from '@/lib/demo/preset-windows';
 import {
   CASE_STUDY_PRESETS,
+  CASE_STUDY_SLICE_COUNT,
+  buildCaseStudySliceRanges,
   getCaseStudyPreset,
   type CaseStudyPresetId,
 } from '@/lib/demo/case-study-presets';
 import { applyDemoPreset } from '@/components/dashboard-demo/lib/applyDemoPreset';
 import { applyDashboardCaseStudy } from '@/components/dashboard-demo/lib/applyDashboardCaseStudy';
+import { fetchCrimeRecordsForPartitions } from '@/components/dashboard-demo/lib/fetchCrimeRecordsForRange';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useDashboardDemoFilterStore } from '@/store/useDashboardDemoFilterStore';
 import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
@@ -72,8 +75,6 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
   const setFilterTimeRange = useDashboardDemoFilterStore((state) => state.setTimeRange);
   const setBrushRange = useDashboardDemoCoordinationStore((state) => state.setBrushRange);
   const setTimeScaleMode = useDashboardDemoCoordinationStore((state) => state.setTimeScaleMode);
-  const setWarpFactor = useDashboardDemoCoordinationStore((state) => state.setWarpFactor);
-  const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
   const setDemoTimeRange = useDashboardDemoTimeStore((state) => state.setRange);
   const setDemoTime = useDashboardDemoTimeStore((state) => state.setTime);
   const setCoordinationTimeRange = useDashboardDemoCoordinationStore((state) => state.setTimeRange);
@@ -85,9 +86,11 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
   const currentTime = useDashboardDemoTimeStore((state) => state.currentTime);
 
   const [activePresetId, setActivePresetId] = useState<DashboardPresetId | null>(null);
+  const [isApplyingCaseStudy, setIsApplyingCaseStudy] = useState(false);
+  const caseStudyRequestRef = useRef(0);
 
   const hasData = !isLoading && (dataCount ?? 0) > 0;
-  const disabled = !hasData;
+  const disabled = !hasData || isApplyingCaseStudy;
   const visiblePresetId = hasData ? activePresetId : null;
 
   const groupedPresets = useMemo(
@@ -102,7 +105,7 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
   );
 
   const handleSelect = useCallback(
-    (presetId: string) => {
+    async (presetId: string) => {
       if (presetId === NONE_VALUE) {
         setActivePresetId(null);
         return;
@@ -110,39 +113,73 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
 
       const caseStudyPreset = getCaseStudyPreset(presetId);
       if (caseStudyPreset) {
-        const result = applyDashboardCaseStudy({
-          preset: caseStudyPreset,
-          minTimestampSec,
-          maxTimestampSec,
-          currentTime,
-          actions: {
-            setFilterTimeRange,
-            setCoordinationTimeRange,
-            setBrushRange,
-            setDemoTimeRange,
-            setDemoTime,
-            setCoordinationTimeScaleMode,
-            setDemoTimeScaleMode,
-            setStkdeScopeMode,
-            clearPendingGeneratedBins: () => useDashboardDemoTimeslicingModeStore.getState().clearPendingGeneratedBins(),
-            replaceSlicesFromBins: (bins, domain) => useSliceDomainStore.getState().replaceSlicesFromBins(bins, domain),
-            setActiveSliceIndex,
-            clearComparisonSlices,
-            setScreenshotReadyState: () => onCaseStudyApplied?.(),
-          },
-        });
+        const requestId = caseStudyRequestRef.current + 1;
+        caseStudyRequestRef.current = requestId;
+        setIsApplyingCaseStudy(true);
 
-        if (!result.ok) {
-          toast.error(`Cannot load ${caseStudyPreset.label}`, {
-            description: 'Timeline bounds unavailable. Wait for data to finish loading.',
+        try {
+          const partitions = buildCaseStudySliceRanges(caseStudyPreset, CASE_STUDY_SLICE_COUNT).map((range) => ({
+            startTime: range.startEpoch * 1000,
+            endTime: range.endEpoch * 1000,
+          }));
+          const fetched = await fetchCrimeRecordsForPartitions(
+            { crimeTypes: [], neighbourhood: null },
+            partitions,
+            caseStudyPreset.limit,
+          );
+
+          if (requestId !== caseStudyRequestRef.current) return;
+
+          const result = applyDashboardCaseStudy({
+            preset: caseStudyPreset,
+            minTimestampSec,
+            maxTimestampSec,
+            currentTime,
+            eventTimestamps: fetched.records.map((crime) => crime.timestamp * 1000),
+            eventTypes: fetched.records.map((crime) => crime.type),
+            actions: {
+              setFilterTimeRange,
+              setCoordinationTimeRange,
+              setBrushRange,
+              setDemoTimeRange,
+              setDemoTime,
+              setCoordinationTimeScaleMode,
+              setDemoTimeScaleMode,
+              setStkdeScopeMode,
+              clearPendingGeneratedBins: () => useDashboardDemoTimeslicingModeStore.getState().clearPendingGeneratedBins(),
+              replaceSlicesFromBins: (bins, domain) => useSliceDomainStore.getState().replaceSlicesFromBins(bins, domain),
+              setActiveSliceIndex,
+              clearComparisonSlices,
+              setScreenshotReadyState: () => onCaseStudyApplied?.(),
+            },
           });
-          return;
-        }
 
-        setActivePresetId(caseStudyPreset.id);
-        toast.success(`Loaded ${caseStudyPreset.label}`, {
-          description: `${caseStudyPreset.rangeLabel} · ${caseStudyPreset.screenshotMode} · 10 applied slices`,
-        });
+          if (!result.ok) {
+            toast.error(`Cannot load ${caseStudyPreset.label}`, {
+              description: 'Timeline bounds unavailable. Wait for data to finish loading.',
+            });
+            return;
+          }
+
+          setActivePresetId(caseStudyPreset.id);
+          toast.success(`Loaded ${caseStudyPreset.label}`, {
+            description: `${caseStudyPreset.rangeLabel} · ${caseStudyPreset.screenshotMode} · 10 applied slices`,
+          });
+          if (fetched.sampled) {
+            toast.warning('Case study uses sampled crime data', {
+              description: 'One or more API responses were sampled; counts and burstiness may be truncated.',
+            });
+          }
+        } catch (error) {
+          if (requestId !== caseStudyRequestRef.current) return;
+          toast.error(`Cannot load ${caseStudyPreset.label}`, {
+            description: error instanceof Error ? error.message : 'Crime data could not be loaded for the case study.',
+          });
+        } finally {
+          if (requestId === caseStudyRequestRef.current) {
+            setIsApplyingCaseStudy(false);
+          }
+        }
         return;
       }
 
@@ -154,14 +191,13 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
         minTimestampSec,
         maxTimestampSec,
         currentTime,
-        warpFactor,
         actions: {
           setFilterTimeRange,
           setBrushRange,
           setDemoTimeRange,
           setDemoTime,
           setTimeScaleMode,
-          setWarpFactor,
+          setDemoTimeScaleMode,
         },
       });
 
@@ -209,8 +245,6 @@ export function DemoPresetSelect({ onCaseStudyApplied }: { onCaseStudyApplied?: 
       setActiveSliceIndex,
       clearComparisonSlices,
       onCaseStudyApplied,
-      setWarpFactor,
-      warpFactor,
     ],
   );
 

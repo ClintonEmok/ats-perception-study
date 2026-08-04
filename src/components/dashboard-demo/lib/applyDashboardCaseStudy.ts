@@ -4,6 +4,7 @@ import {
   CASE_STUDY_SLICE_COUNT,
   type CaseStudyPreset,
 } from '@/lib/demo/case-study-presets';
+import { buildNonUniformDraftBinsFromSelection } from './demo-burst-generation';
 import type { TimeBin } from '@/lib/binning/types';
 
 export interface ApplyDashboardCaseStudyActions {
@@ -27,6 +28,8 @@ export interface ApplyDashboardCaseStudyParams {
   minTimestampSec: number | null;
   maxTimestampSec: number | null;
   currentTime: number;
+  eventTimestamps?: number[];
+  eventTypes?: string[];
   actions: ApplyDashboardCaseStudyActions;
 }
 
@@ -39,15 +42,33 @@ export type ApplyDashboardCaseStudyResult =
     }
   | { ok: false; reason: 'no-data-bounds' | 'invalid-preset' };
 
-function buildCaseStudyBins(preset: CaseStudyPreset): TimeBin[] {
-  return buildCaseStudySliceRanges(preset, CASE_STUDY_SLICE_COUNT).map((range, index) => ({
-    id: `case-study-${preset.id}-${index + 1}`,
-    startTime: range.startEpoch * 1000,
-    endTime: range.endEpoch * 1000,
-    count: 0,
+function buildCaseStudyBins(
+  preset: CaseStudyPreset,
+  eventTimestamps: number[] = [],
+  eventTypes: string[] = [],
+): TimeBin[] {
+  const ranges = buildCaseStudySliceRanges(preset, CASE_STUDY_SLICE_COUNT);
+  const epochRange: [number, number] = [preset.startEpoch * 1000, preset.endEpoch * 1000];
+  const generated = buildNonUniformDraftBinsFromSelection({
     crimeTypes: ['all-crime-types'],
-    districts: [],
-    avgTimestamp: ((range.startEpoch + range.endEpoch) / 2) * 1000,
+    neighbourhood: null,
+    timeWindow: {
+      start: epochRange[0],
+      end: epochRange[1],
+    },
+    granularity: 'daily',
+    partitions: ranges.map((range) => ({
+      startTime: range.startEpoch * 1000,
+      endTime: range.endEpoch * 1000,
+    })),
+    eventTimestamps,
+    eventTypes,
+  });
+
+  return generated.bins.map((bin, index) => ({
+    ...bin,
+    id: `case-study-${preset.id}-${index + 1}`,
+    districts: bin.districts ?? [],
     isModified: false,
   }));
 }
@@ -57,6 +78,8 @@ export function applyDashboardCaseStudy({
   minTimestampSec,
   maxTimestampSec,
   currentTime,
+  eventTimestamps,
+  eventTypes,
   actions,
 }: ApplyDashboardCaseStudyParams): ApplyDashboardCaseStudyResult {
   const epochRange: [number, number] = [preset.startEpoch, preset.endEpoch];
@@ -69,7 +92,7 @@ export function applyDashboardCaseStudy({
   }
 
   const normalizedRange = caseStudyToNormalizedRange(preset, minTimestampSec, maxTimestampSec);
-  const bins = buildCaseStudyBins(preset);
+  const bins = buildCaseStudyBins(preset, eventTimestamps, eventTypes);
   if (!normalizedRange) return { ok: false, reason: 'no-data-bounds' };
   if (bins.length !== CASE_STUDY_SLICE_COUNT) return { ok: false, reason: 'invalid-preset' };
 
