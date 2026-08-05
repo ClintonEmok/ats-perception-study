@@ -130,7 +130,10 @@ describe('useDemoStkde', () => {
       startEpochSec: 1_700_034_560,
       endEpochSec: 1_700_043_200,
     });
-    expect(pendingRequests[0]?.body.domain.startEpochSec).toBe(1_700_000_000);
+    expect(pendingRequests[0]?.body.domain).toEqual({
+      startEpochSec: 1_700_034_560,
+      endEpochSec: 1_700_043_200,
+    });
 
     await act(async () => {
       useSliceDomainStore.getState().updateSlice(initialSliceId as string, { time: 58, range: [55, 65] });
@@ -153,8 +156,8 @@ describe('useDemoStkde', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(pendingRequests[0].signal.aborted).toBe(true);
     expect(pendingRequests[1].body.domain).toEqual({
-      startEpochSec: 1_700_086_400,
-      endEpochSec: 1_700_172_800,
+      startEpochSec: 1_700_133_920,
+      endEpochSec: 1_700_142_560,
     });
     expect(pendingRequests[1].body.filters.slices).toHaveLength(1);
     expect(pendingRequests[1].body.filters.slices?.[0]).toEqual({
@@ -306,6 +309,47 @@ describe('useDemoStkde', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(pendingBodies[0]?.filters.slices?.map((slice) => slice.id).sort()).toEqual(expectedIds.sort());
     expect(pendingBodies[0]?.filters.slices).toHaveLength(expectedIds.length);
+  });
+
+  it('scopes the applied-slices request domain to the union of visible slices', async () => {
+    const pendingBodies: Array<{
+      domain: { startEpochSec: number; endEpochSec: number };
+    }> = [];
+    const fetchMock = vi.fn((_input, init) => {
+      pendingBodies.push(JSON.parse(String(init?.body ?? '{}')) as typeof pendingBodies[number]);
+      return new Promise<{ ok: boolean; json: () => Promise<unknown> }>(() => undefined);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Coordination timeRange stays at the full range; only the slice bounds
+    // should drive the STKDE query domain in applied-slices mode.
+    useDashboardDemoCoordinationStore.getState().setTimeRange(1_700_000_000, 1_800_000_000);
+    useSliceDomainStore.getState().addSlice({
+      time: 20,
+      name: 'Early slice',
+      type: 'range',
+      range: [10, 20],
+      isVisible: true,
+    });
+    useSliceDomainStore.getState().addSlice({
+      time: 60,
+      name: 'Late slice',
+      type: 'range',
+      range: [55, 60],
+      isVisible: true,
+    });
+
+    await mountHarness();
+    await act(async () => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+      await flushMicrotasks();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(pendingBodies[0]?.domain).toEqual({
+      startEpochSec: 1_700_000_000 + Math.floor(0.10 * 100_000_000),
+      endEpochSec: 1_700_000_000 + Math.floor(0.60 * 100_000_000),
+    });
   });
 
   it('exposes loading metadata and retains the last valid response on retry errors', async () => {

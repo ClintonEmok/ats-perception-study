@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { buildTemporalPulseSeries, formatHourLabel } from './temporal-pulses';
 
 describe('formatHourLabel', () => {
-  it('formats midnight, noon, and afternoon hours', () => {
-    expect(formatHourLabel(0)).toBe('12 AM');
-    expect(formatHourLabel(12)).toBe('12 PM');
-    expect(formatHourLabel(17)).toBe('5 PM');
+  it('formats hours as zero-padded 24-hour time without AM/PM', () => {
+    expect(formatHourLabel(0)).toBe('00');
+    expect(formatHourLabel(6)).toBe('06');
+    expect(formatHourLabel(12)).toBe('12');
+    expect(formatHourLabel(18)).toBe('18');
+    expect(formatHourLabel(23)).toBe('23');
   });
 });
 
@@ -18,8 +20,8 @@ describe('buildTemporalPulseSeries', () => {
     });
 
     expect(pulses.hourly).toHaveLength(24);
-    expect(pulses.hourly[0]).toEqual({ label: '12 AM', count: 0 });
-    expect(pulses.hourly[12]).toEqual({ label: '12 PM', count: 12 });
+    expect(pulses.hourly[0]).toEqual({ label: '00', count: 0 });
+    expect(pulses.hourly[12]).toEqual({ label: '12', count: 12 });
     expect(pulses.daily).toEqual([
       { label: 'Sun', count: 10 },
       { label: 'Mon', count: 20 },

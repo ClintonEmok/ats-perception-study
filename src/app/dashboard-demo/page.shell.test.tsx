@@ -215,6 +215,8 @@ describe('/dashboard-demo shell', () => {
     expect(demoSpatialSource).toMatch(/buildDurationVolumeProfile/);
     expect(demoSpatialSource).toMatch(/selectedSourceEvents/);
     expect(demoSpatialSource).toMatch(/showHotspotTrajectories=\{showHotspotTrajectories\}/);
+    expect(demoSpatialSource).toMatch(/showAdaptiveWarpAxis=\{false\}/);
+    expect(demoSpatialSource).toMatch(/showSliceBoundaryBackdrop=\{true\}/);
     expect(demoSpatialSource).not.toMatch(/SliceInspector|buildAllocationMetrics|inspectedAllocationMetrics/);
     expect(demoSpatialSource).toMatch(/isInterpolated: false/);
     expect(demoSpatialSource).not.toMatch(/computeSliceKde|kdeSlice\.worker/);
@@ -246,8 +248,8 @@ describe('/dashboard-demo shell', () => {
     expect(demoPresetSelectSource).toMatch(/applyDashboardCaseStudy/);
     expect(demoPresetSelectSource).toMatch(/CASE_STUDY_PRESETS/);
     expect(demoPresetSelectSource).toMatch(/Case studies/);
-    expect(demoPresetSelectSource).toMatch(/replaceSlicesFromBins/);
-    expect(demoPresetSelectSource).toMatch(/useSliceDomainStore\.getState\(\)/);
+    expect(demoPresetSelectSource).toMatch(/setPendingGeneratedBins/);
+    expect(demoPresetSelectSource).toMatch(/applyGeneratedBins/);
     expect(demoPresetSelectSource).not.toMatch(/loadStkde3dDataset|loadConfiguredMockStkde3dDataset|computeSliceKde/);
     expect(demoSlicePanelSource).toMatch(/useSliceDomainStore/);
     expect(demoSlicePanelSource).toMatch(/useDashboardDemoCoordinationStore/);
@@ -263,7 +265,7 @@ describe('/dashboard-demo shell', () => {
     expect(demoSlicePanelSource).toMatch(/warpEnabled|Warp enabled|Warp disabled/);
     expect(demoSlicePanelSource).toMatch(/warpWeight|Warp strength/);
     expect(demoSlicePanelSource).toMatch(/Warp disabled|Warp \d/);
-    expect(demoSlicePanelSource).toMatch(/setTimeScaleMode|setWarpFactor|resetWarp/);
+    expect(demoSlicePanelSource).toMatch(/handleSelectedSliceWarpWeightChange|clampComparableWarpWeight/);
     expect(demoSlicePanelSource).toMatch(/addManualDraftRange/);
     expect(demoSlicePanelSource).toMatch(/applySingleGeneratedBin/);
     expect(demoSlicePanelSource).not.toMatch(/replaceSlicesFromBins/);
@@ -297,7 +299,7 @@ describe('/dashboard-demo shell', () => {
     expect(demoDualTimelineSource).toMatch(/useDashboardDemoCoordinationStore/);
     expect(demoDualTimelineSource).toMatch(/useDashboardDemoTimeslicingModeStore/);
     expect(demoDualTimelineSource).toMatch(/useDemoBurstWindows/);
-    expect(demoDualTimelineSource).toMatch(/hasVisibleWarpSlices/);
+    expect(demoDualTimelineSource).toMatch(/authoredScopedWarpMap|scopedDensityWarpMap/);
     expect(demoDualTimelineSource).toMatch(/warpEnabled/);
     expect(demoDualTimelineSource).toMatch(/isGeneratedDraft/);
     expect(demoDualTimelineSource).toMatch(/overviewInteractionScale|detailInteractionScale/);

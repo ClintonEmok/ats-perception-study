@@ -47,7 +47,6 @@ export function DemoInspectPanel() {
   const showHotspotTrajectories = useDashboardDemoCoordinationStore((state) => state.showHotspotTrajectories);
   const hotspotMatchingMode = useDashboardDemoCoordinationStore((state) => state.hotspotMatchingMode);
   const inspectInterpolation = useDashboardDemoCoordinationStore((state) => state.inspectInterpolation);
-  const crimeFetchStatus = useDashboardDemoCoordinationStore((state) => state.crimeFetchStatus);
   const setActiveSliceIndex = useDashboardDemoCoordinationStore((state) => state.setActiveSliceIndex);
   const setViewMode = useDashboardDemoCoordinationStore((state) => state.setViewMode);
   const togglePlayback = useDashboardDemoCoordinationStore((state) => state.toggleInspectPlayback);
@@ -60,7 +59,7 @@ export function DemoInspectPanel() {
   const toggleTrajectories = useDashboardDemoCoordinationStore((state) => state.toggleShowHotspotTrajectories);
   const setMatchingMode = useDashboardDemoCoordinationStore((state) => state.setHotspotMatchingMode);
   const setActiveSlice = useSliceDomainStore((state) => state.setActiveSlice);
-  const { response, isLoading, error, isStale, responseMetadata } = useDashboardDemo3d();
+  const { response, isLoading, error, isStale } = useDashboardDemo3d();
 
   const visibleSlices = slices
     .filter((slice) => slice.isVisible && slice.type === 'range')
@@ -114,10 +113,9 @@ export function DemoInspectPanel() {
             <div>
               <CardTitle className="text-sm">{activeSlice?.label ?? 'Inspect 3D'}</CardTitle>
               <CardDescription className="text-xs">
-                {isLoading ? 'STKDE surfaces loading…' : isStale ? 'Showing last valid STKDE response while updating.' : error ? `STKDE error: ${error}` : `${responseMetadata?.eventCount ?? 0} server events across the response`}
+                {isLoading ? 'STKDE surfaces loading…' : isStale ? 'Showing last valid STKDE response while updating.' : error ? `STKDE error: ${error}` : ''}
               </CardDescription>
             </div>
-            <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{crimeFetchStatus === 'loading' ? 'events loading' : 'server STKDE'}</span>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">

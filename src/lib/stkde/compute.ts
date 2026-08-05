@@ -7,7 +7,6 @@ import {
   type StkdeHotspot,
   type StkdeRequest,
   type StkdeResponse,
-  type StkdeSliceDescriptor,
   type StkdeSurfaceResponse,
 } from './contracts';
 import type { FullPopulationStkdeInputs } from './full-population-pipeline';
@@ -289,6 +288,7 @@ function computeSingleStkdeSurfaceFromCrimes(
   request: StkdeRequest,
   crimes: CrimeRecord[],
   metaOverrides?: ComputeMetaOverrides,
+  perSliceCrimes?: Map<string, CrimeRecord[]>,
 ): ComputeStkdeOutput {
   const computeStart = performance.now();
   const metaNotes: string[] = [];
@@ -395,9 +395,13 @@ function computeSingleStkdeSurfaceFromCrimes(
   const sliceDescriptors = request.filters.slices ?? [];
   if (sliceDescriptors.length > 0) {
     for (const slice of sliceDescriptors) {
-      const sliceCrimes = boundedEvents.filter(
-        (crime) => crime.timestamp >= slice.startEpochSec && crime.timestamp < slice.endEpochSec,
-      );
+      // Prefer per-slice fetched crimes (each slice gets its own bounded query)
+      // over subdividing the single capped domain set, which dilutes narrow
+      // slices when the request domain spans many years.
+      const sliceCrimes = perSliceCrimes?.get(slice.id)
+        ?? boundedEvents.filter(
+          (crime) => crime.timestamp >= slice.startEpochSec && crime.timestamp < slice.endEpochSec,
+        );
       const sliceRequest: StkdeRequest = {
         ...request,
         domain: {
@@ -450,8 +454,9 @@ export function computeStkdeFromCrimes(
   request: StkdeRequest,
   crimes: CrimeRecord[],
   metaOverrides?: ComputeMetaOverrides,
+  perSliceCrimes?: Map<string, CrimeRecord[]>,
 ): ComputeStkdeOutput {
-  return computeSingleStkdeSurfaceFromCrimes(request, crimes, metaOverrides);
+  return computeSingleStkdeSurfaceFromCrimes(request, crimes, metaOverrides, perSliceCrimes);
 }
 
 export function computeStkdeFromAggregates(

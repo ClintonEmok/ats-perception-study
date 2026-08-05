@@ -129,9 +129,14 @@ export function OnboardingTour() {
   const dashboardDriverRef = useRef<ReturnType<typeof driver> | null>(null);
   const evalDriverRef = useRef<ReturnType<typeof driver> | null>(null);
 
-  // Legacy dashboard auto-tour (unchanged behavior for `/dashboard*`).
+  // Legacy dashboard auto-tour (unchanged behavior for the legacy
+  // `/dashboard` route). The legacy tour targets elements rendered only by
+  // `DashboardLayout`; newer routes like `/dashboard-demo` and
+  // `/dashboard-v2` do not have those targets, so running the tour there
+  // would paint the driver.js dimming overlay over the whole viewport and
+  // block map/timeline interaction.
   useEffect(() => {
-    const isDashboard = pathname?.startsWith("/dashboard") ?? false;
+    const isDashboard = pathname === "/dashboard" || pathname === "/dashboard/";
     if (!isDashboard) {
       if (dashboardDriverRef.current?.isActive()) {
         dashboardDriverRef.current.destroy();

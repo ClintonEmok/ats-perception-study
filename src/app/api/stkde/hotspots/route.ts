@@ -107,23 +107,45 @@ export async function POST(request: Request) {
     }
 
     if (!payload) {
-      const crimes = await queryCrimesInRange(
-        normalizedRequest.domain.startEpochSec,
-        normalizedRequest.domain.endEpochSec,
-        {
-          limit: normalizedRequest.limits.maxEvents,
-          crimeTypes: normalizedRequest.filters.crimeTypes,
-          districts: normalizedRequest.filters.districts,
-        },
-      );
-
-      const { response } = computeStkdeFromCrimes(normalizedRequest, crimes, {
+      const crimeOptions = {
+        limit: normalizedRequest.limits.maxEvents,
+        crimeTypes: normalizedRequest.filters.crimeTypes,
+        districts: normalizedRequest.filters.districts,
+      };
+      const metaOverrides = {
         requestedComputeMode: requestedMode,
-        effectiveComputeMode: 'sampled',
+        effectiveComputeMode: 'sampled' as const,
         fallbackApplied: fallbackReasons.length ? fallbackReasons.join(',') : null,
         clampsApplied: clampNotes,
         fullPopulationStats,
-      });
+      };
+      const sliceDescriptors = normalizedRequest.filters.slices ?? [];
+
+      const domainCrimes = await queryCrimesInRange(
+        normalizedRequest.domain.startEpochSec,
+        normalizedRequest.domain.endEpochSec,
+        crimeOptions,
+      );
+
+      let perSliceCrimes: Map<string, import('@/types/crime').CrimeRecord[]> | undefined;
+      if (sliceDescriptors.length > 0) {
+        // Fetch each slice's crimes in its own bounded query so a slice is not
+        // diluted by a single 50k cap spread across the whole domain.
+        const entries = await Promise.all(
+          sliceDescriptors.map(async (slice) => [
+            slice.id,
+            await queryCrimesInRange(slice.startEpochSec, slice.endEpochSec, crimeOptions),
+          ]),
+        );
+        perSliceCrimes = new Map(entries as Array<[string, import('@/types/crime').CrimeRecord[]]>);
+      }
+
+      const { response } = computeStkdeFromCrimes(
+        normalizedRequest,
+        domainCrimes,
+        metaOverrides,
+        perSliceCrimes,
+      );
       payload = response;
     }
 

@@ -40,7 +40,7 @@ interface DemoStkdeResult {
   setSelectedHotspot: (hotspotId: string | null) => void;
   setHoveredHotspot: (hotspotId: string | null) => void;
   setStkdeParams: (patch: Partial<StkdeParams>) => void;
-  setScopeMode: (mode: 'applied-slices') => void;
+   setScopeMode: (mode: 'applied-slices') => void;
 }
 
 function toQueryState(scopeMode: 'applied-slices' | 'full-viewport', startEpochSec: number, endEpochSec: number, params: StkdeParams): StkdeQueryState {
@@ -177,10 +177,41 @@ export function useDemoStkde(): DemoStkdeResult {
     [visibleSlices, timeRange.endEpoch, timeRange.startEpoch]
   );
 
+  // Scope the STKDE query domain to the applied slices in applied-slices mode.
+  // Case studies already narrow `timeRange`, but a manually added slice does
+  // not. Without this, the sampled event cap (50k) is spread across the full
+  // 25-year domain and a narrow slice window ends up with almost no sampled
+  // crimes, producing empty per-slice STKDE surfaces.
+  const appliedSliceDomain = useMemo<[number, number] | null>(() => {
+    if (stkdeScopeMode !== 'applied-slices' || sliceDescriptors.length === 0) {
+      return null;
+    }
+
+    let domainStart = Number.POSITIVE_INFINITY;
+    let domainEnd = Number.NEGATIVE_INFINITY;
+    for (const descriptor of sliceDescriptors) {
+      if (Number.isFinite(descriptor.startEpochSec) && descriptor.startEpochSec < domainStart) {
+        domainStart = descriptor.startEpochSec;
+      }
+      if (Number.isFinite(descriptor.endEpochSec) && descriptor.endEpochSec > domainEnd) {
+        domainEnd = descriptor.endEpochSec;
+      }
+    }
+
+    return Number.isFinite(domainStart) && Number.isFinite(domainEnd) && domainEnd > domainStart
+      ? [domainStart, domainEnd]
+      : null;
+  }, [sliceDescriptors, stkdeScopeMode]);
+
   const queryState = useMemo<StkdeQueryState>(
     () =>
-      toQueryState(stkdeScopeMode, timeRange.startEpoch, timeRange.endEpoch, stkdeParams),
-    [stkdeParams, stkdeScopeMode, timeRange.endEpoch, timeRange.startEpoch]
+      toQueryState(
+        stkdeScopeMode,
+        appliedSliceDomain?.[0] ?? timeRange.startEpoch,
+        appliedSliceDomain?.[1] ?? timeRange.endEpoch,
+        stkdeParams,
+      ),
+    [appliedSliceDomain, stkdeParams, stkdeScopeMode, timeRange.endEpoch, timeRange.startEpoch]
   );
 
   const refresh = useCallback(() => {
@@ -218,7 +249,7 @@ export function useDemoStkde(): DemoStkdeResult {
               filters: {
                 bbox: DEFAULT_STKDE_BBOX,
                 ...(paddedDistricts ? { districts: paddedDistricts } : {}),
-                 ...(stkdeScopeMode === 'applied-slices' && sliceDescriptors.length > 0 ? { slices: sliceDescriptors } : {}),
+                  ...(stkdeScopeMode === 'applied-slices' && sliceDescriptors.length > 0 ? { slices: sliceDescriptors } : {}),
               },
               params: {
                 spatialBandwidthMeters: queryState.spatialBandwidthMeters,

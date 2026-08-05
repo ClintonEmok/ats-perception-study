@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Maximize2, ZoomIn } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, Maximize2, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
@@ -36,6 +36,7 @@ function formatDaysLabel(days: number): string {
 
 export function GlobalWarpControls() {
   const isEvaluationLocked = useIsEvaluationLocked();
+  const [timeScaleExpanded, setTimeScaleExpanded] = useState(true);
 
   const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
   const setTimeScaleMode = useDashboardDemoCoordinationStore((state) => state.setTimeScaleMode);
@@ -156,21 +157,40 @@ export function GlobalWarpControls() {
       </div>
 
       <div className="space-y-1.5 rounded-md border border-border/60 bg-background/70 px-2.5 py-2">
-        <div className="flex items-center justify-between">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setTimeScaleExpanded((prev) => !prev)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setTimeScaleExpanded((prev) => !prev);
+            }
+          }}
+          className="flex items-center justify-between cursor-pointer select-none"
+        >
           <span className="text-foreground">Time scale</span>
-          <Button
-            type="button"
-            onClick={handleTimeScaleToggle}
-            variant={timeScaleMode === 'adaptive' ? 'secondary' : 'outline'}
-            size="sm"
-            className="h-6 rounded-sm px-2.5 text-[11px] font-medium"
-            disabled={isEvaluationLocked}
-            aria-label={`Time scale: ${timeScaleMode === 'adaptive' ? 'Adaptive' : 'Linear'}. Click to toggle.`}
-          >
-            {timeScaleMode === 'adaptive' ? 'Adaptive' : 'Linear'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleTimeScaleToggle();
+              }}
+              variant={timeScaleMode === 'adaptive' ? 'secondary' : 'outline'}
+              size="sm"
+              className="h-6 rounded-sm px-2.5 text-[11px] font-medium"
+              disabled={isEvaluationLocked}
+              aria-label={`Time scale: ${timeScaleMode === 'adaptive' ? 'Adaptive' : 'Linear'}. Click to toggle.`}
+            >
+              {timeScaleMode === 'adaptive' ? 'Adaptive' : 'Linear'}
+            </Button>
+            <ChevronDown
+              className={cn('size-3 text-muted-foreground transition-transform', !timeScaleExpanded && '-rotate-90')}
+            />
+          </div>
         </div>
-        {timeScaleMode === 'adaptive' ? (
+        {timeScaleExpanded && timeScaleMode === 'adaptive' ? (
           <>
             <div className="flex items-center gap-2 pt-1">
               <span className="shrink-0 text-foreground">Warp factor</span>
