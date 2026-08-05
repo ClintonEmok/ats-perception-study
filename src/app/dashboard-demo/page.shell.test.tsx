@@ -223,8 +223,15 @@ describe('/dashboard-demo shell', () => {
     expect(demo3dProviderSource).toMatch(/inspectIsPlaying|setActiveSliceIndex/);
     expect(demoCompareHookSource).not.toMatch(/useCrimeData|computeSliceKde|StkdeComparisonStage/);
     expect(demoCompareHookSource).toMatch(/adaptStkdeSurfaceToKdeCells/);
-    expect(demoCompareHookSource).toMatch(/signedDifferenceAvailable: false/);
-    expect(demoCompareStageSource).toMatch(/Signed difference unavailable for sparse server surfaces/);
+    expect(demoCompareHookSource).toMatch(/computeSparseKdeDifference/);
+    expect(demoCompareHookSource).toMatch(/signedDifferenceAvailable: Boolean\(leftKde && rightKde\)/);
+    expect(demoCompareStageSource).not.toMatch(/StkdeSignedDifferenceLegend/);
+    expect(demoCompareStageSource).toMatch(/Signed difference · A − B/);
+    expect(demoCompareStageSource).toMatch(/borderTone="a"/);
+    expect(demoCompareStageSource).toMatch(/borderTone="difference"/);
+    expect(demoCompareStageSource).toMatch(/borderTone="b"/);
+    expect(demoCompareStageSource).toMatch(/aria-pressed=\{showDifference\}/);
+    expect(demoCompareStageSource).not.toMatch(/normalized intensity · sparse/);
     expect(demoDetectPanelSource).toMatch(/selectedTimeRange/);
     expect(demoDetectPanelSource).toMatch(/selectedTimeRange !== null/);
     expect(demoDetectPanelSource).toMatch(/rounded-md border px-3 py-1.5 text-\[11px\] transition-colors/);

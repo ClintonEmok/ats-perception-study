@@ -9,6 +9,7 @@ import type { KdeCell } from '@/lib/kde';
 import type { StkdeResponse } from '@/lib/stkde/contracts';
 import { useDashboardDemo3d } from '../DashboardDemo3dProvider';
 import { adaptStkdeSurfaceToKdeCells } from './adaptStkdeSurfaceToKdeCells';
+import { computeSparseKdeDifference } from './compare-sparse-surfaces';
 
 export interface DemoComparableSlice {
   id: string;
@@ -28,12 +29,13 @@ export interface DemoCompareData {
   rightSlice: DemoComparableSlice | null;
   leftKde: KdeCell[] | undefined;
   rightKde: KdeCell[] | undefined;
+  signedDifference: KdeCell[] | undefined;
   leftIsLoading: boolean;
   rightIsLoading: boolean;
   responseStatus: ReturnType<typeof useDashboardDemo3d>['status'];
   responseError: string | null;
   responseIsStale: boolean;
-  signedDifferenceAvailable: false;
+  signedDifferenceAvailable: boolean;
   signedDifferenceReason: string;
   leftDuration: number;
   rightDuration: number;
@@ -129,6 +131,22 @@ export function useDemoCompareData(): DemoCompareData {
   const rightSlice = rightId ? comparisonById.get(rightId) ?? null : null;
   const leftKde = leftId && response?.sliceResults[leftId] ? adaptStkdeSurfaceToKdeCells(response.sliceResults[leftId]) : undefined;
   const rightKde = rightId && response?.sliceResults[rightId] ? adaptStkdeSurfaceToKdeCells(response.sliceResults[rightId]) : undefined;
+  const signedDifference = useMemo(
+    () => leftKde && rightKde ? computeSparseKdeDifference(leftKde, rightKde) : null,
+    [leftKde, rightKde],
+  );
+
+  const signedDifferenceReason = error
+    ? 'Signed KDE difference is waiting for the server surfaces to recover.'
+    : !leftId || !rightId
+      ? 'Select two slices to compute normalized KDE(A) − KDE(B).'
+      : isLoading && (!leftKde || !rightKde)
+        ? 'Computing normalized signed KDE difference…'
+        : !leftKde || !rightKde
+          ? 'Both selected slices need a server STKDE surface before comparison.'
+          : signedDifference && signedDifference.activeCellCount > 0
+            ? 'Normalized KDE(A) − KDE(B); absent sparse cells are treated as zero.'
+            : 'No active STKDE cells are available in either selected interval.';
 
   const setLeft = useCallback((id: string | null) => setComparisonSliceId('left', id), [setComparisonSliceId]);
   const setRight = useCallback((id: string | null) => setComparisonSliceId('right', id), [setComparisonSliceId]);
@@ -143,13 +161,14 @@ export function useDemoCompareData(): DemoCompareData {
     rightSlice,
     leftKde,
     rightKde,
+    signedDifference: signedDifference?.cells,
     leftIsLoading: isLoading,
     rightIsLoading: isLoading,
     responseStatus: status,
     responseError: error,
     responseIsStale: isStale,
-    signedDifferenceAvailable: false,
-    signedDifferenceReason: 'Signed difference unavailable for sparse server surfaces; no sparse subtraction is performed.',
+    signedDifferenceAvailable: Boolean(leftKde && rightKde),
+    signedDifferenceReason,
     leftDuration,
     rightDuration,
     leftBurstPercent: leftSlice ? normalizeBurstPercent(leftSlice.burstScore) : 0,

@@ -6,10 +6,8 @@ import type { SliceKdeResult } from '@/lib/kde';
 import type { ComparisonSelection } from '../lib/comparison';
 import { computeSharedAbsoluteDomain } from '../lib/comparison-difference';
 import { resolveComparisonSourceContext } from '../lib/comparison-source-context';
-import { StkdeComparisonFieldMap } from './StkdeComparisonFieldMap';
 import { StkdeDifferenceScene } from './StkdeDifferenceScene';
 import { StkdeIntensityLegend } from './StkdeIntensityLegend';
-import { StkdeSignedDifferenceLegend } from './StkdeSignedDifferenceLegend';
 import { Stkde3DMapCapture } from './Stkde3DScene';
 import { StkdeComparisonViewport } from './StkdeComparisonViewport';
 import type { Stkde3DSceneSlice } from './Stkde3DSceneProvider';
@@ -66,7 +64,7 @@ export function StkdeComparisonStage({
     >
       <Stkde3DMapCapture onTextureReady={setMapTexture} />
 
-      <header className="relative z-10 mb-3 grid min-w-0 grid-cols-1 gap-3 rounded-2xl border border-border bg-white px-4 py-4 text-sm text-muted-foreground shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(16rem,34%)] sm:items-stretch sm:px-5 sm:py-4">
+      <header className={`relative z-10 mb-3 grid min-w-0 grid-cols-1 gap-3 rounded-2xl border border-border bg-white px-4 py-4 text-sm text-muted-foreground shadow-sm sm:px-5 sm:py-4 ${mode === 'absolute' ? 'sm:grid-cols-[minmax(0,1fr)_minmax(16rem,34%)] sm:items-stretch' : ''}`}>
         <div className="flex min-w-0 flex-col justify-center gap-1.5">
           <h2 className="text-xl font-semibold uppercase tracking-[0.18em] text-foreground sm:text-2xl">A/B COMPARISON</h2>
           {mode === 'absolute' ? (
@@ -77,9 +75,11 @@ export function StkdeComparisonStage({
             <p className="text-xs font-medium text-foreground">Where did spatial intensity change?</p>
           )}
         </div>
-        <div className="flex min-w-0 items-center sm:justify-end">
-          {mode === 'absolute' ? <StkdeIntensityLegend mode={heatmapRenderer} domain={absoluteDomain} /> : <StkdeSignedDifferenceLegend />}
-        </div>
+        {mode === 'absolute' ? (
+          <div className="flex min-w-0 items-center sm:justify-end">
+            <StkdeIntensityLegend mode={heatmapRenderer} domain={absoluteDomain} />
+          </div>
+        ) : null}
       </header>
 
       {mode === 'difference' ? (

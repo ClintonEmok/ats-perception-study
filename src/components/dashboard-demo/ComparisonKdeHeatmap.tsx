@@ -2,78 +2,33 @@
 
 import { useMemo } from 'react';
 import type { KdeCell } from '@/lib/kde';
+import {
+  buildSparseKdeGrid,
+  COMPARISON_GRID_SIZE,
+} from './lib/compare-sparse-surfaces';
+import {
+  getStkdeIntensityColor,
+  getStkdeSignedDifferenceColor,
+} from '@/app/stkde-3d/lib/palette';
 
-type ColorScheme = 'blue' | 'orange';
+type ColorScheme = 'intensity' | 'difference';
+type BorderTone = 'a' | 'difference' | 'b';
 
-const GRID_SIZE = 32;
-const PIXEL_SIZE = 4;
-const VIEWPORT_SIZE = GRID_SIZE * PIXEL_SIZE;
-
-const COLOR_STOPS: Record<ColorScheme, Array<{ stop: number; rgb: [number, number, number] }>> = {
-  blue: [
-    { stop: 0, rgb: [15, 23, 42] },
-    { stop: 0.15, rgb: [30, 58, 138] },
-    { stop: 0.4, rgb: [37, 99, 235] },
-    { stop: 0.7, rgb: [96, 165, 250] },
-    { stop: 1, rgb: [219, 234, 254] },
-  ],
-  orange: [
-    { stop: 0, rgb: [15, 23, 42] },
-    { stop: 0.15, rgb: [124, 45, 18] },
-    { stop: 0.4, rgb: [234, 88, 12] },
-    { stop: 0.7, rgb: [251, 146, 60] },
-    { stop: 1, rgb: [254, 215, 170] },
-  ],
+const BORDER_TONES: Record<BorderTone, string> = {
+  a: 'border-sky-400/75',
+  difference: 'border-violet-400/75',
+  b: 'border-amber-400/75',
 };
 
-function interpolateColor(intensity: number, scheme: ColorScheme): [number, number, number] {
-  const stops = COLOR_STOPS[scheme];
-  const t = Math.min(1, Math.max(0, intensity));
-
-  let left = stops[0];
-  let right = stops[stops.length - 1];
-
-  for (let i = 0; i < stops.length - 1; i += 1) {
-    const current = stops[i];
-    const next = stops[i + 1];
-    if (t >= current.stop && t <= next.stop) {
-      left = current;
-      right = next;
-      break;
-    }
-  }
-
-  const span = Math.max(0.0001, right.stop - left.stop);
-  const localT = (t - left.stop) / span;
-  return [
-    Math.round(left.rgb[0] + (right.rgb[0] - left.rgb[0]) * localT),
-    Math.round(left.rgb[1] + (right.rgb[1] - left.rgb[1]) * localT),
-    Math.round(left.rgb[2] + (right.rgb[2] - left.rgb[2]) * localT),
-  ];
-}
-
-function buildCellIntensityGrid(cells: KdeCell[]): Float32Array {
-  const grid = new Float32Array(GRID_SIZE * GRID_SIZE);
-  for (const cell of cells) {
-    const col = Math.min(
-      GRID_SIZE - 1,
-      Math.max(0, Math.floor((cell.x + 50) / (100 / GRID_SIZE))),
-    );
-    const row = Math.min(
-      GRID_SIZE - 1,
-      Math.max(0, Math.floor((cell.z + 50) / (100 / GRID_SIZE))),
-    );
-    const idx = row * GRID_SIZE + col;
-    if (cell.intensity > grid[idx]) grid[idx] = cell.intensity;
-  }
-  return grid;
-}
+const PIXEL_SIZE = 4;
+const VIEWPORT_SIZE = COMPARISON_GRID_SIZE * PIXEL_SIZE;
 
 export interface ComparisonKdeHeatmapProps {
   cells?: KdeCell[];
   label: string;
-  crimeCount: number;
+  crimeCount?: number;
   colorScheme: ColorScheme;
+  borderTone: BorderTone;
   isLoading?: boolean;
   status?: string;
   size?: number;
@@ -84,28 +39,33 @@ export function ComparisonKdeHeatmap({
   label,
   crimeCount,
   colorScheme,
+  borderTone,
   isLoading = false,
-  status = 'server-normalized sparse surface',
-  size = VIEWPORT_SIZE,
+  size = 560,
 }: ComparisonKdeHeatmapProps) {
-  const grid = useMemo(() => (cells ? buildCellIntensityGrid(cells) : null), [cells]);
-  const backgroundFill = useMemo(() => `rgb(${interpolateColor(0, colorScheme).join(',')})`, [colorScheme]);
+  const grid = useMemo(
+    () => (cells ? buildSparseKdeGrid(cells, colorScheme === 'difference' ? 'signed' : 'absolute') : null),
+    [cells, colorScheme],
+  );
+  const backgroundFill = colorScheme === 'difference' ? 'rgb(226, 232, 240)' : 'rgb(250, 244, 215)';
 
   return (
-    <figure className="rounded-lg border border-border/70 bg-card/60 p-2">
+    <figure className={`w-full max-w-full rounded-lg border-2 ${BORDER_TONES[borderTone]} bg-card/60 p-2`}>
       <figcaption className="mb-1.5 flex items-center justify-between gap-2">
         <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </span>
+        {crimeCount !== undefined ? (
           <span className="text-[10px] tabular-nums text-muted-foreground">
             {crimeCount.toLocaleString()} events
           </span>
-        </figcaption>
-      <div className="mb-1 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">{status}</div>
+        ) : null}
+      </figcaption>
+      {status ? <div className="mb-1 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">{status}</div> : null}
 
       <div
-        className="relative overflow-hidden rounded-md border border-border/70"
-        style={{ width: size, height: size }}
+        className={`relative mx-auto aspect-square w-full overflow-hidden rounded-md border ${BORDER_TONES[borderTone]}`}
+        style={{ maxWidth: size }}
       >
         {isLoading || !grid ? (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 text-[10px] text-muted-foreground">
@@ -114,19 +74,21 @@ export function ComparisonKdeHeatmap({
         ) : (
           <svg
             viewBox={`0 0 ${VIEWPORT_SIZE} ${VIEWPORT_SIZE}`}
-            width={size}
-            height={size}
+            className="block size-full"
             shapeRendering="crispEdges"
             preserveAspectRatio="xMidYMid meet"
-            aria-label={`${label} KDE heatmap`}
+            aria-label={`${label} ${colorScheme === 'difference' ? 'signed difference' : 'intensity'} heatmap`}
           >
             <rect width={VIEWPORT_SIZE} height={VIEWPORT_SIZE} fill={backgroundFill} />
-            {Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, idx) => {
-              const intensity = grid[idx];
-              if (intensity <= 0) return null;
-              const row = Math.floor(idx / GRID_SIZE);
-              const col = idx % GRID_SIZE;
-              const [r, g, b] = interpolateColor(intensity, colorScheme);
+            {Array.from({ length: COMPARISON_GRID_SIZE * COMPARISON_GRID_SIZE }, (_, idx) => {
+              const intensity = grid.intensities[idx] ?? 0;
+              const isActive = grid.active[idx] === 1;
+              if (!isActive || (colorScheme === 'intensity' && intensity <= 0)) return null;
+              const row = COMPARISON_GRID_SIZE - 1 - Math.floor(idx / COMPARISON_GRID_SIZE);
+              const col = idx % COMPARISON_GRID_SIZE;
+              const color = colorScheme === 'difference'
+                ? getStkdeSignedDifferenceColor(intensity, intensity === 0 ? 0.98 : 0.9)
+                : getStkdeIntensityColor(intensity, 0.34 + intensity * 0.64);
               return (
                 <rect
                   key={idx}
@@ -134,7 +96,7 @@ export function ComparisonKdeHeatmap({
                   y={row * PIXEL_SIZE}
                   width={PIXEL_SIZE}
                   height={PIXEL_SIZE}
-                  fill={`rgb(${r},${g},${b})`}
+                  fill={color}
                 />
               );
             })}

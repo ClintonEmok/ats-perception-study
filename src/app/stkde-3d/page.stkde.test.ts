@@ -86,7 +86,7 @@ describe('/stkde-3d route focus mode', () => {
     expect(comparisonStageSource).toMatch(/grid-cols-1/);
     expect(comparisonStageSource).toMatch(/StkdeIntensityLegend/);
     expect(comparisonStageSource).toMatch(/Stkde3DMapCapture/);
-    expect(comparisonStageSource).toMatch(/StkdeSignedDifferenceLegend/);
+    expect(comparisonStageSource).not.toMatch(/StkdeSignedDifferenceLegend/);
     expect(comparisonStageSource).toMatch(/slot="A"/);
     expect(comparisonStageSource).toMatch(/slot="B"/);
     expect((comparisonStageSource.match(/resolveComparisonSourceContext/g) ?? []).length).toBeGreaterThanOrEqual(2);
