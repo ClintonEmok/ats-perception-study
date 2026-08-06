@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
-import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import {
   applySliceMultipliersToDensityMap,
   buildDemoSliceAuthoredWarpAllocation,
@@ -28,7 +27,16 @@ const expectFiniteMonotonicMap = (map: Float32Array | null, domain: [number, num
   expect(values.every((value) => Number.isFinite(value))).toBe(true);
   expect(values.every((value) => value >= domain[0] && value <= domain[1])).toBe(true);
   expect(values.every((value, index) => index === 0 || value >= (values[index - 1] ?? value))).toBe(true);
+  expect(values[0]).toBe(domain[0]);
   expect(values.at(-1)).toBe(domain[1]);
+};
+
+/** Read the map at a fraction of the sample axis, rounding to the nearest sample. */
+const sampleValue = (map: Float32Array | null, ratio: number): number => {
+  expect(map).not.toBeNull();
+  const values = Array.from(map ?? []);
+  const index = Math.round(ratio * (values.length - 1));
+  return values[index] ?? Number.NaN;
 };
 
 describe('buildDemoSliceAuthoredWarpMap', () => {
@@ -122,16 +130,184 @@ describe('buildDemoSliceAuthoredWarpMap', () => {
     expectFiniteMonotonicMap(map, [1000, 2000]);
   });
 
-  test('keeps authored warp identical to density warp when all multipliers are 1', () => {
+  test('all-neutral weights produce the identity map at any exaggeration', () => {
+    const slices = [buildSlice('a', [10, 30]), buildSlice('b', [50, 70])];
+
+    for (const exaggeration of [1, 3]) {
+      const map = buildDemoSliceAuthoredWarpMap(slices, null, [0, 100], 101, [0, 100], exaggeration);
+      expect(map).not.toBeNull();
+      // With every slice weight at 1 the effective weight is 1 regardless of
+      // exaggeration, so each linear position maps to itself.
+      expect(sampleValue(map, 0.2)).toBeCloseTo(20, 1);
+      expect(sampleValue(map, 0.6)).toBeCloseTo(60, 1);
+      expectFiniteMonotonicMap(map, [0, 100]);
+    }
+  });
+
+  test('maps a weighted interval to its duration times weight share of the whole domain', () => {
+    // Slice [25,75] with weight 2 over domain [0,100] at exaggeration 1.
+    // Weighted lengths: 25*1 + 50*2 + 25*1 = 150, so the slice's 50-long
+    // duration at weight 2 maps to 100 * (100/150) = 66.67 display units.
+    const map = buildDemoSliceAuthoredWarpMap(
+      [buildSlice('weighted', [25, 75], { warpWeight: 2 })],
+      null,
+      [0, 100],
+      101,
+    );
+
+    expect(map).not.toBeNull();
+    const start = sampleValue(map, 0.25);
+    const end = sampleValue(map, 0.75);
+    expect(start).toBeCloseTo(25 * (100 / 150), 1);
+    expect(end).toBeCloseTo(125 * (100 / 150), 1);
+    expect(end - start).toBeCloseTo(50 * 2 * (100 / 150), 1);
+    expectFiniteMonotonicMap(map, [0, 100]);
+  });
+
+  test('overlapping intervals use the maximum covering weight instead of summing', () => {
+    // earlier [10,60] weight 1 and later [40,90] weight 4 overlap on [40,60].
+    // Segments: [0,10]w1 [10,40]w1 [40,60]w4 [60,90]w4 [90,100]w1; the overlap
+    // advances at the max covering weight 4 (not 1+4=5, not the lighter 1).
+    const slices = [
+      buildSlice('earlier', [10, 60], { warpWeight: 1 }),
+      buildSlice('later', [40, 90], { warpWeight: 4 }),
+    ];
+    const map = buildDemoSliceAuthoredWarpMap(slices, null, [0, 100], 101);
+
+    expect(map).not.toBeNull();
+    // Cumulative weighted length at 40 is 40 and at 60 is 40 + 20*4 = 120;
+    // total weighted length is 250, so the overlap maps 32 units wide.
+    const overlapStart = sampleValue(map, 0.4);
+    const overlapEnd = sampleValue(map, 0.6);
+    expect(overlapStart).toBeCloseTo(40 * (100 / 250), 1);
+    expect(overlapEnd).toBeCloseTo(120 * (100 / 250), 1);
+    expect(overlapEnd - overlapStart).toBeCloseTo(20 * 4 * (100 / 250), 1);
+    expectFiniteMonotonicMap(map, [0, 100]);
+  });
+
+  test('leaves uncovered gaps neutral while weighted intervals compress them', () => {
+    // Slice [10,30] weight 3 over domain [0,100] at exaggeration 1.
+    // Weighted lengths: 10*1 + 20*3 + 70*1 = 140, so the leading gap [0,10]
+    // maps to 100 * (10/140) = 7.14 display units and the weighted center
+    // pushes the trailing gap outward.
+    const map = buildDemoSliceAuthoredWarpMap(
+      [buildSlice('burst', [10, 30], { warpWeight: 3 })],
+      null,
+      [0, 100],
+      101,
+    );
+
+    expect(map).not.toBeNull();
+    expect(sampleValue(map, 0.1)).toBeCloseTo(10 * (100 / 140), 1);
+    expect(sampleValue(map, 0.3)).toBeCloseTo(70 * (100 / 140), 1);
+    expectFiniteMonotonicMap(map, [0, 100]);
+  });
+
+  test('uniform weights across full-domain coverage cancel through normalization and stay linear', () => {
+    // Both slices share weight 2 across the whole domain, so every segment
+    // carries weight 2. The cumulative weighted lengths are uniformly scaled
+    // and normalization cancels the common factor, yielding the identity map.
+    // This is expected normalization semantics, not a special case.
+    const slices = [
+      buildSlice('a', [0, 50], { warpWeight: 2 }),
+      buildSlice('b', [50, 100], { warpWeight: 2 }),
+    ];
+    const map = buildDemoSliceAuthoredWarpMap(slices, null, [0, 100], 101);
+
+    expect(map).not.toBeNull();
+    expect(sampleValue(map, 0.25)).toBeCloseTo(25, 1);
+    expect(sampleValue(map, 0.5)).toBeCloseTo(50, 1);
+    expect(sampleValue(map, 0.75)).toBeCloseTo(75, 1);
+    expectFiniteMonotonicMap(map, [0, 100]);
+  });
+
+  test('exaggeration scales deviation from neutral instead of exponentiating weights', () => {
+    // Weight 2 on [25,75]: effective = 1 + (2 - 1) * exaggeration, so the
+    // interval's mapped span grows 50 -> 66.67 -> 80 as exaggeration
+    // goes 0 -> 1 -> 3 while staying linear inside each segment.
+    const slice = buildSlice('weighted', [25, 75], { warpWeight: 2 });
+    const none = buildDemoSliceAuthoredWarpMap([slice], null, [0, 100], 101, [0, 100], 0);
+    const normal = buildDemoSliceAuthoredWarpMap([slice], null, [0, 100], 101, [0, 100], 1);
+    const extreme = buildDemoSliceAuthoredWarpMap([slice], null, [0, 100], 101, [0, 100], 3);
+
+    const span = (map: Float32Array | null) => sampleValue(map, 0.75) - sampleValue(map, 0.25);
+    const spanNone = span(none);
+    const spanNormal = span(normal);
+    const spanExtreme = span(extreme);
+    expect(spanNone).toBeCloseTo(50, 1);
+    expect(spanNormal).toBeCloseTo(50 * 2 * (100 / 150), 1);
+    expect(spanExtreme).toBeCloseTo(50 * 4 * (100 / 250), 1);
+    expect(spanExtreme).toBeGreaterThan(spanNormal);
+    expect(spanNormal).toBeGreaterThan(spanNone);
+    expectFiniteMonotonicMap(extreme, [0, 100]);
+  });
+
+  test('very light weights stay above a positive floor and keep the map finite and monotonic', () => {
+    // NaN weight clamps to 1; weight 0.25 at exaggeration 3 would go negative
+    // under the deviation formula (1 + (0.25-1)*3 = -1.25) and is floored to
+    // 0.01, so the covered segment keeps a tiny positive slope.
+    const slices = [
+      buildSlice('nan', [0, 20], { warpWeight: Number.NaN }),
+      buildSlice('tiny', [40, 60], { warpWeight: 0.25 }),
+    ];
+    const map = buildDemoSliceAuthoredWarpMap(slices, null, [0, 100], 101, [0, 100], 3);
+
+    expect(map).not.toBeNull();
+    const overlapStart = sampleValue(map, 0.4);
+    const overlapEnd = sampleValue(map, 0.6);
+    expect(overlapEnd - overlapStart).toBeCloseTo(20 * 0.01 * (100 / 80.2), 1);
+    expect(overlapEnd - overlapStart).toBeGreaterThan(0);
+    expectFiniteMonotonicMap(map, [0, 100]);
+  });
+
+  test('anchors the map exactly at both map-domain endpoints', () => {
+    const map = buildDemoSliceAuthoredWarpMap(
+      [buildSlice('weighted', [25, 75], { warpWeight: 2 })],
+      null,
+      [0, 100],
+      101,
+      [0, 100],
+      3,
+    );
+
+    expect(map).not.toBeNull();
+    const values = Array.from(map ?? []);
+    expect(values[0]).toBe(0);
+    expect(values[values.length - 1]).toBe(100);
+  });
+
+  test('clips slice ranges to a scoped map domain', () => {
+    // Slice [25,75] in sliceDomain [1000,2000] resolves to epoch [1250,1750];
+    // the scoped map domain [1000,1600] clips it to [1250,1600], leaving a
+    // neutral leading gap of 250 seconds.
+    const map = buildDemoSliceAuthoredWarpMap(
+      [buildSlice('scoped', [25, 75], { warpWeight: 2 })],
+      null,
+      [1000, 2000],
+      61,
+      [1000, 1600],
+    );
+
+    expect(map).not.toBeNull();
+    // Weighted lengths: 250*1 + 350*2 = 950 over a 600-wide map domain.
+    expect(sampleValue(map, (1250 - 1000) / 600)).toBeCloseTo(1000 + 250 * (600 / 950), 1);
+    expect(sampleValue(map, (1600 - 1000) / 600) - sampleValue(map, (1250 - 1000) / 600))
+      .toBeCloseTo(350 * 2 * (600 / 950), 1);
+    expectFiniteMonotonicMap(map, [1000, 1600]);
+  });
+
+  test('keeps uniform neutral weights linear regardless of density', () => {
     const slices = [
       buildSlice('a', [0, 50], { warpWeight: 1 }),
       buildSlice('b', [50, 100], { warpWeight: 1 }),
     ];
     const densityMap = Float32Array.from([0, 1, 0.5, 1]);
 
-    expect(Array.from(buildDemoSliceAuthoredWarpMap(slices, densityMap, [0, 100], 16) ?? [])).toEqual(
-      Array.from(buildDensityWarpMap(densityMap, [0, 100]) ?? []),
-    );
+    const values = Array.from(buildDemoSliceAuthoredWarpMap(slices, densityMap, [0, 100], 101) ?? []);
+    // Equal neutral weights make the map linear, and the authored mode ignores
+    // the density map entirely, so density cannot skew the timeline.
+    expect(values[Math.round(0.5 * 100)]).toBeCloseTo(50, 1);
+    expectFiniteMonotonicMap(buildDemoSliceAuthoredWarpMap(slices, densityMap, [0, 100], 101), [0, 100]);
   });
 
   test('applies slice multipliers directly onto the density map', () => {
@@ -191,7 +367,7 @@ describe('buildDemoSliceAuthoredWarpMap', () => {
     ))).toBe(true);
   });
 
-  test('keeps overlapping source intervals separate in cumulative display space', () => {
+  test('keeps overlapping source intervals chronologically ordered with finite boundaries', () => {
     const slices = [buildSlice('later', [40, 90]), buildSlice('earlier', [10, 60])];
     const allocation = buildDemoSliceAuthoredWarpAllocation(slices, Float32Array.from([1, 2, 3, 4]), [0, 100]);
     const boundaries = Array.from(allocation?.boundaries ?? []);
