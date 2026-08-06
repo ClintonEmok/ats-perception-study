@@ -36,6 +36,7 @@ interface MapVisualizationProps {
   coordinationStoreOverride?: unknown;
   mapLayerStoreOverride?: unknown;
   sliceTimeRange?: [number, number] | null;
+  sliceHighlightRange?: [number, number] | null;
   activeSliceLabel?: string | null;
 }
 
@@ -49,6 +50,7 @@ export default function MapVisualization({
   coordinationStoreOverride,
   mapLayerStoreOverride,
   sliceTimeRange = null,
+  sliceHighlightRange = null,
   activeSliceLabel = null,
 }: MapVisualizationProps = {}) {
   const mapRef = useRef<MapRef>(null);
@@ -76,6 +78,14 @@ export default function MapVisualization({
     const [start, end] = sliceTimeRange;
     return data.filter((r) => r.timestamp >= start && r.timestamp <= end);
   }, [data, sliceTimeRange]);
+
+  // When an active-slice highlight range is present, keep the regular
+  // viewport/filter query data available to the event layer so out-of-slice
+  // events stay visible as subdued context instead of being filtered away.
+  const eventRecords = useMemo(
+    () => (sliceHighlightRange ? data : filteredData),
+    [data, filteredData, sliceHighlightRange],
+  );
 
   const filterStore = (filterStoreOverride ?? useFilterStore) as typeof useFilterStore;
   const coordinationStore = (coordinationStoreOverride ?? useCoordinationStore) as typeof useCoordinationStore;
@@ -169,11 +179,12 @@ export default function MapVisualization({
         {visibility.events ? (
           <MapEventLayer
             hoveredTypeId={hoveredTypeId}
-            records={filteredData}
+            records={eventRecords}
             selectedTimeRange={selectedTimeRange}
             selectedTypes={selectedTypes}
             selectedDistricts={selectedDistricts}
             selectedSpatialBounds={selectedSpatialBounds}
+            highlightRange={sliceHighlightRange}
           />
         ) : null}
         {!disableHeatmapOverlay && visibility.heatmap ? <MapHeatmapOverlay /> : null}

@@ -83,7 +83,7 @@ export function DemoMapVisualization({
         filterStoreOverride={useDashboardDemoFilterStore}
         coordinationStoreOverride={useDashboardDemoCoordinationStore}
         mapLayerStoreOverride={useDashboardDemoMapLayerStore}
-        sliceTimeRange={sliceTimeRange}
+        sliceHighlightRange={sliceTimeRange}
         activeSliceLabel={activeSliceLabel}
       />
     </div>
