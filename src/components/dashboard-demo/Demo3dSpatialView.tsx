@@ -167,6 +167,7 @@ export function Demo3dSpatialView() {
   const sliceOpacity = useDashboardDemoCoordinationStore((state) => state.inspectSliceOpacity);
   const timeScaleMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
   const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
+  const warpExaggeration = useDashboardDemoCoordinationStore((state) => state.warpExaggeration);
   const densityMap = useDashboardDemoCoordinationStore((state) => state.densityMap);
   const warpMap = useDashboardDemoCoordinationStore((state) => state.warpMap);
   const mapDomain = useDashboardDemoCoordinationStore((state) => state.mapDomain);
@@ -367,15 +368,15 @@ export function Demo3dSpatialView() {
   }, [cubeScopeMode, cubeTimeDomain, overviewTimestampSec]);
 
   const scopedWarpMap = useMemo(
-    () => cubeScopeMode === 'brushed' ? buildDensityWarpMap(scopedDensityMap, cubeTimeDomain) : null,
-    [cubeScopeMode, scopedDensityMap, cubeTimeDomain],
+    () => cubeScopeMode === 'brushed' ? buildDensityWarpMap(scopedDensityMap, cubeTimeDomain, warpExaggeration) : null,
+    [cubeScopeMode, scopedDensityMap, cubeTimeDomain, warpExaggeration],
   );
 
   const scopedAuthoredWarpMap = useMemo(
     () => cubeScopeMode === 'brushed'
-      ? buildDemoSliceAuthoredWarpMap(slices, scopedDensityMap, fullTimeDomain, Math.max(96, slices.length * 8 || 0), cubeTimeDomain)
+      ? buildDemoSliceAuthoredWarpMap(slices, scopedDensityMap, fullTimeDomain, Math.max(96, slices.length * 8 || 0), cubeTimeDomain, warpExaggeration)
       : null,
-    [cubeScopeMode, cubeTimeDomain, fullTimeDomain, scopedDensityMap, slices],
+    [cubeScopeMode, cubeTimeDomain, fullTimeDomain, scopedDensityMap, slices, warpExaggeration],
   );
 
   const visibleWarpSliceCount = useMemo(
@@ -384,8 +385,8 @@ export function Demo3dSpatialView() {
   );
 
   const authoredWarpMap = useMemo(
-    () => buildDemoSliceAuthoredWarpMap(slices, densityMap, fullTimeDomain, Math.max(96, slices.length * 8 || 0)),
-    [densityMap, fullTimeDomain, slices],
+    () => buildDemoSliceAuthoredWarpMap(slices, densityMap, fullTimeDomain, Math.max(96, slices.length * 8 || 0), fullTimeDomain, warpExaggeration),
+    [densityMap, fullTimeDomain, slices, warpExaggeration],
   );
 
   const usingDensitySource = warpSource === 'density' || visibleWarpSliceCount < 2;
@@ -568,6 +569,9 @@ export function Demo3dSpatialView() {
         const nextGlobalIndex = nextSlice
           ? countedSlices.findIndex((slice) => slice.sourceSliceId === nextSlice.sourceSliceId)
           : -1;
+        // Playback/scrubbing/runtime index changes must reconcile back to the
+        // canonical counted-slice source id so the timeline highlight follows.
+        setActiveSlice(nextSlice ? nextSlice.sourceSliceId : null);
         setActiveSliceIndex(nextGlobalIndex);
       },
       onSliceSelect: ({ index, sourceSliceId }) => {
@@ -639,11 +643,17 @@ export function Demo3dSpatialView() {
     if (countedSlices.length === 0) return;
     if (!hasLoadedRef.current) {
       hasLoadedRef.current = true;
-      setActiveSliceIndex(Math.max(0, countedSlices.length - 1));
+      const initialIndex = Math.max(0, countedSlices.length - 1);
+      const initialSlice = countedSlices[initialIndex];
+      setActiveSliceIndex(initialIndex);
+      if (initialSlice) setActiveSlice(initialSlice.sourceSliceId);
     } else if (activeIndex >= countedSlices.length) {
-      setActiveSliceIndex(Math.max(0, countedSlices.length - 1));
+      const clampedIndex = Math.max(0, countedSlices.length - 1);
+      const clampedSlice = countedSlices[clampedIndex];
+      setActiveSliceIndex(clampedIndex);
+      if (clampedSlice) setActiveSlice(clampedSlice.sourceSliceId);
     }
-  }, [countedSlices.length, activeIndex, setActiveSliceIndex]);
+  }, [countedSlices, countedSlices.length, activeIndex, setActiveSlice, setActiveSliceIndex]);
 
 
   if (orderedSlices.length === 0) {
