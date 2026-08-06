@@ -127,6 +127,7 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 1. **Capture Chapter 6 prototype evidence and thesis demo strategy** (docs, major) — Chapter 6 has 5 PLACEHOLDER figures; demo strategy needs linear→adaptive transition and context preservation argument.
+2. **Align dashboard compare heatmap to map** (ui, minor) — Dashboard compare can use a Chicago map underlay, but it needs an explicit coordinate transform between the compare heatmap frame and the map frame instead of cropping, stretching, or manual visual nudging.
 
 Phase 4 and quick tasks 260802-compare-ux-feedback, 260802-ab-reference-layout, 20260803-adaptive-temporal-allocation, 260803-tdb, 260803-ud3, 260803-unc, and 260804-01p are complete after comparison UX, reference layout, shared authored temporal allocation, dashboard STKDE controls, dashboard presentation cleanup, and the final dashboard rail/slice workflow refactor. Phase 5 shared-model refactoring follows next. Dashboard active-event controls are rendered after generated slices are applied; the route's initial 3D empty state remains intentional.
 
