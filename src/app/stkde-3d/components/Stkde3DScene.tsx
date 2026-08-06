@@ -18,6 +18,7 @@ import type { BurstVolumeModel } from '@/lib/stkde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { buildRawEventPositions, resolveSourceEvents } from '../lib/raw-events';
 import { CHICAGO_BOUNDS } from '../lib/chicago-bounds';
+import { resolveTemporalSlabBounds } from '../lib/timeline-axis';
 import {
   createStkde3DSceneRuntime,
   Stkde3DSceneProvider,
@@ -30,6 +31,8 @@ import type { StkdeHeatmapRenderer } from './StkdeSliceStack';
 
 const CAMERA_POSITION: [number, number, number] = [105, 175, 105];
 const CAMERA_TARGET: [number, number, number] = [0, 0, 0];
+const SLICE_BOUNDARY_BACKDROP_Z = -50.6;
+const SLICE_BOUNDARY_BACKDROP_DEPTH = 1.8;
 // Keep semantic camera-focus wiring available, but avoid disorienting jumps by default.
 const ENABLE_INTERACTION_CAMERA_FOCUS = false;
 
@@ -122,6 +125,8 @@ interface Stkde3DSceneProps {
   viewMode?: 'stack' | 'focus';
   showRawEvents?: boolean;
   showHotspotTrajectories?: boolean;
+  showAdaptiveWarpAxis?: boolean;
+  showSliceBoundaryBackdrop?: boolean;
   sliceOpacity?: number;
   activeSliceOpacity?: number;
   nonActiveSliceOpacity?: number;
@@ -200,6 +205,84 @@ function RawEventPoints({
   );
 }
 
+function SliceBoundaryBackdrop({
+  slices,
+  resolveEpochY,
+}: {
+  slices: readonly Stkde3DSceneSlice[];
+  resolveEpochY: (epochSec: number) => number;
+}) {
+  const bands = useMemo(
+    () => slices.flatMap((slice) => {
+      const bounds = resolveTemporalSlabBounds(slice.startEpoch, slice.endEpoch, resolveEpochY);
+      if (
+        !Number.isFinite(bounds.minY)
+        || !Number.isFinite(bounds.maxY)
+        || bounds.height <= 0
+      ) {
+        return [];
+      }
+
+      return [{
+        key: `${slice.sourceSliceId ?? slice.index}:${slice.startEpoch}:${slice.endEpoch}`,
+        bounds,
+      }];
+    }),
+    [resolveEpochY, slices],
+  );
+  const boundaryYs = useMemo(
+    () => Array.from(
+        new globalThis.Map(
+        bands.flatMap(({ bounds }) => [bounds.minY, bounds.maxY])
+          .filter((value) => Number.isFinite(value))
+          .map((value) => [value.toFixed(6), value] as const),
+      ).values(),
+    ),
+    [bands],
+  );
+
+  if (bands.length === 0) return null;
+
+  return (
+    <group name="slice-boundary-backdrop" renderOrder={-10}>
+      {bands.map(({ key, bounds }) => (
+        <group key={key}>
+          <mesh
+            position={[0, bounds.centerY, SLICE_BOUNDARY_BACKDROP_Z]}
+            renderOrder={-10}
+          >
+            <boxGeometry args={[100, bounds.height, SLICE_BOUNDARY_BACKDROP_DEPTH]} />
+            <meshBasicMaterial
+              color="#d6d3d1"
+              transparent
+              opacity={0.035}
+              depthWrite={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+
+        </group>
+      ))}
+      {boundaryYs.map((boundaryY) => (
+        <mesh
+          key={boundaryY}
+          position={[0, boundaryY, SLICE_BOUNDARY_BACKDROP_Z + 0.05]}
+          renderOrder={20}
+        >
+          <boxGeometry args={[100, 0.08, SLICE_BOUNDARY_BACKDROP_DEPTH]} />
+          <meshBasicMaterial
+            color="#78716c"
+            transparent
+            opacity={0.32}
+            depthTest={false}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function SceneContent({
   slices,
   sliceKdes,
@@ -211,6 +294,8 @@ function SceneContent({
   viewMode = 'stack',
   showRawEvents = false,
   showHotspotTrajectories = true,
+  showAdaptiveWarpAxis = true,
+  showSliceBoundaryBackdrop = false,
   sliceOpacity = 1,
   activeSliceOpacity = 1,
   nonActiveSliceOpacity = 0.35,
@@ -233,7 +318,7 @@ function SceneContent({
 }: Pick<
   Stkde3DSceneProps,
   'slices' | 'sliceKdes' | 'volumeProfile' | 'sliceEvents' | 'hotspotSliceResults' | 'hotspotMatchingOptions' | 'activeIndex' | 'viewMode' |
-  'showRawEvents' | 'showHotspotTrajectories' | 'sliceOpacity' | 'activeSliceOpacity' | 'nonActiveSliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize' | 'sliceKdeFields' | 'absoluteDomain' | 'absoluteThreshold' | 'comparisonSelectedSourceSliceIds' | 'comparisonSelectedSourceIndices' | 'sourceSlices' | 'sourceSliceResults' | 'selectedSourceEvents' | 'selectedSourceIndex' | 'cameraControlsRef' | 'onCameraUpdate'
+  'showRawEvents' | 'showHotspotTrajectories' | 'showAdaptiveWarpAxis' | 'showSliceBoundaryBackdrop' | 'sliceOpacity' | 'activeSliceOpacity' | 'nonActiveSliceOpacity' | 'heightScale' | 'burstVolumeModel' | 'heatmapRenderer' | 'kdeGridSize' | 'sliceKdeFields' | 'absoluteDomain' | 'absoluteThreshold' | 'comparisonSelectedSourceSliceIds' | 'comparisonSelectedSourceIndices' | 'sourceSlices' | 'sourceSliceResults' | 'selectedSourceEvents' | 'selectedSourceIndex' | 'cameraControlsRef' | 'onCameraUpdate'
 > & {
   cameraFocusTarget: Stkde3DCameraFocusTarget | null;
 }) {
@@ -252,6 +337,7 @@ function SceneContent({
   const focusedVolumeProfile = volumeProfile?.[activeIndex]
     ? [{ ...volumeProfile[activeIndex]!, index: 0 }]
     : [];
+  const displayedSlices = viewMode === 'focus' ? focusedSlices : slices;
 
   useEffect(() => {
     const controls = controlsRef.current;
@@ -299,10 +385,14 @@ function SceneContent({
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      <AdaptiveWarpAxis />
+      {showAdaptiveWarpAxis ? <AdaptiveWarpAxis /> : null}
+
+      {showSliceBoundaryBackdrop ? (
+        <SliceBoundaryBackdrop slices={displayedSlices} resolveEpochY={resolveEpochY} />
+      ) : null}
 
       <StkdeSliceStack
-        slices={viewMode === 'focus' ? focusedSlices : slices}
+        slices={displayedSlices}
         sliceKdes={viewMode === 'focus' ? focusedKdes : sliceKdes}
         volumeProfile={viewMode === 'focus' ? focusedVolumeProfile : volumeProfile}
         activeIndex={viewMode === 'focus' ? 0 : activeIndex}
@@ -374,6 +464,8 @@ export function Stkde3DScene({
   viewMode = 'stack',
   showRawEvents = false,
   showHotspotTrajectories = true,
+  showAdaptiveWarpAxis = true,
+  showSliceBoundaryBackdrop = false,
   sliceOpacity = 1,
   activeSliceOpacity = 1,
   nonActiveSliceOpacity = 0.35,
@@ -459,6 +551,8 @@ export function Stkde3DScene({
               viewMode={viewMode}
               showRawEvents={showRawEvents}
               showHotspotTrajectories={showHotspotTrajectories}
+              showAdaptiveWarpAxis={showAdaptiveWarpAxis}
+              showSliceBoundaryBackdrop={showSliceBoundaryBackdrop}
               sliceOpacity={sliceOpacity}
               activeSliceOpacity={activeSliceOpacity}
               nonActiveSliceOpacity={nonActiveSliceOpacity}

@@ -19,7 +19,7 @@ const buildActions = () => ({
   setDemoTimeRange: vi.fn(),
   setDemoTime: vi.fn(),
   setTimeScaleMode: vi.fn(),
-  setWarpFactor: vi.fn(),
+  setDemoTimeScaleMode: vi.fn(),
 });
 
 describe('applyDemoPreset', () => {
@@ -32,7 +32,6 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime,
-      warpFactor: 1,
       actions,
     });
 
@@ -59,7 +58,6 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime,
-      warpFactor: 1,
       actions,
     });
 
@@ -76,14 +74,13 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime,
-      warpFactor: 1,
       actions,
     });
 
     expect(actions.setDemoTime).not.toHaveBeenCalled();
   });
 
-  test('warms warpFactor to 1 on adaptive presets when the current warpFactor is 0', () => {
+  test('preserves an explicit zero warp factor on adaptive presets', () => {
     const actions = buildActions();
 
     applyDemoPreset({
@@ -91,15 +88,12 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime: 0,
-      warpFactor: 0,
-      actions,
+       actions,
     });
 
-    expect(actions.setWarpFactor).toHaveBeenCalledTimes(1);
-    expect(actions.setWarpFactor).toHaveBeenCalledWith(1);
   });
 
-  test('does not touch warpFactor on adaptive presets when the current warpFactor is > 0', () => {
+  test('preserves an explicit warp factor on adaptive presets', () => {
     const actions = buildActions();
 
     applyDemoPreset({
@@ -107,14 +101,12 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime: 0,
-      warpFactor: 2.5,
-      actions,
+       actions,
     });
 
-    expect(actions.setWarpFactor).not.toHaveBeenCalled();
   });
 
-  test('does not touch warpFactor on linear presets even when the current warpFactor is 0', () => {
+  test('preserves an explicit warp factor on linear presets', () => {
     const actions = buildActions();
 
     applyDemoPreset({
@@ -122,11 +114,9 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime: 0,
-      warpFactor: 0,
-      actions,
+       actions,
     });
 
-    expect(actions.setWarpFactor).not.toHaveBeenCalled();
   });
 
   test('reset preset clears the filter, clears the brush, restores full-range linear mode', () => {
@@ -139,8 +129,7 @@ describe('applyDemoPreset', () => {
       // currentTime is at 75 — out of [0, 100]? No, in range. Move it to -5
       // to exercise the clamp path.
       currentTime: -5,
-      warpFactor: 1,
-      actions,
+       actions,
     });
 
     expect(result).toEqual({ ok: true });
@@ -152,7 +141,7 @@ describe('applyDemoPreset', () => {
     expect(actions.setTimeScaleMode).toHaveBeenCalledWith('linear');
   });
 
-  test('reset preset does not call setWarpFactor (warp factor is durable user state)', () => {
+  test('reset preset preserves the durable warp factor', () => {
     const actions = buildActions();
 
     applyDemoPreset({
@@ -160,11 +149,9 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime: 50,
-      warpFactor: 0,
-      actions,
+       actions,
     });
 
-    expect(actions.setWarpFactor).not.toHaveBeenCalled();
   });
 
   test('reset preset does not write currentTime when it is already inside the full range', () => {
@@ -175,8 +162,7 @@ describe('applyDemoPreset', () => {
       minTimestampSec: MIN_EPOCH,
       maxTimestampSec: MAX_EPOCH,
       currentTime: 50,
-      warpFactor: 1,
-      actions,
+       actions,
     });
 
     expect(actions.setDemoTime).not.toHaveBeenCalled();
@@ -190,8 +176,7 @@ describe('applyDemoPreset', () => {
       minTimestampSec: null,
       maxTimestampSec: MAX_EPOCH,
       currentTime: 0,
-      warpFactor: 1,
-      actions,
+       actions,
     });
 
     expect(result).toEqual({ ok: false, reason: 'no-data-bounds' });
@@ -200,7 +185,6 @@ describe('applyDemoPreset', () => {
     expect(actions.setDemoTimeRange).not.toHaveBeenCalled();
     expect(actions.setDemoTime).not.toHaveBeenCalled();
     expect(actions.setTimeScaleMode).not.toHaveBeenCalled();
-    expect(actions.setWarpFactor).not.toHaveBeenCalled();
   });
 
   test('applies all nine study-task presets without throwing (smoke test for the full surface)', () => {
@@ -213,8 +197,7 @@ describe('applyDemoPreset', () => {
         minTimestampSec: MIN_EPOCH,
         maxTimestampSec: MAX_EPOCH,
         currentTime: 0,
-        warpFactor: 1,
-        actions,
+         actions,
       });
       expect(result, `${id} should apply cleanly`).toEqual({ ok: true });
       expect(actions.setFilterTimeRange, `${id} filter range should be set`).toHaveBeenCalledTimes(1);
@@ -243,9 +226,9 @@ describe('applyDemoPreset', () => {
       'setBrushRange',
       'setDemoTime',
       'setDemoTimeRange',
+      'setDemoTimeScaleMode',
       'setFilterTimeRange',
       'setTimeScaleMode',
-      'setWarpFactor',
     ]);
   });
 });

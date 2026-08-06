@@ -4,7 +4,7 @@ import { Html, Line } from '@react-three/drei';
 import type { BurstVolumeModel, BurstVolumeSample } from '@/lib/stkde';
 import { createCameraFocusTarget, useStkde3DSceneRuntime } from './Stkde3DSceneProvider';
 
-const CONTOUR_COLORS = ['#22d3ee', '#38bdf8', '#818cf8', '#c084fc', '#f0abfc'];
+const CONTOUR_COLORS = ['#9a3412', '#b45309', '#7c6858', '#6b5b7a', '#4f6f52'];
 
 interface BurstVolumeRendererProps {
   model: BurstVolumeModel;
@@ -52,8 +52,8 @@ export function BurstVolumeRenderer({ model, resolveEpochY, active = true }: Bur
 
   return (
     <group name="burst-volume-renderer" renderOrder={300}>
-      <Line points={boundaryPoints(model, startY)} color="#f8fafc" lineWidth={active ? 2.4 : 1.2} transparent opacity={opacity} depthWrite={false} />
-      <Line points={boundaryPoints(model, endY)} color="#f8fafc" lineWidth={active ? 2.4 : 1.2} transparent opacity={opacity} depthWrite={false} />
+      <Line points={boundaryPoints(model, startY)} color="#7c6858" lineWidth={active ? 2.4 : 1.2} transparent opacity={opacity} depthWrite={false} />
+      <Line points={boundaryPoints(model, endY)} color="#7c6858" lineWidth={active ? 2.4 : 1.2} transparent opacity={opacity} depthWrite={false} />
       {model.samples.map((sample, index) => {
         const y = sampleY(model, sample, resolveEpochY);
         const radius = footprintRadius(sample);
@@ -104,7 +104,7 @@ export function BurstVolumeRenderer({ model, resolveEpochY, active = true }: Bur
           </group>
         );
       })}
-      {path.length > 1 ? <Line points={path} color="#fef08a" lineWidth={active ? 3 : 1.5} transparent opacity={active ? 0.98 : 0.35} depthWrite={false} /> : null}
+      {path.length > 1 ? <Line points={path} color="#7c3f28" lineWidth={active ? 3 : 1.5} transparent opacity={active ? 0.98 : 0.35} depthWrite={false} /> : null}
       {path.map((point, index) => (
         <mesh
           key={`${model.id}-centroid-${index}`}
@@ -157,12 +157,12 @@ export function BurstVolumeRenderer({ model, resolveEpochY, active = true }: Bur
           onPointerMissed={() => onBurstHover(null)}
         >
           <sphereGeometry args={[active ? 0.7 : 0.42, 12, 12]} />
-          <meshBasicMaterial color="#fef08a" transparent opacity={active ? 0.96 : 0.4} depthWrite={false} />
+          <meshBasicMaterial color="#a16207" transparent opacity={active ? 0.96 : 0.4} depthWrite={false} />
         </mesh>
       ))}
       {active ? (
         <Html position={[path[0]![0], startY + 2, path[0]![2]]} center distanceFactor={85} style={{ pointerEvents: 'none' }}>
-          <div className="rounded border border-cyan-300/60 bg-slate-950/90 px-2 py-1 text-[10px] font-medium tracking-wide text-cyan-100 shadow-lg">
+          <div className="rounded border border-border bg-card/95 px-2 py-1 text-[10px] font-medium tracking-wide text-foreground shadow-sm">
             {model.label}
           </div>
         </Html>

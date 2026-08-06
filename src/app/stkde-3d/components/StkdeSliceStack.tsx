@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ThreeEvent, useThree } from '@react-three/fiber';
 import { easeInOutCubic, interpolateKdeCells } from '@/lib/motion/easing';
-import { START_Y, SLICE_SPACING } from '../lib/timeline-axis';
+import { resolveTemporalSlabBounds, START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 import { getLegacyStkdeIntensityColor, getStkdeIntensityColor } from '../lib/palette';
 import type { KdeCell } from '../lib/types';
 import { convertKdeFieldToDisplayCells } from '@/app/stkde-3d/lib/comparison-difference';
@@ -210,6 +210,7 @@ export function StkdeSliceStack({
     isInterpolated,
     sourceSliceIds,
     resolveSliceY,
+    resolveEpochY,
     yToEpoch,
     onActiveIndexChange,
     onSliceHover,
@@ -462,7 +463,6 @@ export function StkdeSliceStack({
     <group>
       {slices.map((slice) => {
         const i = slice.index;
-        const y = resolveSliceY(slice);
         const diff = Math.abs(i - activeIndex);
         const isActive = hasActiveSlice && diff === 0;
         const isAdjacent = hasActiveSlice && diff === 1;
@@ -484,8 +484,17 @@ export function StkdeSliceStack({
         const gridOpacity = isEmphasized ? 0.08 : isAdjacent ? 0.03 : 0.01;
         const volume = volumeProfile?.[i];
         const hasVolume = Boolean(volume);
-        const thickness = (volume?.thickness ?? 0.3) * heightScale;
-        const surfaceY = hasVolume ? thickness / 2 + 0.1 : 0;
+        const visualThickness = (volume?.thickness ?? 0.3) * heightScale;
+        const slabBounds = hasVolume
+          ? resolveTemporalSlabBounds(slice.startEpoch, slice.endEpoch, resolveEpochY)
+          : null;
+        const thickness = slabBounds?.height ?? visualThickness;
+        const groupY = slabBounds?.centerY ?? resolveSliceY(slice);
+        const surfaceY = slabBounds
+          ? slabBounds.maxY - slabBounds.centerY + 0.1
+          : hasVolume
+            ? thickness / 2 + 0.1
+            : 0;
         const baseMultiplier = opacityMultiplier * sliceOpacity;
         const slabOpacity = hasVolume
           ? isActive
@@ -503,13 +512,21 @@ export function StkdeSliceStack({
         const texture = textures.get(i) ?? undefined;
 
         const handleInset = Math.max(0.06, thickness * 0.12);
-        const bottomHandleY = hasVolume ? handleInset : 0.08;
-        const topHandleY = hasVolume ? Math.max(handleInset + 0.06, thickness - handleInset) : 0.18;
+        const bottomHandleY = slabBounds
+          ? slabBounds.startY - slabBounds.centerY
+          : hasVolume
+            ? handleInset
+            : 0.08;
+        const topHandleY = slabBounds
+          ? slabBounds.endY - slabBounds.centerY
+          : hasVolume
+            ? Math.max(handleInset + 0.06, thickness - handleInset)
+            : 0.18;
 
         return (
           <group
             key={slice.index}
-            position={[0, y, 0]}
+            position={[0, groupY, 0]}
             onPointerEnter={(event) => {
               event.stopPropagation();
               onSliceHover(buildSliceHoverPayload(i));
@@ -527,7 +544,7 @@ export function StkdeSliceStack({
           >
             {hasVolume ? (
               <>
-                <mesh position={[0, thickness / 2, 0]}>
+                <mesh position={[0, slabBounds ? 0 : thickness / 2, 0]}>
                   <boxGeometry args={[100, thickness, 100]} />
                   <meshStandardMaterial
                     color={isEmphasized ? '#b45309' : '#d6d3d1'}
@@ -583,15 +600,15 @@ export function StkdeSliceStack({
              {isActive && !comparisonSelectionEnabled && sourceSliceId ? (
               <>
                 <mesh
-                  position={[50, topHandleY, 0]}
-                  onPointerDown={(event) => handleHandlePointerDown(event, i, 'end', y + thickness / 2)}
+                   position={[50, topHandleY, 0]}
+                   onPointerDown={(event) => handleHandlePointerDown(event, i, 'end', groupY)}
                 >
                   <sphereGeometry args={[0.9, 16, 16]} />
                   <meshBasicMaterial color={dragState?.sliceId === sourceSliceId && dragState.handle === 'end' ? '#b45309' : '#f4f1eb'} />
                 </mesh>
                 <mesh
-                  position={[50, bottomHandleY, 0]}
-                  onPointerDown={(event) => handleHandlePointerDown(event, i, 'start', y + thickness / 2)}
+                   position={[50, bottomHandleY, 0]}
+                   onPointerDown={(event) => handleHandlePointerDown(event, i, 'start', groupY)}
                 >
                   <sphereGeometry args={[0.9, 16, 16]} />
                   <meshBasicMaterial color={dragState?.sliceId === sourceSliceId && dragState.handle === 'start' ? '#b45309' : '#f4f1eb'} />

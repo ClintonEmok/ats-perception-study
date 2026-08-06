@@ -1,4 +1,5 @@
 export const DASHBOARD_WARP_FACTOR_MAX = 5;
+export const DASHBOARD_WARP_EXAGGERATION_MAX = 3;
 
 export const dashboardWarpPercentToFactor = (percent: number): number =>
   (Math.min(100, Math.max(0, percent)) / 100) * DASHBOARD_WARP_FACTOR_MAX;

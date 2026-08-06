@@ -4,6 +4,7 @@ import {
   AXIS_HEIGHT,
   START_Y,
   resolveEpochFromWarpedY,
+  resolveTemporalSlabBounds,
   resolveWarpedEpochY,
 } from './timeline-axis';
 import { createStkde3DSceneRuntime } from '../components/Stkde3DSceneProvider';
@@ -69,5 +70,36 @@ describe('timeline-axis vertical mapping', () => {
 
     expect(runtime.resolveSliceY(slice)).toBeCloseTo(runtime.resolveEpochY(slice.startEpoch), 6);
     expect(runtime.yToEpoch(runtime.resolveSliceY(slice))).toBeCloseTo(slice.startEpoch, 0);
+  });
+
+  it('uses warped endpoint epochs for adjacent temporal slab bounds', () => {
+    const runtime = createStkde3DSceneRuntime({
+      displayDomain: [100, 300],
+      warpDomain: [100, 300],
+      timeScaleMode: 'adaptive',
+      warpBlend: 1,
+      warpMap: Float32Array.from([100, 120, 260, 300]),
+    });
+    const first = resolveTemporalSlabBounds(100, 180, runtime.resolveEpochY);
+    const second = resolveTemporalSlabBounds(180, 300, runtime.resolveEpochY);
+
+    expect(first.endY).toBeCloseTo(second.startY, 6);
+    expect(first.centerY - first.height / 2).toBeCloseTo(first.minY, 6);
+    expect(second.centerY + second.height / 2).toBeCloseTo(second.maxY, 6);
+    expect(first.height).toBeGreaterThan(0);
+    expect(second.height).toBeGreaterThan(0);
+  });
+
+  it('inverts within the visible display domain when the warp domain is wider', () => {
+    const runtime = createStkde3DSceneRuntime({
+      displayDomain: [125, 175],
+      warpDomain: [100, 200],
+      timeScaleMode: 'adaptive',
+      warpBlend: 1,
+      warpMap: Float32Array.from([100, 110, 190, 200]),
+    });
+
+    const epoch = 150;
+    expect(runtime.yToEpoch(runtime.resolveEpochY(epoch))).toBeCloseTo(epoch, 0);
   });
 });

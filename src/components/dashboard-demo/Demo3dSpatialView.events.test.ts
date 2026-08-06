@@ -14,6 +14,7 @@ describe('dashboard 3D active event wiring', () => {
     expect(source).toMatch(/selectedSourceEvents=\{showRawEvents \? activeEvents : null\}/);
     expect(source).toMatch(/showRawEvents=\{showRawEvents\}/);
     expect(source).toMatch(/buildDurationVolumeProfile\(cubeSlices/);
+    expect(source).toMatch(/showAdaptiveWarpAxis=\{false\}/);
     expect(source).toMatch(/warpMap: activeWarpMap/);
     expect(source).toMatch(/warpDomain: activeWarpDomain/);
     expect(source).toMatch(/isInterpolated: false/);

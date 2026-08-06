@@ -10,6 +10,7 @@ import { useIsEvaluationLocked } from '@/store/useEvaluationStudyStore';
 import { cn } from '@/lib/utils';
 import {
   DASHBOARD_WARP_FACTOR_MAX,
+  DASHBOARD_WARP_EXAGGERATION_MAX,
   dashboardWarpFactorToBlend,
   dashboardWarpPercentToFactor,
 } from '@/components/dashboard-demo/lib/warp-contract';
@@ -46,6 +47,8 @@ export function GlobalWarpControls() {
 
   const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
   const setWarpFactor = useDashboardDemoCoordinationStore((state) => state.setWarpFactor);
+  const warpExaggeration = useDashboardDemoCoordinationStore((state) => state.warpExaggeration);
+  const setWarpExaggeration = useDashboardDemoCoordinationStore((state) => state.setWarpExaggeration);
 
   const cubeScopeMode = useDashboardDemoCoordinationStore((state) => state.cubeScopeMode);
   const setCubeScopeMode = useDashboardDemoCoordinationStore((state) => state.setCubeScopeMode);
@@ -86,6 +89,13 @@ export function GlobalWarpControls() {
     [setWarpFactor, warpFactor],
   );
 
+  const handleWarpExaggerationChange = useCallback(
+    (value: number[]) => {
+      setWarpExaggeration(value[0] ?? warpExaggeration);
+    },
+    [setWarpExaggeration, warpExaggeration],
+  );
+
   const handleTimeScaleToggle = useCallback(() => {
     const nextMode = timeScaleMode === 'linear' ? 'adaptive' : 'linear';
     setTimeScaleMode(nextMode);
@@ -103,6 +113,7 @@ export function GlobalWarpControls() {
   }, [setWarpSource, slices, updateSlice]);
 
   const warpPercent = Math.round((warpFactor / DASHBOARD_WARP_FACTOR_MAX) * WARP_FACTOR_PERCENT_MAX);
+  const warpExaggerationLabel = `${warpExaggeration.toFixed(1)}×`;
 
   return (
     <section
@@ -205,6 +216,21 @@ export function GlobalWarpControls() {
               />
               <span className="w-10 shrink-0 text-right font-mono tabular-nums text-foreground">
                 {warpPercent}%
+              </span>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <span className="shrink-0 text-foreground">Warp intensity</span>
+              <Slider
+                min={1}
+                max={DASHBOARD_WARP_EXAGGERATION_MAX}
+                step={0.1}
+                value={[warpExaggeration]}
+                onValueChange={handleWarpExaggerationChange}
+                aria-label="Warp intensity"
+                disabled={isEvaluationLocked}
+              />
+              <span className="w-10 shrink-0 text-right font-mono tabular-nums text-foreground">
+                {warpExaggerationLabel}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2 pt-2">

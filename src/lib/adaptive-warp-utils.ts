@@ -3,7 +3,8 @@ const DENSITY_WARP_WEIGHT_SCALE = 5;
 
 export const buildDensityWarpMap = (
   densityMap: Float32Array | null,
-  domain: [number, number]
+  domain: [number, number],
+  exaggeration = 1
 ): Float32Array | null => {
   if (!densityMap || densityMap.length < 2) {
     return null;
@@ -27,11 +28,12 @@ export const buildDensityWarpMap = (
   }
 
   const weights = new Float32Array(densityMap.length);
+  const contrastScale = Number.isFinite(exaggeration) ? Math.max(0, exaggeration) : 1;
   let totalWeight = 0;
   for (let i = 0; i < densityMap.length; i += 1) {
     const normalized = (densityMap[i] ?? 0) / maxDensity;
     const safeNormalized = Number.isFinite(normalized) ? normalized : 0;
-    const weight = 1 + (safeNormalized ** DENSITY_WARP_CONTRAST_EXPONENT) * DENSITY_WARP_WEIGHT_SCALE;
+    const weight = 1 + (safeNormalized ** DENSITY_WARP_CONTRAST_EXPONENT) * DENSITY_WARP_WEIGHT_SCALE * contrastScale;
     weights[i] = weight;
     totalWeight += weight;
   }

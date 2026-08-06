@@ -17,9 +17,8 @@
  *      the normalized range. `currentTime` is clamped to the new range and
  *      only re-written when the clamped value actually differs.
  *   4. Update `useDashboardDemoCoordinationStore.setTimeScaleMode(preset.mode)`.
- *   5. If `preset.mode === 'adaptive'` and the current `warpFactor` is `0`,
- *      warm it to `1` so the warp is visible — same convention as
- *      `GlobalWarpControls.tsx`.
+ *   5. Preserve an explicit `0` warp factor; entering adaptive mode does not
+ *      silently override the user's no-warp setting.
  *
  * The helper is a pure function — no React, no zustand. The caller wires the
  * action bag to the demo store setters. This makes the sync contract
@@ -42,8 +41,8 @@ export interface ApplyDemoPresetActions {
   setDemoTime: (time: number) => void;
   /** `useDashboardDemoCoordinationStore.setTimeScaleMode`. */
   setTimeScaleMode: (mode: DemoWarpScaleMode) => void;
-  /** `useDashboardDemoCoordinationStore.setWarpFactor`. */
-  setWarpFactor: (value: number) => void;
+  /** `useDashboardDemoTimeStore.setTimeScaleMode`. */
+  setDemoTimeScaleMode: (mode: DemoWarpScaleMode) => void;
 }
 
 export interface ApplyDemoPresetParams {
@@ -55,8 +54,6 @@ export interface ApplyDemoPresetParams {
   maxTimestampSec: number | null;
   /** The current `currentTime` from `useDashboardDemoTimeStore`. The helper only re-writes it when the clamped value differs. */
   currentTime: number;
-  /** The current `warpFactor` from `useDashboardDemoCoordinationStore`. Used to decide whether to warm the warp on adaptive presets. */
-  warpFactor: number;
   /** The demo store setters the helper should call. */
   actions: ApplyDemoPresetActions;
 }
@@ -79,7 +76,6 @@ export const applyDemoPreset = ({
   minTimestampSec,
   maxTimestampSec,
   currentTime,
-  warpFactor,
   actions,
 }: ApplyDemoPresetParams): ApplyDemoPresetResult => {
   if (preset.timeRange === null) {
@@ -94,6 +90,7 @@ export const applyDemoPreset = ({
       actions.setDemoTime(clampedCurrent);
     }
     actions.setTimeScaleMode('linear');
+    actions.setDemoTimeScaleMode('linear');
     return { ok: true };
   }
 
@@ -124,12 +121,7 @@ export const applyDemoPreset = ({
   }
 
   actions.setTimeScaleMode(preset.mode);
-
-  // Warm the warp factor when entering adaptive mode with a zero factor —
-  // same convention as `GlobalWarpControls.handleTimeScaleToggle`.
-  if (preset.mode === 'adaptive' && warpFactor === 0) {
-    actions.setWarpFactor(1);
-  }
+  actions.setDemoTimeScaleMode(preset.mode);
 
   return { ok: true };
 };

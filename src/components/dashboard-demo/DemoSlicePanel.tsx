@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Check,
   Lock,
@@ -28,6 +28,7 @@ import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTi
 import { useTimelineDataStore } from '@/store/useTimelineDataStore';
 import { useIsEvaluationLocked } from '@/store/useEvaluationStudyStore';
 import { normalizedToEpochSeconds, resolutionToNormalizedStep } from '@/lib/time-domain';
+import { clampComparableWarpWeight } from '@/lib/binning/warp-scaling';
 import { cn } from '@/lib/utils';
 
 const formatDateTime = (value: number | null | undefined) => {
@@ -95,11 +96,6 @@ export function DemoSlicePanel() {
   const lastAppliedAt = useDashboardDemoTimeslicingModeStore((state) => state.lastAppliedAt);
   const addManualDraftRange = useDashboardDemoTimeslicingModeStore((state) => state.addManualDraftRange);
   const updatePendingBinRange = useDashboardDemoTimeslicingModeStore((state) => state.updatePendingBinRange);
-  const warpMode = useDashboardDemoCoordinationStore((state) => state.timeScaleMode);
-  const warpFactor = useDashboardDemoCoordinationStore((state) => state.warpFactor);
-  const setTimeScaleMode = useDashboardDemoCoordinationStore((state) => state.setTimeScaleMode);
-  const setWarpFactor = useDashboardDemoCoordinationStore((state) => state.setWarpFactor);
-  const resetWarp = useDashboardDemoCoordinationStore((state) => state.resetWarp);
   const clearSelectedBurstWindows = useDashboardDemoCoordinationStore((state) => state.clearSelectedBurstWindows);
 
   const selectedSlice = useMemo(
@@ -119,26 +115,6 @@ export function DemoSlicePanel() {
   const selectedDraftLabel = selectedDraft
     ? `${selectedDraft.isNeutralPartition ? 'Neutral slice' : 'Selection-first slice'} · ${selectedDraft.burstClass ?? 'neutral'} · ${selectedDraft.id}`
     : 'Read-only metadata for the selected slice.';
-
-  const visibleWarpSliceCount = useMemo(
-    () => slices.filter((slice) => slice.isVisible && (slice.warpEnabled ?? true)).length,
-    [slices]
-  );
-
-  useEffect(() => {
-    if (visibleWarpSliceCount > 0) {
-      if (warpMode !== 'adaptive') {
-        setTimeScaleMode('adaptive');
-      }
-      if (warpFactor === 0) {
-        setWarpFactor(1);
-      }
-      return;
-    }
-    if (warpMode !== 'linear' || warpFactor !== 0) {
-      resetWarp();
-    }
-  }, [resetWarp, setTimeScaleMode, setWarpFactor, visibleWarpSliceCount, warpFactor, warpMode]);
 
   const handleAddRangeSlice = useCallback(() => {
     const stepSize = resolutionToNormalizedStep(timeResolution, minTimestampSec, maxTimestampSec);
@@ -327,6 +303,15 @@ export function DemoSlicePanel() {
 
     updateSlice(selectedSlice.id, { endDateTimeMs: nextEndMs });
   }, [maxTimestampSec, minTimestampSec, selectedSlice, toNormalizedFromTimestampMs, updateSlice]);
+
+  const handleSelectedSliceWarpWeightChange = useCallback((value: string) => {
+    if (!selectedSlice || value.trim() === '') return;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+    updateSlice(selectedSlice.id, {
+      warpWeight: clampComparableWarpWeight(parsed),
+    });
+  }, [selectedSlice, updateSlice]);
 
   const hasItems = pendingItems.length > 0 || appliedItems.length > 0;
 
@@ -620,6 +605,19 @@ export function DemoSlicePanel() {
                   <div className="mt-1 text-xs text-muted-foreground">
                     Warp {(selectedSlice.warpEnabled ?? true) ? 'enabled' : 'disabled'} · Strength {(selectedSlice.warpWeight ?? 1).toFixed(2)}
                   </div>
+                  <label className="mt-3 block space-y-1 text-[11px] text-muted-foreground">
+                    <span>Warp weight</span>
+                    <Input
+                      aria-label="Warp weight"
+                      type="number"
+                      min={0.25}
+                      max={4}
+                      step={0.05}
+                      value={selectedSlice.warpWeight ?? 1}
+                      onChange={(event) => handleSelectedSliceWarpWeightChange(event.target.value)}
+                    />
+                    <span className="block text-[10px]">Per-slice hint used by authored allocation (0.25–4).</span>
+                  </label>
                 </div>
 
                 {(selectedSlice.burstProvenance || selectedSlice.tieBreakReason || selectedSlice.thresholdSource) ? (

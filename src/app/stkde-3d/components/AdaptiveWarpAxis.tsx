@@ -15,7 +15,7 @@ const AXIS_DEPTH = 1.8;
 const AXIS_BOTTOM_Y = START_Y;
 const AXIS_Z = -50.6;
 const AXIS_LABEL_OFFSET_X = AXIS_WIDTH / 2 + 8;
-const LINEAR_COLOR = new THREE.Color('#4f7fa8');
+const LINEAR_COLOR = new THREE.Color('#7c6858');
 const MIN_BIN_HEIGHT = AXIS_HEIGHT / ADAPTIVE_BIN_COUNT / 3;
 const AXIS_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -25,10 +25,10 @@ const AXIS_LABEL_FORMATTER = new Intl.DateTimeFormat('en-US', {
 });
 
 const COLOR_STOPS: Array<{ stop: number; color: [number, number, number] }> = [
-  { stop: 0, color: [30, 58, 95] },
-  { stop: 0.5, color: [14, 165, 233] },
+  { stop: 0, color: [92, 70, 53] },
+  { stop: 0.5, color: [183, 143, 91] },
   { stop: 0.8, color: [245, 158, 11] },
-  { stop: 1, color: [239, 68, 68] },
+  { stop: 1, color: [153, 55, 35] },
 ];
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
@@ -169,10 +169,10 @@ export function AdaptiveWarpAxis() {
         <group key={`${tick.epochSec}-${index}`}>
           <mesh position={[AXIS_LABEL_OFFSET_X - 3.2, tick.y, AXIS_Z + 0.05]}>
             <boxGeometry args={[2.4, 0.18, 0.45]} />
-            <meshBasicMaterial color="#93c5fd" transparent opacity={0.5} depthWrite={false} />
+            <meshBasicMaterial color="#b89c7b" transparent opacity={0.5} depthWrite={false} />
           </mesh>
           <Html position={[AXIS_LABEL_OFFSET_X, tick.y, AXIS_Z]} center className="pointer-events-none select-none">
-            <div className="rounded-md border border-sky-300/15 bg-slate-950/88 px-2 py-0.5 text-[9px] font-medium tracking-[0.08em] text-slate-100 shadow-[0_10px_25px_-14px_rgba(15,23,42,0.95)] backdrop-blur-sm">
+            <div className="min-w-max whitespace-nowrap border-b border-foreground/30 bg-card/90 px-1.5 py-0.5 text-[9px] font-medium tracking-[0.08em] text-foreground shadow-sm backdrop-blur-sm">
               {tick.label}
             </div>
           </Html>

@@ -26,4 +26,36 @@ describe('buildDensityWarpMap', () => {
     expect(values[2]).toBeCloseTo(10.9091, 3);
     expect(values[3]).toBe(40);
   });
+
+  it('keeps the default map identical when exaggeration is omitted', () => {
+    const baseline = buildDensityWarpMap(Float32Array.from([0, 0.5, 1, 0]), [0, 40]);
+    const defaulted = buildDensityWarpMap(Float32Array.from([0, 0.5, 1, 0]), [0, 40], 1);
+
+    expect(Array.from(defaulted ?? [])).toEqual(Array.from(baseline ?? []));
+  });
+
+  it('shrinks the sparse mid-bin further and inflates the peak when exaggerated', () => {
+    const normal = buildDensityWarpMap(Float32Array.from([0, 0.5, 1, 0]), [0, 40]);
+    const extreme = buildDensityWarpMap(Float32Array.from([0, 0.5, 1, 0]), [0, 40], 3);
+
+    expect(extreme).not.toBeNull();
+    const normalValues = Array.from(normal ?? []);
+    const extremeValues = Array.from(extreme ?? []);
+    expect(extremeValues[0]).toBe(0);
+    expect(extremeValues[extremeValues.length - 1]).toBe(40);
+    // The mid-density bin lands earlier (squeezed toward the sparse end) …
+    expect(extremeValues[1]).toBeLessThan(normalValues[1] ?? 0);
+    // … while the peak bin's segment stretches further into the axis.
+    const normalPeakSpan = (normalValues[3] ?? 0) - (normalValues[2] ?? 0);
+    const extremePeakSpan = (extremeValues[3] ?? 0) - (extremeValues[2] ?? 0);
+    expect(extremePeakSpan).toBeGreaterThan(normalPeakSpan);
+    expect(extremeValues.every((value, index) => index === 0 || value >= (extremeValues[index - 1] ?? value))).toBe(true);
+  });
+
+  it('ignores non-finite exaggeration and falls back to neutral contrast', () => {
+    const neutral = buildDensityWarpMap(Float32Array.from([0, 0.5, 1, 0]), [0, 40], Number.NaN);
+    const baseline = buildDensityWarpMap(Float32Array.from([0, 0.5, 1, 0]), [0, 40]);
+
+    expect(Array.from(neutral ?? [])).toEqual(Array.from(baseline ?? []));
+  });
 });

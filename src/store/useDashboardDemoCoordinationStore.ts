@@ -6,6 +6,7 @@ import {
   type StkdeTemporalFilter,
 } from '@/store/useStkdeStore';
 import type { StkdeResponse } from '@/lib/stkde/contracts';
+import { DASHBOARD_WARP_EXAGGERATION_MAX } from '@/components/dashboard-demo/lib/warp-contract';
 
 export type DemoSelectionSource = 'cube' | 'timeline' | 'map' | null;
 export type DemoSyncStatusToken = 'syncing' | 'synchronized' | 'partial';
@@ -126,6 +127,7 @@ interface DashboardDemoCoordinationState {
   timeScaleMode: DemoWarpScaleMode;
   warpSource: DemoWarpSource;
   warpFactor: number;
+  warpExaggeration: number;
   densityMap: Float32Array | null;
   warpMap: Float32Array | null;
   mapDomain: [number, number];
@@ -189,6 +191,7 @@ interface DashboardDemoCoordinationState {
   setTimeScaleMode: (mode: DemoWarpScaleMode) => void;
   setWarpSource: (source: DemoWarpSource) => void;
   setWarpFactor: (value: number) => void;
+  setWarpExaggeration: (value: number) => void;
   setPrecomputedMaps: (densityMap: Float32Array | null, warpMap: Float32Array | null, domain: [number, number]) => void;
   setIsComputing: (value: boolean) => void;
   resetWarp: () => void;
@@ -248,6 +251,7 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   timeScaleMode: 'adaptive',
   warpSource: 'density',
   warpFactor: 1,
+  warpExaggeration: 1,
   densityMap: null,
   warpMap: null,
   mapDomain: [0, 100],
@@ -421,11 +425,13 @@ export const useDashboardDemoCoordinationStore = create<DashboardDemoCoordinatio
   setTimeScaleMode: (mode) => set({ timeScaleMode: mode }),
   setWarpSource: (source) => set({ warpSource: source }),
   setWarpFactor: (value) => set({ warpFactor: Math.min(5, Math.max(0, value)) }),
+  setWarpExaggeration: (value) =>
+    set({ warpExaggeration: Math.min(DASHBOARD_WARP_EXAGGERATION_MAX, Math.max(1, value)) }),
   setPrecomputedMaps: (densityMap, warpMap, domain) =>
     set({ densityMap, warpMap, mapDomain: domain, isComputing: false }),
   setIsComputing: (value) => set({ isComputing: value }),
   resetWarp: () =>
-    set({ timeScaleMode: 'linear', warpFactor: 0, warpSource: 'density', isComputing: false }),
+    set({ timeScaleMode: 'linear', warpFactor: 0, warpSource: 'density', warpExaggeration: 1, isComputing: false }),
   setSelectedDistricts: (districts) => set({ selectedDistricts: districts }),
   toggleDistrict: (district) =>
     set((state) => {

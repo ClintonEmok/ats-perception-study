@@ -4,21 +4,21 @@ export type StkdeColorStop = {
 };
 
 export const STKDE_INTENSITY_STOPS: StkdeColorStop[] = [
-  { stop: 0, rgb: [7, 24, 54] },
-  { stop: 0.25, rgb: [8, 78, 110] },
-  { stop: 0.5, rgb: [14, 148, 163] },
-  { stop: 0.75, rgb: [34, 211, 238] },
-  { stop: 0.9, rgb: [253, 224, 71] },
-  { stop: 1, rgb: [255, 247, 204] },
+  { stop: 0, rgb: [250, 244, 215] },
+  { stop: 0.25, rgb: [244, 215, 136] },
+  { stop: 0.5, rgb: [226, 145, 71] },
+  { stop: 0.75, rgb: [190, 70, 45] },
+  { stop: 0.9, rgb: [132, 43, 32] },
+  { stop: 1, rgb: [79, 27, 27] },
 ];
 
 export const LEGACY_STKDE_INTENSITY_STOPS: StkdeColorStop[] = [
-  { stop: 0, rgb: [34, 76, 255] },
-  { stop: 0.28, rgb: [0, 212, 255] },
-  { stop: 0.55, rgb: [42, 255, 163] },
-  { stop: 0.75, rgb: [255, 214, 64] },
-  { stop: 0.9, rgb: [255, 122, 42] },
-  { stop: 1, rgb: [255, 64, 96] },
+  { stop: 0, rgb: [250, 244, 215] },
+  { stop: 0.28, rgb: [247, 222, 151] },
+  { stop: 0.55, rgb: [231, 159, 77] },
+  { stop: 0.75, rgb: [201, 82, 43] },
+  { stop: 0.9, rgb: [145, 43, 29] },
+  { stop: 1, rgb: [86, 28, 26] },
 ];
 
 function clamp01(value: number): number {

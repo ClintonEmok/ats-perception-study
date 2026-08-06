@@ -52,6 +52,15 @@ describe('/stkde-3d route focus mode', () => {
     expect(pageSource).not.toMatch(/useDashboardDemoCoordinationStore|useDashboardDemoTimeslicingModeStore|useSliceDomainStore|useViewportStore/);
     expect(sceneSource).toMatch(/viewMode\?: 'stack' \| 'focus'/);
     expect(sceneSource).toMatch(/showRawEvents\?: boolean/);
+    expect(sceneSource).toMatch(/showAdaptiveWarpAxis\?: boolean/);
+    expect(sceneSource).toMatch(/showAdaptiveWarpAxis = true/);
+    expect(sceneSource).toMatch(/\{showAdaptiveWarpAxis \? <AdaptiveWarpAxis \/> : null\}/);
+    expect(sceneSource).toMatch(/showSliceBoundaryBackdrop\?: boolean/);
+    expect(sceneSource).toMatch(/showSliceBoundaryBackdrop = false/);
+    expect(sceneSource).toMatch(/SliceBoundaryBackdrop/);
+    expect(sceneSource).toMatch(/resolveTemporalSlabBounds/);
+    expect(sceneSource).toMatch(/const displayedSlices = viewMode === 'focus' \? focusedSlices : slices/);
+    expect(pageSource).not.toMatch(/showSliceBoundaryBackdrop/);
     expect(sceneSource).toMatch(/sliceEvents\?: MockCrimeEvent\[\]\[]/);
     expect(sceneSource).toMatch(/compact={viewMode === 'focus'}/);
     expect(sceneSource).toMatch(/RawEventPoints/);

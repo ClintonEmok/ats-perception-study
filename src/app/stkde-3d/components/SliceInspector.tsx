@@ -29,9 +29,9 @@ interface SliceInspectorProps {
 function burstinessColor(value: number): string {
   if (value > 0.3) return 'bg-amber-500';
   if (value > 0.1) return 'bg-amber-400/70';
-  if (value < -0.3) return 'bg-sky-500/70';
-  if (value < -0.1) return 'bg-sky-400/60';
-  return 'bg-slate-500';
+  if (value < -0.3) return 'bg-stone-500/70';
+  if (value < -0.1) return 'bg-stone-400/70';
+  return 'bg-muted-foreground';
 }
 
 function formatMetric(value: number, digits = 1): string {
@@ -50,8 +50,8 @@ function MetricRow({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
     <div className="flex justify-between gap-3">
-      <span className="text-slate-400">{label}</span>
-      <span className="text-right tabular-nums text-slate-100">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right tabular-nums text-foreground">{value}</span>
     </div>
   );
 }
@@ -76,13 +76,13 @@ export function SliceInspector({
   }, null);
 
   return (
-    <section className="rounded-md border border-border/70 bg-background/60 p-2 text-xs text-slate-300">
+    <section className="rounded-md border border-border/70 bg-background/60 p-2 text-xs text-muted-foreground">
       <div className="space-y-1.5">
         {slice ? (
           <>
             <div className="flex justify-between gap-3">
-              <span className="text-slate-400">Clock range</span>
-              <span className="text-right tabular-nums text-slate-100">
+              <span className="text-muted-foreground">Clock range</span>
+              <span className="text-right tabular-nums text-foreground">
                 {formatSliceDate(slice.startEpoch)} - {formatSliceDate(slice.endEpoch)}
               </span>
             </div>
@@ -100,7 +100,7 @@ export function SliceInspector({
 
         {allocationMetrics ? (
           <div className="mt-2 space-y-1.5 border-t border-border/50 pt-2">
-            <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-slate-500">Allocation</div>
+            <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Allocation</div>
             <MetricRow label="Density" value={allocationMetrics.eventDensityPerDay === null ? null : `${formatMetric(allocationMetrics.eventDensityPerDay, 2)} events/day`} />
             <MetricRow label="Adaptive weight" value={allocationMetrics.adaptiveWeight === null ? null : formatMetric(allocationMetrics.adaptiveWeight, 3)} />
             <MetricRow label="Signal" value={allocationMetrics.signal === null ? null : formatMetric(allocationMetrics.signal, 3)} />
@@ -114,7 +114,7 @@ export function SliceInspector({
 
         {hasBurstModel && burstVolumeModel ? (
           <div className="mt-2 space-y-1.5 border-t border-border/50 pt-2">
-            <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-slate-500">Burst volume</div>
+            <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Burst volume</div>
             <MetricRow label="Clock duration" value={formatDuration(burstVolumeModel.durationSec)} />
             <MetricRow label="Support" value={formatMetric(burstVolumeModel.spatialFootprint.supportCount, 0)} />
             <MetricRow label="Peak intensity" value={maxSampleIntensity === null ? null : formatMetric(maxSampleIntensity, 3)} />
@@ -126,11 +126,11 @@ export function SliceInspector({
 
       {slice ? (
         <div className="mt-2">
-        <div className="mb-1 flex items-center justify-between text-slate-400">
+        <div className="mb-1 flex items-center justify-between text-muted-foreground">
           <span>Burstiness</span>
-          <span className="tabular-nums text-slate-100">{burstinessDisplay}</span>
+          <span className="tabular-nums text-foreground">{burstinessDisplay}</span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-800/80">
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div
             className={`h-full rounded-full transition-all duration-300 ${burstinessColor(burstinessValue)}`}
             style={{ width: `${burstinessWidth * 100}%` }}

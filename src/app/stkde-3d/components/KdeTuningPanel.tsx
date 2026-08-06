@@ -18,18 +18,18 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
   const isSelective = smoothingMeters <= 250 || value.threshold >= 0.18;
 
   return (
-    <section className="rounded-2xl border border-sky-500/15 bg-slate-950/60 p-4 text-xs text-slate-300 shadow-[0_24px_80px_-48px_rgba(14,165,233,0.45)]">
+    <section className="rounded-2xl border border-border bg-card p-4 text-xs text-muted-foreground shadow-sm">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-sky-300">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             KDE Tuning
           </div>
-          <h3 className="mt-1 text-sm font-medium text-slate-50">
+          <h3 className="mt-1 text-sm font-medium text-foreground">
             Hotspot sharpness
           </h3>
         </div>
 
-        <span className="rounded-full border border-sky-400/15 bg-sky-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-sky-200">
+        <span className="rounded-full border border-border bg-muted px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
           {isSelective ? 'Selective' : 'Broad'}
         </span>
       </div>
@@ -37,10 +37,10 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
       <div className="space-y-3">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
-            <Label className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+            <Label className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Grid size
             </Label>
-            <span className="tabular-nums text-slate-100">{value.gridSize}</span>
+            <span className="tabular-nums text-foreground">{value.gridSize}</span>
           </div>
           <Slider
             min={16}
@@ -53,19 +53,19 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
                 gridSize: next ?? DEFAULT_KDE_PARAMS.gridSize,
               })
             }
-            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-sky-400 [&_[data-slot=slider-thumb]]:size-3.5"
+            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-foreground [&_[data-slot=slider-thumb]]:size-3.5"
           />
-          <p className="text-[10px] leading-4 text-slate-500">
+          <p className="text-[10px] leading-4 text-muted-foreground">
             Higher values split the city into smaller cells.
           </p>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
-            <Label className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+            <Label className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Smoothing radius
             </Label>
-            <span className="tabular-nums text-slate-100">{smoothingMeters}m</span>
+            <span className="tabular-nums text-foreground">{smoothingMeters}m</span>
           </div>
           <Slider
             min={75}
@@ -78,19 +78,19 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
                 smoothingMeters: next ?? value.smoothingMeters ?? 250,
               })
             }
-            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-sky-400 [&_[data-slot=slider-thumb]]:size-3.5"
+            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-foreground [&_[data-slot=slider-thumb]]:size-3.5"
           />
-          <p className="text-[10px] leading-4 text-slate-500">
+          <p className="text-[10px] leading-4 text-muted-foreground">
             Smaller radii keep peaks tight. Larger radii merge nearby activity.
           </p>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
-            <Label className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+            <Label className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Kernel radius
             </Label>
-            <span className="tabular-nums text-slate-100">{value.kernelRadiusCells}</span>
+            <span className="tabular-nums text-foreground">{value.kernelRadiusCells}</span>
           </div>
           <Slider
             min={1}
@@ -103,19 +103,19 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
                 kernelRadiusCells: next ?? DEFAULT_KDE_PARAMS.kernelRadiusCells,
               })
             }
-            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-sky-400 [&_[data-slot=slider-thumb]]:size-3.5"
+            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-foreground [&_[data-slot=slider-thumb]]:size-3.5"
           />
-          <p className="text-[10px] leading-4 text-slate-500">
+          <p className="text-[10px] leading-4 text-muted-foreground">
             Smaller radii ignore far neighbors and tighten the blur.
           </p>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
-            <Label className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+            <Label className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Cutoff
             </Label>
-            <span className="tabular-nums text-slate-100">{formatPercent(value.threshold)}</span>
+            <span className="tabular-nums text-foreground">{formatPercent(value.threshold)}</span>
           </div>
           <Slider
             min={0.02}
@@ -128,15 +128,15 @@ export function KdeTuningPanel({ value, onChange }: KdeTuningPanelProps) {
                 threshold: next ?? DEFAULT_KDE_PARAMS.threshold,
               })
             }
-            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-sky-400 [&_[data-slot=slider-thumb]]:size-3.5"
+            className="[&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-range]]:bg-foreground [&_[data-slot=slider-thumb]]:size-3.5"
           />
-          <p className="text-[10px] leading-4 text-slate-500">
+          <p className="text-[10px] leading-4 text-muted-foreground">
             Higher cutoffs hide weaker cells so hotspots read more distinctly.
           </p>
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-[10px] leading-5 text-slate-400">
+      <div className="mt-4 rounded-xl border border-border bg-muted px-3 py-2 text-[10px] leading-5 text-muted-foreground">
         {isSelective
           ? 'This setting favors tighter hotspots and less overlap between regions.'
           : 'This setting keeps more context but may merge nearby hotspots.'}

@@ -21,6 +21,35 @@ export interface WarpTimelineAxisSettings {
   yOffset?: number;
 }
 
+export interface TemporalSlabBounds {
+  startY: number;
+  endY: number;
+  minY: number;
+  maxY: number;
+  centerY: number;
+  height: number;
+}
+
+export function resolveTemporalSlabBounds(
+  startEpoch: number,
+  endEpoch: number,
+  resolveEpochY: (epochSec: number) => number,
+): TemporalSlabBounds {
+  const startY = resolveEpochY(startEpoch);
+  const endY = resolveEpochY(endEpoch);
+  const minY = Math.min(startY, endY);
+  const maxY = Math.max(startY, endY);
+
+  return {
+    startY,
+    endY,
+    minY,
+    maxY,
+    centerY: (startY + endY) / 2,
+    height: maxY - minY,
+  };
+}
+
 export function resolveWarpedEpochY(epochSec: number, axisStartY: number, settings: WarpTimelineAxisSettings): number {
   const axisEndY = axisStartY + AXIS_HEIGHT;
   const yOffset = settings.yOffset ?? 0;
