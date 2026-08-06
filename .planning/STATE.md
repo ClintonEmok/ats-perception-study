@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: STKDE-3D A/B Comparison
 status: quick_task_complete
-stopped_at: Completed quick task 260806-js2
-last_updated: "2026-08-06T12:14:29Z"
+stopped_at: Completed quick task 260806-k90
+last_updated: "2026-08-06T12:34:48Z"
 last_activity: 2026-08-06
-last_activity_desc: Completed quick task 260806-js2; slice-authored warp now treats warpWeight as a duration multiplier (all-1 linear, max-weight overlaps, deviation-based exaggeration).
+last_activity_desc: Completed quick task 260806-k90; timeline slices are clickable and sync the active slice across timeline, 3D cube, and map highlight.
 progress:
   total_phases: 5
   completed_phases: 1
@@ -170,3 +170,4 @@ Resume file: None
 | Refactor dashboard-demo user-created slices and final rail (`260804-01p`) | Complete | 2026-08-04 |
 | Make dashboard STKDE intensity legend compact (`260804-1y2`) | Complete | 2026-08-04 |
 | Rework slice-authored warp to duration-times-weight semantics (`260806-js2`) | Complete | 2026-08-06 |
+| Make timeline slices clickable with timeline-cube sync and map highlight (`260806-k90`) | Complete | 2026-08-06 |
