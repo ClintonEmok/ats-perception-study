@@ -13,6 +13,7 @@ const DEFAULT_DOMAIN: [number, number] = [0, 100];
 const MINIMUM_WIDTH_SHARE = 1e-6;
 const MIN_WARP_WEIGHT = 0.25;
 const MAX_WARP_WEIGHT = 4;
+const MIN_EFFECTIVE_WARP_WEIGHT = 0.01;
 
 const clampPercent = (value: number): number => Math.min(100, Math.max(0, value));
 
@@ -296,21 +297,175 @@ export const resolveDensityDerivedSliceWeights = (
   );
 };
 
+interface WeightedWarpSlice {
+  id: string;
+  start: number;
+  end: number;
+  weight: number;
+}
+
+interface WarpSegment {
+  start: number;
+  end: number;
+  weight: number;
+}
+
+/**
+ * Build a warp map from slice warp weights interpreted as temporal warp
+ * multipliers. Each map-domain segment advances the display position by its
+ * duration multiplied by the covering slice's effective weight, and the
+ * cumulative weighted lengths are normalized onto the fixed map span. Segments
+ * not covered by any slice stay neutral (weight 1); overlapping slices
+ * contribute their maximum covering weight.
+ */
+const buildWeightedDurationWarpMap = (
+  segments: WarpSegment[],
+  domain: [number, number],
+  sampleCount: number,
+): Float32Array | null => {
+  if (sampleCount < 2 || segments.length === 0) {
+    return null;
+  }
+
+  const [domainStart, domainEnd] = domain;
+  const domainSpan = domainEnd - domainStart;
+  if (!Number.isFinite(domainSpan) || domainSpan <= 0) {
+    return null;
+  }
+
+  const cumulative = new Array<number>(segments.length + 1);
+  cumulative[0] = 0;
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    const duration = segment ? Math.max(0, segment.end - segment.start) : 0;
+    const weight = segment && Number.isFinite(segment.weight) ? Math.max(0, segment.weight) : 1;
+    cumulative[index + 1] = (cumulative[index] ?? 0) + duration * weight;
+  }
+
+  const totalWeightedSpan = cumulative[cumulative.length - 1] ?? 0;
+  if (!Number.isFinite(totalWeightedSpan) || totalWeightedSpan <= 0) {
+    return null;
+  }
+  const scale = domainSpan / totalWeightedSpan;
+
+  const warpMap = new Float32Array(sampleCount);
+  let previousValue = domainStart;
+
+  for (let sample = 0; sample < sampleCount; sample += 1) {
+    const ratio = sampleCount <= 1 ? 0 : sample / (sampleCount - 1);
+    const linearPosition = domainStart + ratio * domainSpan;
+
+    let segmentIndex = segments.length - 1;
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index];
+      if (!segment) continue;
+      const isLast = index === segments.length - 1;
+      if (linearPosition < segment.end || (isLast && linearPosition <= segment.end)) {
+        segmentIndex = index;
+        break;
+      }
+    }
+
+    const segment = segments[segmentIndex];
+    const segmentStart = segment?.start ?? domainStart;
+    const segmentEnd = segment?.end ?? domainEnd;
+    const segmentWeightedLength = segment
+      ? (cumulative[segmentIndex + 1] ?? 0) - (cumulative[segmentIndex] ?? 0)
+      : 0;
+    const local = segmentEnd > segmentStart
+      ? Math.min(1, Math.max(0, (linearPosition - segmentStart) / (segmentEnd - segmentStart)))
+      : 0;
+    const weightedOffset = (cumulative[segmentIndex] ?? 0) + segmentWeightedLength * local;
+
+    const mapped = domainStart + weightedOffset * scale;
+    const clamped = Number.isFinite(mapped) ? Math.min(domainEnd, Math.max(domainStart, mapped)) : previousValue;
+    const nextValue = Math.max(previousValue, clamped);
+    warpMap[sample] = nextValue;
+    previousValue = nextValue;
+  }
+
+  warpMap[sampleCount - 1] = domainEnd;
+  return warpMap;
+};
+
 export const buildDemoSliceAuthoredWarpMap = (
   slices: TimeSlice[],
-  densityMap: Float32Array | null,
+  _densityMap: Float32Array | null,
   sliceDomain: [number, number],
   sampleCount: number,
   mapDomain: [number, number] = sliceDomain,
+  exaggeration = 1,
 ): Float32Array | null => {
-  const weightedDensityMap = applySliceMultipliersToDensityMap(slices, densityMap, sliceDomain, mapDomain);
-  const densityWarpMap = buildDensityWarpMap(weightedDensityMap, normalizeDomain(mapDomain));
-  if (densityWarpMap) {
-    return densityWarpMap;
+  const safeSampleCount = Math.floor(sampleCount);
+  if (!Number.isFinite(safeSampleCount) || safeSampleCount < 2) {
+    return null;
   }
 
-  const allocation = buildDemoSliceAuthoredWarpAllocation(slices, densityMap, sliceDomain);
-  return allocation
-    ? buildSampleWarpMapFromComparableWarp(allocation, sampleCount, sliceDomain)
-    : null;
+  const resolvedSliceDomain = normalizeDomain(sliceDomain);
+  const resolvedMapDomain = normalizeDomain(mapDomain);
+  const safeExaggeration = Number.isFinite(exaggeration) ? Math.max(0, exaggeration) : 1;
+  const [mapStart, mapEnd] = resolvedMapDomain;
+
+  // Resolve each visible warp-enabled slice to a clipped map-domain range and
+  // an effective weight. The effective weight deviates from neutral through
+  // `1 + (clampedWeight - 1) * exaggeration` and stays above a positive floor
+  // so no segment is ever zero or negative.
+  const weightedSlices = slices
+    .filter((slice) => slice.isVisible && (slice.warpEnabled ?? true))
+    .flatMap((slice) => {
+      const range = resolveSliceRange(slice, resolvedSliceDomain);
+      if (!range) {
+        return [];
+      }
+      const clampedWeight = clampComparableWarpWeight(slice.warpWeight ?? 1, MIN_WARP_WEIGHT, MAX_WARP_WEIGHT);
+      const effectiveWeight = Math.max(
+        MIN_EFFECTIVE_WARP_WEIGHT,
+        1 + (clampedWeight - 1) * safeExaggeration,
+      );
+      return [{
+        id: slice.id,
+        start: Math.min(mapEnd, Math.max(mapStart, range[0])),
+        end: Math.max(mapStart, Math.min(mapEnd, range[1])),
+        weight: effectiveWeight,
+      } satisfies WeightedWarpSlice];
+    })
+    .filter((slice) => Number.isFinite(slice.start) && Number.isFinite(slice.end) && slice.end > slice.start);
+
+  if (weightedSlices.length === 0) {
+    return null;
+  }
+
+  // Boundaries come from the map endpoints plus every clipped slice endpoint.
+  const boundarySet = new Set<number>([mapStart, mapEnd]);
+  for (const slice of weightedSlices) {
+    boundarySet.add(slice.start);
+    boundarySet.add(slice.end);
+  }
+  const boundaries = [...boundarySet]
+    .filter((boundary) => Number.isFinite(boundary) && boundary >= mapStart && boundary <= mapEnd)
+    .sort((left, right) => left - right);
+
+  const segments: WarpSegment[] = [];
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    const start = boundaries[index] ?? mapStart;
+    const end = boundaries[index + 1] ?? mapEnd;
+    if (end <= start) {
+      continue;
+    }
+
+    // Uncovered segments stay neutral (weight 1); covered segments use the
+    // maximum effective weight of the slices covering the full segment. The
+    // neutral 1 is only the gap fallback, not a lower bound for covered
+    // segments, so very light weights still compress their interval.
+    let coveringWeight: number | null = null;
+    for (const slice of weightedSlices) {
+      if (start >= slice.start && end <= slice.end
+        && (coveringWeight === null || slice.weight > coveringWeight)) {
+        coveringWeight = slice.weight;
+      }
+    }
+    segments.push({ start, end, weight: coveringWeight ?? 1 });
+  }
+
+  return buildWeightedDurationWarpMap(segments, resolvedMapDomain, safeSampleCount);
 };
