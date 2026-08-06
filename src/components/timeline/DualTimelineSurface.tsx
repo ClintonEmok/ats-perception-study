@@ -65,6 +65,7 @@ interface DualTimelineSurfaceProps {
   detailBins: SurfaceBucket[];
   selectedDetailPeriodId?: string | null;
   onDetailPeriodClick?: (period: DemoDetailPeriodSelection) => void;
+  onSliceClick?: (sliceId: string) => void;
   orderedSliceGeometries: SurfaceSliceGeometry[];
   activeSliceUpdatedAt: number | null;
   pendingGeneratedGeometries: SurfaceSliceGeometry[];
@@ -174,6 +175,7 @@ export function DualTimelineSurface(props: DualTimelineSurfaceProps) {
     detailBins,
     selectedDetailPeriodId = null,
     onDetailPeriodClick,
+    onSliceClick,
     orderedSliceGeometries,
     activeSliceUpdatedAt,
     pendingGeneratedGeometries,
@@ -364,10 +366,11 @@ export function DualTimelineSurface(props: DualTimelineSurfaceProps) {
                     );
                   })}
 
-              {orderedSliceGeometries.map((geometry: SurfaceSliceGeometry) => {
+              {orderedSliceGeometries.map((geometry: SurfaceSliceGeometry, index: number) => {
                 const baseOpacity = geometry.isActive ? 0.68 : geometry.overlapCount >= 3 ? 0.2 : geometry.overlapCount === 2 ? 0.28 : 0.38;
                 const isSuggestionSlice = geometry.isSuggestion && !geometry.isBurst;
                 const isGeneratedAppliedSlice = geometry.isGeneratedApplied;
+                const isClickable = typeof onSliceClick === 'function';
                 const adaptivePalette = timeScaleMode === 'adaptive'
                   ? resolveAdaptiveSlicePalette(geometry)
                   : null;
@@ -389,9 +392,36 @@ export function DualTimelineSurface(props: DualTimelineSurfaceProps) {
                         : resolveColorValue(geometry.color, 'stroke') ?? 'rgba(100, 116, 139, 0.8)');
                 return (
                   <g key={`${geometry.id}-${geometry.isActive ? activeSliceUpdatedAt : 'base'}`}>
-                    <rect x={geometry.left} y={3} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 6} rx={isGeneratedAppliedSlice ? 0 : 3} fill={fill} stroke={stroke} strokeWidth={geometry.isActive ? 2.3 : geometry.overlapCount >= 2 ? 1.5 : 1} strokeDasharray={geometry.overlapCount >= 3 || isSuggestionSlice ? '5 3' : undefined} opacity={baseOpacity} />
-                    {geometry.overlapCount >= 2 && !geometry.isActive && <rect x={geometry.left} y={3} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 6} rx={isGeneratedAppliedSlice ? 0 : 3} fill="url(#sliceOverlapHatch)" opacity={geometry.overlapCount >= 3 ? 0.42 : 0.3} />}
-                    {geometry.isActive && <rect x={geometry.left} y={2} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 4} rx={isGeneratedAppliedSlice ? 0 : 3} fill="none" stroke={geometry.isBurst ? 'rgba(253, 186, 116, 0.95)' : 'rgba(125, 211, 252, 0.95)'} strokeWidth={2.2} opacity={0.9}><animate attributeName="opacity" values="0.55;1;0.55" dur="1.8s" repeatCount="indefinite" /></rect>}
+                    <rect
+                      x={geometry.left}
+                      y={3}
+                      width={Math.max(2, geometry.width)}
+                      height={DETAIL_HEIGHT - 6}
+                      rx={isGeneratedAppliedSlice ? 0 : 3}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth={geometry.isActive ? 2.3 : geometry.overlapCount >= 2 ? 1.5 : 1}
+                      strokeDasharray={geometry.overlapCount >= 3 || isSuggestionSlice ? '5 3' : undefined}
+                      opacity={baseOpacity}
+                      className={isClickable ? 'cursor-pointer' : undefined}
+                      role={isClickable ? 'button' : undefined}
+                      tabIndex={isClickable ? 0 : undefined}
+                      aria-label={isClickable ? `Select timeline slice ${index + 1}` : undefined}
+                      aria-pressed={isClickable ? geometry.isActive : undefined}
+                      onClick={isClickable ? () => onSliceClick(geometry.id) : undefined}
+                      onKeyDown={
+                        isClickable
+                          ? (event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                onSliceClick(geometry.id);
+                              }
+                            }
+                          : undefined
+                      }
+                    />
+                    {geometry.overlapCount >= 2 && !geometry.isActive && <rect x={geometry.left} y={3} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 6} rx={isGeneratedAppliedSlice ? 0 : 3} fill="url(#sliceOverlapHatch)" opacity={geometry.overlapCount >= 3 ? 0.42 : 0.3} pointerEvents="none" />}
+                    {geometry.isActive && <rect x={geometry.left} y={2} width={Math.max(2, geometry.width)} height={DETAIL_HEIGHT - 4} rx={isGeneratedAppliedSlice ? 0 : 3} fill="none" stroke={geometry.isBurst ? 'rgba(253, 186, 116, 0.95)' : 'rgba(125, 211, 252, 0.95)'} strokeWidth={2.2} opacity={0.9} pointerEvents="none"><animate attributeName="opacity" values="0.55;1;0.55" dur="1.8s" repeatCount="indefinite" /></rect>}
                   </g>
                 );
               })}

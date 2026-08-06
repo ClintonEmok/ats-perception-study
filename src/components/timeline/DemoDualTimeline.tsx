@@ -17,6 +17,7 @@ import {
   selectSlices,
   useSliceDomainStore,
 } from '@/store/useSliceDomainStore';
+import type { TimeSlice } from '@/store/useSliceDomainStore';
 import type { DemoDetailPeriodSelection } from '@/store/useDashboardDemoCoordinationStore';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
 import { resolvePointByIndex } from '@/lib/selection';
@@ -51,6 +52,34 @@ const OVERVIEW_MARGIN = { top: 8, right: 12, bottom: 10, left: 12 };
 const DETAIL_MARGIN = { top: 8, right: 12, bottom: 12, left: 12 };
 
 const clamp = clampToRange;
+
+/**
+ * Resolves a slice's canonical epoch range using the same precedence as the
+ * cube's scene slices: explicit start/end timestamps first, then the
+ * normalized `range`, then the point time.
+ */
+function resolveSliceEpochRange(
+  slice: TimeSlice,
+  minTimestampSec: number,
+  maxTimestampSec: number,
+): [number, number] {
+  if (slice.startDateTimeMs !== undefined || slice.endDateTimeMs !== undefined) {
+    const startMs = slice.startDateTimeMs ?? slice.endDateTimeMs ?? 0;
+    const endMs = slice.endDateTimeMs ?? slice.startDateTimeMs ?? startMs;
+    const start = startMs / 1000;
+    const end = endMs / 1000;
+    return start <= end ? [start, end] : [end, start];
+  }
+
+  if (slice.type === 'range' && slice.range) {
+    const start = normalizedToEpochSeconds(slice.range[0], minTimestampSec, maxTimestampSec);
+    const end = normalizedToEpochSeconds(slice.range[1], minTimestampSec, maxTimestampSec);
+    return start <= end ? [start, end] : [end, start];
+  }
+
+  const time = normalizedToEpochSeconds(slice.time, minTimestampSec, maxTimestampSec);
+  return [time, time];
+}
 
 interface ApplyRangeToStoresContractParams {
   interactive: boolean;
@@ -160,6 +189,7 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
   const timeScaleMode = useStore(useDashboardDemoCoordinationStore, (state) => state.timeScaleMode);
   const warpSource = useStore(useDashboardDemoCoordinationStore, (state) => state.warpSource);
   const warpFactor = useStore(useDashboardDemoCoordinationStore, (state) => state.warpFactor);
+  const warpExaggeration = useStore(useDashboardDemoCoordinationStore, (state) => state.warpExaggeration);
   const densityMap = useStore(useDashboardDemoCoordinationStore, (state) => state.densityMap);
   const precomputedWarpMap = useStore(useDashboardDemoCoordinationStore, (state) => state.warpMap);
   const precomputedMapDomain = useStore(useDashboardDemoCoordinationStore, (state) => state.mapDomain);
@@ -169,6 +199,8 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
   const slices = useStore(useSliceDomainStore, selectSlices);
   const activeSliceId = useStore(useSliceDomainStore, selectActiveSliceId);
   const activeSliceUpdatedAt = useStore(useSliceDomainStore, selectActiveSliceUpdatedAt);
+  const setActiveSlice = useStore(useSliceDomainStore, (state) => state.setActiveSlice);
+  const setActiveSliceIndex = useStore(useDashboardDemoCoordinationStore, (state) => state.setActiveSliceIndex);
   const getSliceOverlapCounts = useStore(useSliceDomainStore, select((state) => state.getOverlapCounts));
   const pendingGeneratedBins = useStore(useDashboardDemoTimeslicingModeStore, (state) => state.pendingGeneratedBins);
 
@@ -180,8 +212,8 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
   }, [maxTimestampSec, minTimestampSec]);
 
   const authoredWarpMap = useMemo(
-    () => buildDemoSliceAuthoredWarpMap(slices, densityMap, warpDomain, Math.max(96, slices.length * 8 || 0)),
-    [densityMap, slices, warpDomain]
+    () => buildDemoSliceAuthoredWarpMap(slices, densityMap, warpDomain, Math.max(96, slices.length * 8 || 0), warpDomain, warpExaggeration),
+    [densityMap, slices, warpDomain, warpExaggeration]
   );
 
   // Get viewport store for brush/zoom sync
@@ -270,8 +302,8 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
   }, [timestampSeconds, warpDomain]);
 
   const nextDensityWarpMap = useMemo(
-    () => buildDensityWarpMap(nextDensityMap, warpDomain),
-    [nextDensityMap, warpDomain]
+    () => buildDensityWarpMap(nextDensityMap, warpDomain, warpExaggeration),
+    [nextDensityMap, warpDomain, warpExaggeration]
   );
 
   useEffect(() => {
@@ -319,15 +351,15 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
   });
 
   const authoredScopedWarpMap = useMemo(
-    () => buildDemoSliceAuthoredWarpMap(slices, detailDensityMap, warpDomain, Math.max(96, slices.length * 8 || 0), detailRangeSec),
-    [detailDensityMap, detailRangeSec, slices, warpDomain],
+    () => buildDemoSliceAuthoredWarpMap(slices, detailDensityMap, warpDomain, Math.max(96, slices.length * 8 || 0), detailRangeSec, warpExaggeration),
+    [detailDensityMap, detailRangeSec, slices, warpDomain, warpExaggeration],
   );
 
   const scopedDensityWarpMap = useMemo(
     () => detailDensityMap && detailRangeSec[1] > detailRangeSec[0]
-      ? buildDensityWarpMap(detailDensityMap, detailRangeSec)
+      ? buildDensityWarpMap(detailDensityMap, detailRangeSec, warpExaggeration)
       : null,
-    [detailDensityMap, detailRangeSec],
+    [detailDensityMap, detailRangeSec, warpExaggeration],
   );
 
   const usingDensitySource = warpSource === 'density';
@@ -533,6 +565,48 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
       setSelectedDetailPeriod(period);
     },
     [setSelectedDetailPeriod]
+  );
+
+  // Canonical visible, range-slice ordering used by the cube (chronological
+  // start/end with stable id tie-breaking). The coordination index for a
+  // clicked slice must resolve against this ordering — NOT the visual
+  // `orderedSliceGeometries`, which are re-sorted for stacking.
+  const canonicalRangeSliceIds = useMemo(() => {
+    if (minTimestampSec === null || maxTimestampSec === null) {
+      return [] as string[];
+    }
+
+    return slices
+      .filter((slice) => slice.isVisible && slice.type === 'range')
+      .map((slice) => {
+        const [startEpoch, endEpoch] = resolveSliceEpochRange(slice, minTimestampSec, maxTimestampSec);
+        return { id: slice.id, startEpoch, endEpoch };
+      })
+      .sort((left, right) => {
+        const startDelta = left.startEpoch - right.startEpoch;
+        if (startDelta !== 0) return startDelta;
+        const endDelta = left.endEpoch - right.endEpoch;
+        if (endDelta !== 0) return endDelta;
+        return left.id.localeCompare(right.id);
+      })
+      .map((slice) => slice.id);
+  }, [maxTimestampSec, minTimestampSec, slices]);
+
+  const handleSliceClick = useCallback(
+    (sliceId: string) => {
+      const slice = slices.find((candidate) => candidate.id === sliceId);
+      if (!slice) return;
+      setActiveSlice(sliceId);
+      if (slice.type === 'range') {
+        const coordinationIndex = canonicalRangeSliceIds.indexOf(sliceId);
+        setActiveSliceIndex(coordinationIndex >= 0 ? coordinationIndex : -1);
+      } else {
+        // Point slices are not cube-compatible — clear the cube index
+        // instead of assigning an unrelated cube slice.
+        setActiveSliceIndex(-1);
+      }
+    },
+    [canonicalRangeSliceIds, setActiveSlice, setActiveSliceIndex, slices]
   );
 
 
@@ -798,6 +872,7 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
     detailBins,
     selectedDetailPeriodId: selectedDetailPeriod?.id ?? null,
     onDetailPeriodClick: handleDetailPeriodClick,
+    onSliceClick: handleSliceClick,
     orderedSliceGeometries,
     activeSliceUpdatedAt,
     pendingGeneratedGeometries,
