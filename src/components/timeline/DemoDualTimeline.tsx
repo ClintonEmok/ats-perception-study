@@ -860,6 +860,7 @@ export const DemoDualTimeline: React.FC<DemoDualTimelineProps> = ({
     })),
     timeScaleMode: effectiveTimeScaleMode,
     brushRef,
+    brushClassName: 'demo-overview-brush',
     overviewTicks,
     overviewTickFormat,
     burstWindows: burstWindowsWithTaxonomy,

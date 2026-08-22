@@ -473,13 +473,7 @@ export function StkdeSliceStack({
           || comparisonSelectedSourceIndices.includes(sourceSliceIndex)
         );
         const isEmphasized = isActive || isComparisonSelected;
-        const opacityMultiplier = isActive
-          ? activeSliceOpacity
-          : isComparisonSelected
-            ? activeSliceOpacity
-          : isAdjacent
-            ? nonActiveSliceOpacity
-            : nonActiveSliceOpacity * 0.3;
+        const emphasis = isEmphasized ? activeSliceOpacity : nonActiveSliceOpacity;
 
         const gridOpacity = isEmphasized ? 0.08 : isAdjacent ? 0.03 : 0.01;
         const volume = volumeProfile?.[i];
@@ -495,17 +489,13 @@ export function StkdeSliceStack({
           : hasVolume
             ? thickness / 2 + 0.1
             : 0;
-        const baseMultiplier = opacityMultiplier * sliceOpacity;
+        const baseMultiplier = emphasis * sliceOpacity;
         const slabOpacity = hasVolume
-          ? isActive
-            ? Math.min(0.48, Math.max(0.08, (volume?.opacity ?? 0.18) * baseMultiplier + 0.24 * activeSliceOpacity))
-            : Math.min(0.3, Math.max(0.04, (volume?.opacity ?? 0.18) * baseMultiplier))
+          ? Math.min(0.48, Math.max(0.08, (volume?.opacity ?? 0.18) * baseMultiplier + 0.24 * emphasis))
           : 0;
         const surfaceOpacity = hasVolume
-          ? isActive
-            ? Math.min(0.98, Math.max(0.32, ((volume?.opacity ?? 0.18) + 0.2) * baseMultiplier + 0.24 * activeSliceOpacity))
-            : Math.min(0.75, Math.max(0.04, ((volume?.opacity ?? 0.18) + 0.2) * baseMultiplier))
-          : Math.min(isActive ? 0.85 : 0.7, 0.3 * baseMultiplier + (isActive ? 0.24 * activeSliceOpacity : 0));
+          ? Math.min(0.98, Math.max(0.32, ((volume?.opacity ?? 0.18) + 0.2) * baseMultiplier + 0.24 * emphasis))
+          : Math.min(0.85, 0.3 * baseMultiplier + 0.24 * emphasis);
         const underlayOpacity = hasVolume
           ? Math.max(0.05, surfaceOpacity * (0.26 + (volume?.falloff ?? 0.1)))
           : 0;

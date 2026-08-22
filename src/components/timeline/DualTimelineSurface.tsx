@@ -53,6 +53,7 @@ interface DualTimelineSurfaceProps {
   userWarpOverlayBands: Array<{ id: string; startSec: number; endSec: number; isDebugPreview: boolean }>;
   timeScaleMode: 'linear' | 'adaptive';
   brushRef: React.RefObject<SVGGElement | null>;
+  brushClassName?: string;
   overviewTicks: Date[];
   overviewTickFormat: (date: Date) => string;
   burstWindows: SurfaceBurstWindow[];
@@ -166,6 +167,7 @@ export function DualTimelineSurface(props: DualTimelineSurfaceProps) {
     userWarpOverlayBands,
     timeScaleMode,
     brushRef,
+    brushClassName,
     overviewTicks,
     overviewTickFormat,
     detailDensityMap,
@@ -266,7 +268,7 @@ export function DualTimelineSurface(props: DualTimelineSurfaceProps) {
               const widthSpan = Math.max(1, Math.abs(x1 - x0));
               return <rect key={`overview-user-warp-${slice.id}`} x={left} y={0} width={widthSpan} height={OVERVIEW_HEIGHT} fill={slice.isDebugPreview ? 'rgba(56, 189, 248, 0.16)' : 'rgba(139, 92, 246, 0.15)'} stroke={slice.isDebugPreview ? 'rgba(34, 211, 238, 0.7)' : 'rgba(99, 102, 241, 0.55)'} strokeDasharray={slice.isDebugPreview ? '2 2' : '4 3'} strokeWidth={1} />;
             })}
-            <g ref={brushRef} />
+            <g ref={brushRef} className={brushClassName} />
             <g transform={`translate(0, ${OVERVIEW_HEIGHT})`} className="text-muted-foreground">
               {timeScaleMode === 'adaptive' ? <rect x={0} y={0} width={overviewInnerWidth} height={AXIS_HEIGHT} fill="url(#adaptiveAxisGradient)" /> : null}
               {overviewTicks.map((tick: Date, index: number) => {

@@ -87,6 +87,8 @@ def detect_format(csv_path: str) -> dict:
             'idx_type': header.index('type'),
             'idx_district': header.index('district'),
             'idx_beat': header.index('block'),
+            'idx_lat': None,
+            'idx_lon': None,
             'parse': parse,
         }
 
@@ -102,10 +104,27 @@ def detect_format(csv_path: str) -> dict:
             'idx_type': header.index('Primary Type'),
             'idx_district': header.index('District'),
             'idx_beat': header.index('Beat'),
+            'idx_lat': header.index('Latitude'),
+            'idx_lon': header.index('Longitude'),
             'parse': parse,
         }
 
     raise ValueError(f'Unknown CSV format — header columns: {header[:10]}...')
+
+
+def has_valid_coordinates(row: list[str], fmt: dict) -> bool:
+    """Return whether a record has finite coordinate values."""
+
+    idx_lat = fmt.get('idx_lat')
+    idx_lon = fmt.get('idx_lon')
+    if idx_lat is None or idx_lon is None:
+        return True
+    try:
+        latitude = float(row[idx_lat])
+        longitude = float(row[idx_lon])
+    except (ValueError, IndexError, TypeError):
+        return False
+    return math.isfinite(latitude) and math.isfinite(longitude)
 
 
 # ── Subset anchors (computed from sample) ────────────────────────────
@@ -129,6 +148,8 @@ def determine_anchors(csv_path: str, fmt: dict, sample_n: int = 100_000) -> dict
             rows_seen += 1
             if rows_seen > sample_n:
                 break
+            if not has_valid_coordinates(row, fmt):
+                continue
             try:
                 ts, y, m, d = fmt['parse'](row[fmt['idx_date']])
             except (ValueError, IndexError):
@@ -172,6 +193,7 @@ def load_subsets(csv_path: str, fmt: dict, anchors: dict,
     }
 
     total = 0
+    invalid_coordinates = 0
     y_anchor = anchors['year']
     m_anchor = anchors['month']
     d_anchor = anchors['day']
@@ -190,6 +212,9 @@ def load_subsets(csv_path: str, fmt: dict, anchors: dict,
             total += 1
             if progress and total % 500_000 == 0:
                 print(f'    ... {total:,} rows processed', flush=True)
+            if not has_valid_coordinates(row, fmt):
+                invalid_coordinates += 1
+                continue
             try:
                 ts, y, m, d = parse(row[idx_d])
             except (ValueError, IndexError):
@@ -220,7 +245,7 @@ def load_subsets(csv_path: str, fmt: dict, anchors: dict,
         arr.sort()
         subsets[key] = arr
 
-    return subsets, total
+    return subsets, total, invalid_coordinates
 
 
 # ── Labelling ─────────────────────────────────────────────────────────
@@ -229,7 +254,7 @@ def labelled_subsets(subsets: dict[str, np.ndarray], anchors: dict) -> dict[str,
     """Rename internal bucket keys to human-readable labels."""
     y, m, d = anchors['year'], anchors['month'], anchors['day']
     return {
-        'Entire dataset':                              subsets['full'],
+        'After cleanup':                               subsets['full'],
         f'Single year ({y})':                          subsets['year'],
         f'Single month ({y}-{m:02d})':                 subsets['month'],
         f'Single day ({y}-{m:02d}-{d:02d})':           subsets['day'],
@@ -384,11 +409,13 @@ def step1_timestamp_quality(csv_path: str, fmt: dict, anchors: dict,
 # ── Step 2: Subset overview ───────────────────────────────────────────
 
 def step2_subset_overview(subsets: dict[str, np.ndarray], total_rows: int,
-                          output_dir: Path):
+                          invalid_coordinates: int, output_dir: Path):
     print('\n' + '=' * 72)
     print('  Step 2: Multi-scale Dataset Selection')
     print('=' * 72)
     print(f'  Total CSV rows processed: {total_rows:,}\n')
+    print(f'  Removed invalid coordinate records: {invalid_coordinates:,}')
+    print(f'  Retained records: {total_rows - invalid_coordinates:,}\n')
     print(f'  {"Subset":60s} {"Events":>10s}')
     print(f'  {"─"*60} {"─"*10}')
     for label, ts in subsets.items():
@@ -429,7 +456,7 @@ def step3_interevent_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
 
     # Short labels for plots
     short = {
-        'Entire dataset': 'Full',
+        'After cleanup': 'Cleaned',
         'Single year (2025)': 'Year',
         'Single month (2025-07)': 'Month',
         'Single day (2025-07-31)': 'Day',
@@ -460,7 +487,7 @@ def step3_interevent_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
 
     # Figure: histograms of inter-event times (log x) for key subsets
     key_labels = [
-        'Entire dataset',
+        'After cleanup',
         next((l for l in subsets if l.startswith('Single year')), None),
         next((l for l in subsets if l.startswith('Single month')), None),
         next((l for l in subsets if l.startswith('Single district')), None),
@@ -468,7 +495,7 @@ def step3_interevent_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
     key_labels = [k for k in key_labels if k]
     hist_files: list[str] = []
     hist_names = {
-        'Entire dataset': 'step3_interevent_hist_full.png',
+        'After cleanup': 'step3_interevent_hist_full.png',
         'Single year (2025)': 'step3_interevent_hist_year.png',
         'Single month (2025-07)': 'step3_interevent_hist_month.png',
         'Single district (012)': 'step3_interevent_hist_district.png',
@@ -539,7 +566,7 @@ def step4_density_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
                   f'empty={m["empty_pct"]:>5.1f}%')
 
     # Figures for full dataset
-    full_ts = subsets.get('Entire dataset', np.array([]))
+    full_ts = subsets.get('After cleanup', np.array([]))
     if len(full_ts) >= 2:
         t0, t1 = float(full_ts[0]), float(full_ts[-1])
 
@@ -724,15 +751,17 @@ def main():
 
     # Stream and collect subsets
     print('\n  Streaming CSV to build subsets ...')
-    subsets_raw, total_rows = load_subsets(args.csv_path, fmt, anchors)
+    subsets_raw, total_rows, invalid_coordinates = load_subsets(args.csv_path, fmt, anchors)
     subsets = labelled_subsets(subsets_raw, anchors)
     print(f'  Processed {total_rows:,} rows.')
+    print(f'  Removed {invalid_coordinates:,} records with invalid coordinate values.')
+    print(f'  Retained {total_rows - invalid_coordinates:,} records after cleanup.')
 
     # ── Step 1 ──
     step1_timestamp_quality(args.csv_path, fmt, anchors, total_rows, output_dir)
 
     # ── Step 2 ──
-    step2_subset_overview(subsets, total_rows, output_dir)
+    step2_subset_overview(subsets, total_rows, invalid_coordinates, output_dir)
 
     # ── Step 3 ──
     interevent_results = step3_interevent_analysis(subsets, output_dir)
