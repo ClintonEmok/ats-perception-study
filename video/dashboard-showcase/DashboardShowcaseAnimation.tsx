@@ -51,10 +51,10 @@ function DashboardSurface({
   const entrance = spring({
     frame: frame - enterAt,
     fps,
-    durationInFrames: 38,
-    config: { damping: 20, stiffness: 140 },
+    durationInFrames: 42,
+    config: { damping: 22, stiffness: 130 },
   });
-  const float = Math.sin((frame - enterAt) / 24) * 4 * (1 - assembly);
+  const float = Math.sin((frame - enterAt) / 28) * 4 * (1 - assembly);
 
   const style: CSSProperties = {
     position: 'absolute',
@@ -62,10 +62,10 @@ function DashboardSurface({
     top: mix(isolated.y, assembled.y, assembly) + float,
     width: mix(isolated.width, assembled.width, assembly),
     height: mix(isolated.height, assembled.height, assembly),
-    border: '1.5px solid rgba(15, 23, 42, 0.14)',
+    border: '1.5px solid rgba(15, 23, 42, 0.13)',
     borderRadius: mix(16, 10, assembly),
     background: '#ffffff',
-    boxShadow: `0 ${mix(24, 8, assembly)}px ${mix(60, 24, assembly)}px rgba(15, 23, 42, ${mix(0.12, 0.06, assembly)})`,
+    boxShadow: `0 ${mix(28, 8, assembly)}px ${mix(70, 24, assembly)}px rgba(15, 23, 42, ${mix(0.13, 0.05, assembly)})`,
     overflow: 'visible',
     opacity: entrance * opacity,
     transform: `translateY(${(1 - entrance) * 70}px) scale(${0.92 + entrance * 0.08}) rotate(${mix(isolated.rotate, assembled.rotate, assembly)}deg)`,
@@ -73,7 +73,7 @@ function DashboardSurface({
     fontFamily: FONT_FAMILY,
   };
 
-  const labelOpacity = interpolate(assembly, [0, 0.5], [1, 0], clamp);
+  const labelOpacity = interpolate(assembly, [0, 0.45], [1, 0], clamp);
 
   return (
     <div style={style}>
@@ -83,7 +83,7 @@ function DashboardSurface({
           style={{
             height: 38,
             borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
-            background: 'rgba(15, 23, 42, 0.025)',
+            background: 'rgba(15, 23, 42, 0.02)',
             padding: '0 14px',
             display: 'flex',
             alignItems: 'center',
@@ -104,7 +104,7 @@ function DashboardSurface({
         <div style={{ height: 'calc(100% - 38px)' }}>{children}</div>
       </div>
 
-      {/* Initial Floating Role Callout (Disappears on assembly) */}
+      {/* Floating Role Label during isolated entrance */}
       <div
         style={{
           position: 'absolute',
@@ -130,34 +130,40 @@ export function DashboardShowcaseAnimation() {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Animation Choreography
+  // 1. Initial Title Card
   const titleIn = spring({ frame, fps, durationInFrames: 45, config: { damping: 200 } });
   const titleOut = interpolate(frame, [60, 95], [1, 0], clamp);
 
-  // 1. Assembly into coordinated dashboard (Frames 100 to 220 / 3.3s to 7.3s)
+  // 2. Assembly into coordinated dashboard (Frames 100 to 220 / 3.3s to 7.3s)
   const assembly = interpolate(frame, [100, 220], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
 
-  // 2. Brush temporal selection (Frames 230 to 330 / 7.6s to 11.0s)
+  // 3. Brush temporal selection on Thursday 31 July (Frames 230 to 330 / 7.6s to 11.0s)
   const selection = interpolate(frame, [230, 330], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
 
-  // 3. Switch between 2D Map and 3D Space-Time Cube (Frames 335 to 400 / 11.1s to 13.3s)
+  // 4. Viewport switch from 2D Map to 3D Space-Time Cube (Frames 335 to 400 / 11.1s to 13.3s)
   const toggle = interpolate(frame, [335, 400], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
 
-  // 4. Adaptive Visual Allocation Activation (Frames 410 to 500 / 13.6s to 16.6s)
+  // 5. Adaptive Visual Allocation Activation (Frames 410 to 500 / 13.6s to 16.6s)
   const warpProgress = interpolate(frame, [410, 500], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
   const multiplier = interpolate(warpProgress, [0, 1], [1.0, 2.5]);
+
+  // 6. Smooth 3D Camera Orbit Sweep throughout the video
+  const cameraProgress = interpolate(frame, [0, 520], [0, 1], {
+    ...clamp,
+    easing: Easing.inOut(Easing.cubic),
+  });
 
   const cubeIsActive = toggle > 0.5;
   const mapAssemblyOpacity =
@@ -166,7 +172,7 @@ export function DashboardShowcaseAnimation() {
     interpolate(assembly, [0, 0.45, 0.9, 1], [1, 1, 0, 0], clamp) + toggle;
   const dashboardChrome = interpolate(assembly, [0.5, 1], [0, 1], clamp);
 
-  // Dynamic Narrative Captions
+  // Dynamic Floating Captions
   const caption1 = interpolate(frame, [110, 140, 200, 225], [0, 1, 1, 0], clamp);
   const caption2 = interpolate(frame, [235, 260, 315, 335], [0, 1, 1, 0], clamp);
   const caption3 = interpolate(frame, [415, 435, 490, 515], [0, 1, 1, 0], clamp);
@@ -182,7 +188,7 @@ export function DashboardShowcaseAnimation() {
       }}
     >
       {/* ---------------------------------------------------- */}
-      {/* 1. INITIAL TITLE CARD (Fades in, then clears out)   */}
+      {/* 1. INITIAL TITLE CARD                                */}
       {/* ---------------------------------------------------- */}
       <div
         style={{
@@ -352,6 +358,7 @@ export function DashboardShowcaseAnimation() {
           selectionProgress={selection}
           warpProgress={warpProgress}
           multiplier={multiplier}
+          cameraProgress={cameraProgress}
         />
       </DashboardSurface>
 
