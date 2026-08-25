@@ -116,7 +116,7 @@ export function DashboardShowcaseAnimation() {
           {[
             ['PRIMARY VIEW', cubeIsActive ? '3D STKDE DENSITY SLICES' : '2D GEOGRAPHIC MAP'],
             ['SYNC STATUS', 'SYNCHRONIZED'],
-            ['DATASET', '5,152 CHICAGO RECORDS'],
+            ['DATASET', 'CHICAGO CRIME DATA'],
           ].map(([label, value], index) => (
             <div
               key={label}
@@ -314,7 +314,7 @@ export function DashboardShowcaseAnimation() {
         [
           badge1,
           '1. SPATIAL FOUNDATION',
-          'Chicago Basemap & 5,152 Geocoded Incident Hotspots',
+          'Chicago Basemap & Geocoded Incident Hotspots',
           '#2563eb',
         ],
         [
