@@ -7,6 +7,22 @@ import {
   SELECTED_HOURLY_COUNTS,
 } from '../real/data';
 
+// Canonical constants copied directly from DualTimelineSurface.tsx
+const OVERVIEW_HEIGHT = 42;
+const DETAIL_HEIGHT = 60;
+const AXIS_HEIGHT = 28;
+
+const DENSITY_COLOR_STOPS = [
+  { offset: 0, color: [34, 76, 255] as [number, number, number] },
+  { offset: 0.5, color: [0, 212, 255] as [number, number, number] },
+  { offset: 0.8, color: [255, 214, 64] as [number, number, number] },
+  { offset: 1, color: [255, 64, 96] as [number, number, number] },
+];
+const TIME_CURSOR_COLOR = '#10b981';
+
+const OVERVIEW_MARGIN = { top: 8, right: 12, bottom: 10, left: 12 };
+const DETAIL_MARGIN = { top: 8, right: 12, bottom: 12, left: 12 };
+
 const DAY_LABELS = ['Mon 28', 'Tue 29', 'Wed 30', 'Thu 31', 'Fri 01', 'Sat 02', 'Sun 03'];
 
 export function RealDashboardTimeline({
@@ -22,15 +38,40 @@ export function RealDashboardTimeline({
   highlightDensity?: boolean;
   highlightDetail?: boolean;
 }) {
+  const width = 1600;
+  const overviewInnerWidth = width - OVERVIEW_MARGIN.left - OVERVIEW_MARGIN.right;
+  const detailInnerWidth = width - DETAIL_MARGIN.left - DETAIL_MARGIN.right;
+
   const hourLayout = buildAdaptiveHourLayout(warpProgress, multiplier);
 
-  const brushX = (3 / 7) * 100;
-  const brushWidth = (1 / 7) * 100;
-  const currentBrushWidth = interpolate(selectionProgress, [0, 1], [100, brushWidth]);
-  const currentBrushX = interpolate(selectionProgress, [0, 1], [0, brushX]);
+  // Brush window animation (Mon-Sun -> Thu 31 Jul)
+  const fullWidth = overviewInnerWidth;
+  const thuWidth = overviewInnerWidth / 7;
+  const thuLeft = (3 / 7) * overviewInnerWidth;
+
+  const currentBrushLeft = interpolate(selectionProgress, [0, 1], [0, thuLeft]);
+  const currentBrushWidth = interpolate(selectionProgress, [0, 1], [fullWidth, thuWidth]);
 
   const maxDaily = Math.max(...DAILY_COUNTS);
   const maxHourly = Math.max(...SELECTED_HOURLY_COUNTS);
+
+  // Time cursor position (scans across the 24h detail timeline)
+  const cursorHour = interpolate(warpProgress, [0, 0.5, 1], [18, 18.5, 18.5]);
+  const cursorIndex = Math.floor(cursorHour);
+  const cursorFraction = cursorHour - cursorIndex;
+  const cursorNormalized = hourLayout[cursorIndex].start + cursorFraction * hourLayout[cursorIndex].width;
+  const cursorX = cursorNormalized * detailInnerWidth;
+
+  // Burst window geometry for Thursday (17:00 - 20:00)
+  const burstStartHour = 17;
+  const burstEndHour = 20;
+  const burstLeft = hourLayout[burstStartHour].start * detailInnerWidth;
+  const burstRight = (hourLayout[burstEndHour].start + hourLayout[burstEndHour].width) * detailInnerWidth;
+  const burstWidth = burstRight - burstLeft;
+
+  const densityGradientCss = `linear-gradient(90deg, ${DENSITY_COLOR_STOPS.map(
+    (stop) => `rgb(${stop.color.join(',')}) ${Math.round(stop.offset * 100)}%`
+  ).join(', ')})`;
 
   return (
     <div
@@ -39,270 +80,451 @@ export function RealDashboardTimeline({
         height: '100%',
         background: '#090d16',
         color: '#f8fafc',
-        padding: '14px 20px',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
+        padding: '10px 0',
       }}
     >
-      {/* ---------------------------------------------------- */}
-      {/* 1. OVERVIEW TIMELINE (7-Day Density Strip)           */}
-      {/* ---------------------------------------------------- */}
       <div
         style={{
-          border: highlightDensity
-            ? '1.5px solid #38bdf8'
-            : '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 10,
-          padding: '10px 14px',
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(12px)',
-          boxShadow: highlightDensity
-            ? '0 0 24px rgba(56, 189, 248, 0.25)'
-            : '0 4px 16px rgba(0, 0, 0, 0.2)',
-          transition: 'all 0.2s ease',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          width: '100%',
         }}
       >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: 99, background: '#38bdf8' }} />
-            <span style={{ fontSize: 9.5, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
-              OVERVIEW TEMPORAL RESOLUTION (7 DAYS · DENSITY STRIP)
-            </span>
-          </div>
-          <span style={{ fontSize: 10, color: '#38bdf8', fontFamily: MONO_FONT, fontWeight: 750 }}>
-            {selectionProgress > 0.5 ? 'BRUSH LOCKED: THU 31 JUL (723 INCIDENTS)' : 'DRAGGABLE BRUSH WINDOW'}
-          </span>
-        </div>
-
-        {/* 7-Day Density Bars & Continuous Gradient */}
-        <div style={{ position: 'relative', height: 44, width: '100%' }}>
-          {/* Continuous STKDE 1D Density Heat Strip (Background) */}
+        {/* ============================================================ */}
+        {/* 1. OVERVIEW TIMELINE SURFACE (Matching DualTimelineSurface)   */}
+        {/* ============================================================ */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            border: highlightDensity
+              ? '1.5px solid #38bdf8'
+              : '1px solid transparent',
+            borderRadius: 8,
+            boxShadow: highlightDensity
+              ? '0 0 24px rgba(56, 189, 248, 0.25)'
+              : 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {/* Sparse -> Dense Legend & Continuous Density Strip */}
           <div
             style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 6,
-              borderRadius: 3,
-              background: 'linear-gradient(90deg, #224cff 0%, #00d4ff 35%, #ffd640 65%, #ff4060 100%)',
-              opacity: 0.85,
-            }}
-          />
-
-          {/* Interactive Brush Selection Window with Resize Grips */}
-          <div
-            style={{
-              position: 'absolute',
-              left: `${currentBrushX}%`,
-              width: `${currentBrushWidth}%`,
-              top: -2,
-              bottom: -2,
-              border: '2px solid #38bdf8',
-              borderRadius: 6,
-              background: 'rgba(56, 189, 248, 0.16)',
-              boxShadow: '0 0 18px rgba(56, 189, 248, 0.4)',
-              zIndex: 10,
-              transition: 'all 0.1s ease',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '0 2px',
+              padding: '0 8px 4px 8px',
+              marginLeft: OVERVIEW_MARGIN.left,
+              marginRight: OVERVIEW_MARGIN.right,
             }}
           >
-            {/* Left Grip Handle */}
-            <div style={{ width: 4, height: 16, background: '#38bdf8', borderRadius: 2, opacity: 0.8 }} />
-            {/* Right Grip Handle */}
-            <div style={{ width: 4, height: 16, background: '#38bdf8', borderRadius: 2, opacity: 0.8 }} />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: 10,
+                color: '#94a3b8',
+                fontFamily: MONO_FONT,
+                marginBottom: 4,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: 99, background: '#38bdf8' }} />
+                <span style={{ fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#e2e8f0' }}>
+                  OVERVIEW TEMPORAL RESOLUTION (7 DAYS · DENSITY STRIP)
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 9.5 }}>Sparse</span>
+                <span
+                  style={{
+                    height: 6,
+                    width: 96,
+                    borderRadius: 3,
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: densityGradientCss,
+                    display: 'inline-block',
+                  }}
+                  aria-hidden="true"
+                />
+                <span style={{ fontSize: 9.5 }}>Dense</span>
+              </div>
+            </div>
+
+            {/* Continuous 1D Density Heat Strip Bar */}
+            <div style={{ position: 'relative', width: '100%', height: 10, borderRadius: 4, overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: densityGradientCss,
+                  opacity: 0.85,
+                }}
+              />
+              {/* Density Strip Selection Box */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  bottom: 0,
+                  left: currentBrushLeft,
+                  width: currentBrushWidth,
+                  borderRadius: 2,
+                  border: '1px solid #38bdf8',
+                  background: 'rgba(56, 189, 248, 0.25)',
+                  boxShadow: '0 0 12px rgba(56, 189, 248, 0.5)',
+                }}
+              />
+            </div>
           </div>
 
-          {/* Daily Histogram Bars */}
-          <div style={{ display: 'flex', height: '100%', width: '100%', gap: 6, alignItems: 'flex-end', paddingBottom: 8 }}>
-            {DAILY_COUNTS.map((count, index) => {
-              const heightPct = Math.max(15, (count / maxDaily) * 100);
-              const isThu = index === 3;
-              return (
-                <div
-                  key={DAY_LABELS[index]}
+          {/* Overview SVG Surface (Histogram Bins + D3 Brush + Axis) */}
+          <svg width={width} height={OVERVIEW_HEIGHT + AXIS_HEIGHT} style={{ display: 'block' }}>
+            <defs>
+              <linearGradient id="overviewAdaptiveAxisGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.04" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.12" />
+              </linearGradient>
+            </defs>
+
+            <g transform={`translate(${OVERVIEW_MARGIN.left},${OVERVIEW_MARGIN.top})`}>
+              {/* Daily Histogram Bins */}
+              {DAILY_COUNTS.map((count, index) => {
+                const dayWidth = overviewInnerWidth / 7;
+                const x0 = index * dayWidth;
+                const barWidth = Math.max(0, dayWidth - 4);
+                const barHeight = (count / maxDaily) * OVERVIEW_HEIGHT;
+                const isThu = index === 3;
+
+                return (
+                  <g key={`overview-bin-${index}`}>
+                    <rect
+                      x={x0 + 2}
+                      y={OVERVIEW_HEIGHT - barHeight}
+                      width={barWidth}
+                      height={barHeight}
+                      rx={3}
+                      fill={isThu ? 'rgba(239, 68, 68, 0.35)' : 'rgba(56, 189, 248, 0.22)'}
+                      stroke={isThu ? 'rgba(239, 68, 68, 0.85)' : 'rgba(56, 189, 248, 0.55)'}
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={x0 + dayWidth / 2}
+                      y={OVERVIEW_HEIGHT - barHeight - 4}
+                      textAnchor="middle"
+                      fontSize={9}
+                      fontWeight={800}
+                      fontFamily={MONO_FONT}
+                      fill={isThu ? '#f87171' : '#94a3b8'}
+                    >
+                      {count}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* D3 Brush Overlay (Exact visual structure from d3-brush) */}
+              <g className="brush">
+                {/* Brush Background Selection Rect */}
+                <rect
+                  className="selection"
+                  x={currentBrushLeft}
+                  y={0}
+                  width={currentBrushWidth}
+                  height={OVERVIEW_HEIGHT}
+                  fill="rgba(56, 189, 248, 0.16)"
+                  stroke="#38bdf8"
+                  strokeWidth={2}
+                  rx={4}
                   style={{
-                    flex: 1,
-                    height: `${heightPct}%`,
+                    filter: 'drop-shadow(0 0 10px rgba(56, 189, 248, 0.4))',
+                  }}
+                />
+                {/* West Resize Handle Grip */}
+                <g transform={`translate(${currentBrushLeft - 4}, 0)`}>
+                  <rect width={8} height={OVERVIEW_HEIGHT} fill="#38bdf8" rx={3} opacity={0.9} />
+                  <line x1={3} y1={14} x2={3} y2={28} stroke="#0f172a" strokeWidth={1.2} />
+                  <line x1={5} y1={14} x2={5} y2={28} stroke="#0f172a" strokeWidth={1.2} />
+                </g>
+                {/* East Resize Handle Grip */}
+                <g transform={`translate(${currentBrushLeft + currentBrushWidth - 4}, 0)`}>
+                  <rect width={8} height={OVERVIEW_HEIGHT} fill="#38bdf8" rx={3} opacity={0.9} />
+                  <line x1={3} y1={14} x2={3} y2={28} stroke="#0f172a" strokeWidth={1.2} />
+                  <line x1={5} y1={14} x2={5} y2={28} stroke="#0f172a" strokeWidth={1.2} />
+                </g>
+              </g>
+
+              {/* Overview Axis & Date Ticks */}
+              <g transform={`translate(0, ${OVERVIEW_HEIGHT})`} className="text-muted-foreground">
+                {DAY_LABELS.map((day, index) => {
+                  const dayWidth = overviewInnerWidth / 7;
+                  const x = index * dayWidth + dayWidth / 2;
+                  const isThu = index === 3;
+
+                  return (
+                    <g key={`overview-tick-${index}`} transform={`translate(${x}, 0)`}>
+                      <line y2={6} stroke={isThu ? '#38bdf8' : 'rgba(255, 255, 255, 0.2)'} strokeWidth={1.2} />
+                      <text
+                        y={16}
+                        textAnchor="middle"
+                        fontSize={10}
+                        fontWeight={isThu ? 850 : 600}
+                        fontFamily={MONO_FONT}
+                        fill={isThu ? '#38bdf8' : '#94a3b8'}
+                      >
+                        {day}
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        {/* ============================================================ */}
+        {/* 2. DETAIL TIMELINE SURFACE (Matching DualTimelineSurface)     */}
+        {/* ============================================================ */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            border: highlightDetail
+              ? '1.5px solid #ef4444'
+              : '1px solid transparent',
+            borderRadius: 8,
+            boxShadow: highlightDetail
+              ? '0 0 24px rgba(239, 68, 68, 0.25)'
+              : 'none',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {/* Detail Header & Density Strip */}
+          <div
+            style={{
+              padding: '0 8px 4px 8px',
+              marginLeft: DETAIL_MARGIN.left,
+              marginRight: DETAIL_MARGIN.right,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: 10,
+                color: '#94a3b8',
+                fontFamily: MONO_FONT,
+                marginBottom: 4,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: 99, background: warpProgress > 0.1 ? '#ef4444' : '#38bdf8' }} />
+                <span style={{ fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#e2e8f0' }}>
+                  DETAIL TEMPORAL RESOLUTION · THURSDAY 31 JULY (24 HOURS)
+                </span>
+                <span
+                  style={{
+                    padding: '2px 6px',
                     borderRadius: 4,
-                    background: isThu
-                      ? 'linear-gradient(180deg, #ef4444, #f59e0b)'
-                      : 'linear-gradient(180deg, #38bdf8, #0284c7)',
-                    opacity: isThu ? 1 : 0.45,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                    paddingTop: 3,
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#f87171',
+                    fontSize: 8.5,
+                    fontWeight: 800,
+                    fontFamily: MONO_FONT,
                   }}
                 >
-                  <span style={{ fontSize: 8.5, fontWeight: 800, color: '#ffffff', fontFamily: MONO_FONT }}>
-                    {count}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                  BURST: 17:00 – 20:00
+                </span>
+              </div>
 
-        {/* Day Labels */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          {DAY_LABELS.map((day, idx) => (
-            <span
-              key={day}
-              style={{
-                flex: 1,
-                textAlign: 'center',
-                fontSize: 9,
-                color: idx === 3 ? '#38bdf8' : '#64748b',
-                fontWeight: idx === 3 ? 850 : 600,
-                fontFamily: MONO_FONT,
-              }}
-            >
-              {day}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ---------------------------------------------------- */}
-      {/* 2. DETAIL TIMELINE (24-Hour Adaptive Resolution)      */}
-      {/* ---------------------------------------------------- */}
-      <div
-        style={{
-          border: highlightDetail
-            ? '1.5px solid #38bdf8'
-            : '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 10,
-          padding: '10px 14px',
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(12px)',
-          boxShadow: highlightDetail
-            ? '0 0 24px rgba(56, 189, 248, 0.25)'
-            : '0 4px 16px rgba(0, 0, 0, 0.2)',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: 99, background: warpProgress > 0.1 ? '#ef4444' : '#38bdf8' }} />
-            <span style={{ fontSize: 9.5, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
-              DETAIL TEMPORAL RESOLUTION · THURSDAY 31 JULY (24 HOURS)
-            </span>
-            <span
-              style={{
-                padding: '2px 6px',
-                borderRadius: 4,
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#f87171',
-                fontSize: 8.5,
-                fontWeight: 800,
-                fontFamily: MONO_FONT,
-              }}
-            >
-              BURST: 17:00 – 20:00
-            </span>
-          </div>
-          <span
-            style={{
-              fontSize: 10,
-              fontFamily: MONO_FONT,
-              fontWeight: 800,
-              color: warpProgress > 0.1 ? '#ef4444' : '#38bdf8',
-            }}
-          >
-            {warpProgress > 0.1
-              ? `VISUAL ALLOCATION ACTIVE (${multiplier.toFixed(1)}× EXPANSION)`
-              : 'UNIFORM 1-HOUR BINS'}
-          </span>
-        </div>
-
-        {/* 24-Hour Adaptive Bins Layout */}
-        <div style={{ position: 'relative', height: 44, width: '100%', display: 'flex', gap: 2 }}>
-          {/* Continuous Adaptive Density Heat Strip (Bottom) */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 5,
-              borderRadius: 3,
-              background: 'linear-gradient(90deg, #224cff 0%, #00d4ff 45%, #ffd640 70%, #ff4060 85%, #00d4ff 100%)',
-              opacity: 0.85,
-            }}
-          />
-
-          {hourLayout.map((hourBin, idx) => {
-            const count = SELECTED_HOURLY_COUNTS[idx];
-            const heightPct = Math.max(15, (count / maxHourly) * 100);
-            const isBurst = idx >= 17 && idx <= 20;
-
-            return (
-              <div
-                key={`hour-${idx}`}
+              <span
                 style={{
-                  width: `${hourBin.width * 100}%`,
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-end',
-                  transition: 'width 0.1s ease',
-                  paddingBottom: 7,
+                  fontSize: 10,
+                  fontFamily: MONO_FONT,
+                  fontWeight: 800,
+                  color: warpProgress > 0.1 ? '#ef4444' : '#38bdf8',
                 }}
               >
-                <div
-                  style={{
-                    height: `${heightPct}%`,
-                    borderRadius: 3,
-                    background: isBurst
-                      ? 'linear-gradient(180deg, #ef4444, #f59e0b)'
-                      : 'linear-gradient(180deg, #38bdf8, #0284c7)',
-                    opacity: isBurst ? 1 : 0.55,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                    paddingTop: 2,
-                    boxShadow: isBurst ? '0 0 10px rgba(239, 68, 68, 0.4)' : 'none',
-                  }}
-                >
-                  {hourBin.width > 0.035 ? (
-                    <span style={{ fontSize: 8, fontWeight: 850, color: '#ffffff', fontFamily: MONO_FONT }}>
-                      {count}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                {warpProgress > 0.1
+                  ? `VISUAL ALLOCATION ACTIVE (${multiplier.toFixed(1)}× EXPANSION)`
+                  : 'UNIFORM 1-HOUR BINS'}
+              </span>
+            </div>
 
-        {/* Hour Ticks */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          {[0, 4, 8, 12, 16, 18, 20, 24].map((h) => (
-            <span
-              key={`tick-${h}`}
-              style={{
-                fontSize: 8.5,
-                color: h >= 17 && h <= 20 ? '#ef4444' : '#64748b',
-                fontWeight: h >= 17 && h <= 20 ? 850 : 600,
-                fontFamily: MONO_FONT,
-              }}
-            >
-              {String(h).padStart(2, '0')}:00
-            </span>
-          ))}
+            {/* Continuous Adaptive Density Heat Strip Bar */}
+            <div style={{ position: 'relative', width: '100%', height: 10, borderRadius: 4, overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #224cff 0%, #00d4ff 45%, #ffd640 70%, #ff4060 85%, #00d4ff 100%)',
+                  opacity: 0.85,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Detail SVG Surface (Adaptive Hourly Bins + Slices + Time Cursor + Axis) */}
+          <svg width={width} height={DETAIL_HEIGHT + AXIS_HEIGHT} style={{ display: 'block' }}>
+            <defs>
+              <filter id="timeCursorGlow" x="-50%" y="-10%" width="200%" height="120%">
+                <feDropShadow dx="0" dy="0" stdDeviation="1.4" floodColor={TIME_CURSOR_COLOR} floodOpacity="0.75" />
+              </filter>
+              <pattern id="sliceOverlapHatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(35)">
+                <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(148, 163, 184, 0.5)" strokeWidth="2" />
+              </pattern>
+            </defs>
+
+            <g transform={`translate(${DETAIL_MARGIN.left},${DETAIL_MARGIN.top})`}>
+              {/* Background Interactive Rect */}
+              <rect
+                width={detailInnerWidth}
+                height={DETAIL_HEIGHT}
+                fill="transparent"
+                className="cursor-crosshair"
+              />
+
+              {/* 24-Hour Adaptive Hourly Bins */}
+              {hourLayout.map((hourBin, idx) => {
+                const count = SELECTED_HOURLY_COUNTS[idx];
+                const x0 = hourBin.start * detailInnerWidth;
+                const barWidth = Math.max(0, hourBin.width * detailInnerWidth - 2);
+                const barHeight = (count / maxHourly) * DETAIL_HEIGHT;
+                const isBurst = idx >= 17 && idx <= 20;
+
+                return (
+                  <g key={`detail-bin-${idx}`}>
+                    <rect
+                      x={x0 + 1}
+                      y={DETAIL_HEIGHT - barHeight}
+                      width={barWidth}
+                      height={barHeight}
+                      rx={2}
+                      fill={isBurst ? 'rgba(239, 68, 68, 0.35)' : 'rgba(56, 189, 248, 0.2)'}
+                      stroke={isBurst ? 'rgba(239, 68, 68, 0.9)' : 'rgba(56, 189, 248, 0.5)'}
+                      strokeWidth={1}
+                      style={{
+                        boxShadow: isBurst ? '0 0 12px rgba(239, 68, 68, 0.5)' : 'none',
+                      }}
+                    />
+                    {hourBin.width > 0.032 ? (
+                      <text
+                        x={x0 + (hourBin.width * detailInnerWidth) / 2}
+                        y={DETAIL_HEIGHT - barHeight - 4}
+                        textAnchor="middle"
+                        fontSize={8.5}
+                        fontWeight={850}
+                        fontFamily={MONO_FONT}
+                        fill={isBurst ? '#f87171' : '#cbd5e1'}
+                      >
+                        {count}
+                      </text>
+                    ) : null}
+                  </g>
+                );
+              })}
+
+              {/* Burst Slice Geometry Band (17:00 - 20:00) */}
+              <g key="burst-slice-geometry">
+                <rect
+                  x={burstLeft}
+                  y={2}
+                  width={burstWidth}
+                  height={DETAIL_HEIGHT - 4}
+                  rx={4}
+                  fill="rgba(251, 146, 60, 0.18)"
+                  stroke="rgba(251, 146, 60, 0.85)"
+                  strokeWidth={2}
+                  strokeDasharray={warpProgress > 0.1 ? undefined : '5 3'}
+                  opacity={0.8}
+                />
+                {warpProgress > 0.1 ? (
+                  <rect
+                    x={burstLeft}
+                    y={1}
+                    width={burstWidth}
+                    height={DETAIL_HEIGHT - 2}
+                    rx={4}
+                    fill="none"
+                    stroke="rgba(253, 186, 116, 0.95)"
+                    strokeWidth={2.4}
+                    opacity={0.9}
+                  />
+                ) : null}
+              </g>
+
+              {/* Time Cursor Line & Head Indicator (Exact matching DualTimelineSurface) */}
+              <g key="time-cursor-indicator">
+                <line
+                  x1={cursorX}
+                  x2={cursorX}
+                  y1={0}
+                  y2={DETAIL_HEIGHT}
+                  stroke={TIME_CURSOR_COLOR}
+                  strokeWidth={2}
+                  filter="url(#timeCursorGlow)"
+                />
+                <circle
+                  cx={cursorX}
+                  cy={0}
+                  r={8}
+                  fill="rgba(16,185,129,0.2)"
+                  stroke="rgba(16,185,129,0.45)"
+                  strokeWidth={1}
+                />
+                <circle
+                  cx={cursorX}
+                  cy={0}
+                  r={5.5}
+                  fill={TIME_CURSOR_COLOR}
+                  stroke="rgba(255,255,255,0.95)"
+                  strokeWidth={2}
+                  filter="url(#timeCursorGlow)"
+                />
+              </g>
+
+              {/* Detail Axis & Hour Ticks */}
+              <g transform={`translate(0, ${DETAIL_HEIGHT})`} className="text-muted-foreground">
+                {[0, 2, 4, 6, 8, 10, 12, 14, 16, 17, 18, 19, 20, 22, 24].map((hour) => {
+                  const localPos =
+                    hour === 24
+                      ? 1
+                      : hourLayout[hour].start;
+                  const x = localPos * detailInnerWidth;
+                  const isBurstTick = hour >= 17 && hour <= 20;
+
+                  return (
+                    <g key={`detail-tick-${hour}`} transform={`translate(${x}, 0)`}>
+                      <line
+                        y2={isBurstTick ? 8 : 5}
+                        stroke={isBurstTick ? '#ef4444' : 'rgba(255, 255, 255, 0.25)'}
+                        strokeWidth={isBurstTick ? 1.6 : 1}
+                      />
+                      <text
+                        y={16}
+                        textAnchor="middle"
+                        fontSize={9}
+                        fontWeight={isBurstTick ? 900 : 600}
+                        fontFamily={MONO_FONT}
+                        fill={isBurstTick ? '#ef4444' : '#94a3b8'}
+                      >
+                        {String(hour).padStart(2, '0')}:00
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            </g>
+          </svg>
         </div>
       </div>
     </div>
   );
 }
-
