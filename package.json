@@ -22,6 +22,8 @@
     "video:still-equal-time": "remotion still video/index.ts EqualTimeConcept output/equal-time-concept/equal-time-concept.png --frame=270",
     "video:render-density-approaches": "remotion render video/index.ts DensityApproachesConcept output/density-approaches/density-approaches.mp4 --gl=angle",
     "video:still-density-approaches": "remotion still video/index.ts DensityApproachesConcept output/density-approaches/density-approaches-summary.png --frame=600",
+    "video:render-showcase": "remotion render video/index.ts DashboardShowcase output/dashboard-showcase/dashboard-showcase.mp4 --gl=angle",
+    "video:still-showcase": "remotion still video/index.ts DashboardShowcase output/dashboard-showcase/dashboard-showcase-summary.png --frame=520",
     "video:render-visual-allocation": "remotion render video/index.ts VisualAllocationConcept output/visual-allocation/visual-allocation.mp4 --gl=angle",
     "video:render-wang": "remotion render video/index.ts WangTimeslicing output/wang-timeslicing/wang-timeslicing.mp4 --gl=angle",
     "video:render-wang-graphs": "remotion render video/index.ts WangTimeslicingWithGraphs output/wang-timeslicing/wang-timeslicing-graphs.mp4 --gl=angle",

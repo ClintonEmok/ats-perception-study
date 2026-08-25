@@ -9,6 +9,7 @@ import {
 } from './ConstructingRealDashboard';
 import { CubeExplainer, TimelineExplainer } from './ComponentExplainers';
 import { CubeEvolutionExplainer } from './CubeEvolutionExplainer';
+import { DashboardShowcaseAnimation } from './dashboard-showcase';
 import { DensityApproachesAnimation } from './density-approaches';
 import { EqualTimeAnimation } from './equal-time-concept';
 import { VisualAllocationAnimation } from './visual-allocation';
@@ -17,6 +18,14 @@ import { WangAnimation, WangGraphAnimation } from './wang-timeslicing';
 export const RemotionRoot = () => {
   return (
     <>
+      <Composition
+        id="DashboardShowcase"
+        component={DashboardShowcaseAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="WangTimeslicing"
         component={WangAnimation}
