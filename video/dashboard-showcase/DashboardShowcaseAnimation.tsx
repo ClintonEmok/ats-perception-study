@@ -30,9 +30,8 @@ export function DashboardShowcaseAnimation() {
   // 0:49 - 0:55 (1470 - 1650): Act 6: Adaptive Visual Allocation Climax (2.5x Z-expansion)
   // 0:55 - 1:00 (1650 - 1800): Act 7: Final Freeze Frame Hold (Last 5s)
 
-  // 1. Act 1: 2D Map reveal & hotspot pulse
+  // 1. Act 1: 2D Map reveal
   const mapPointsReveal = interpolate(frame, [0, 120], [0.3, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
-  const mapHotspotsActive = frame >= 90 && frame < 270;
 
   // Crossfade between 2D Map and 3D Cube in Primary Viewport (Frames 270 to 330)
   const cubeFade = interpolate(frame, [270, 330], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
@@ -205,7 +204,6 @@ export function DashboardShowcaseAnimation() {
             <ShowcaseMap
               selectionProgress={brushProgress}
               revealProgress={mapPointsReveal}
-              highlightHotspots={mapHotspotsActive}
             />
           </div>
 

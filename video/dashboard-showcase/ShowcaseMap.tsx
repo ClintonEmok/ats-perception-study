@@ -77,21 +77,12 @@ const pointPaths = Array.from(new Set(REAL_WEEK_RECORDS.map((r) => displayType(r
   };
 });
 
-// Projected Hotspot centroids
-const HOTSPOTS = [
-  { name: 'THE LOOP', ...(() => { const [x, y] = MAPLIBRE_VIEWPORT.project([-87.6298, 41.8781]); return { x, y }; })(), r: 42 },
-  { name: 'AUSTIN', ...(() => { const [x, y] = MAPLIBRE_VIEWPORT.project([-87.765, 41.89]); return { x, y }; })(), r: 38 },
-  { name: 'NEAR NORTH SIDE', ...(() => { const [x, y] = MAPLIBRE_VIEWPORT.project([-87.635, 41.898]); return { x, y }; })(), r: 35 },
-];
-
 export function ShowcaseMap({
   selectionProgress = 0,
   revealProgress = 1,
-  highlightHotspots = false,
 }: {
   selectionProgress?: number;
   revealProgress?: number;
-  highlightHotspots?: boolean;
 }) {
   const selectedOpacity = interpolate(selectionProgress, [0.15, 0.7], [0.55, 1], {
     extrapolateLeft: 'clamp',
@@ -128,7 +119,7 @@ export function ShowcaseMap({
         }}
       />
 
-      {/* 2. SVG Vector Overlays: Boundaries, Hotspots & 5,152 Crime Incidents */}
+      {/* 2. SVG Vector Overlays: Boundaries & Crime Incidents */}
       <svg
         width="100%"
         height="100%"
@@ -142,54 +133,6 @@ export function ShowcaseMap({
             <path key={area.number} d={area.path} />
           ))}
         </g>
-
-        {/* Hotspot Pulse Rings (Chapter 1 Spatial Foundation) */}
-        {highlightHotspots ? (
-          <g>
-            {HOTSPOTS.map((hotspot) => (
-              <g key={hotspot.name}>
-                <circle
-                  cx={hotspot.x}
-                  cy={hotspot.y}
-                  r={hotspot.r}
-                  fill="rgba(37, 99, 235, 0.12)"
-                  stroke="#2563eb"
-                  strokeWidth="2.2"
-                  strokeDasharray="4 4"
-                />
-                <circle
-                  cx={hotspot.x}
-                  cy={hotspot.y}
-                  r={hotspot.r + 14}
-                  fill="rgba(37, 99, 235, 0.04)"
-                  stroke="#2563eb"
-                  strokeWidth="1"
-                  opacity="0.6"
-                />
-                <rect
-                  x={hotspot.x - 48}
-                  y={hotspot.y - hotspot.r - 20}
-                  width="96"
-                  height="16"
-                  rx="4"
-                  fill="rgba(15, 23, 42, 0.88)"
-                />
-                <text
-                  x={hotspot.x}
-                  y={hotspot.y - hotspot.r - 9}
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize="8.5"
-                  fontWeight="850"
-                  fontFamily={MONO_FONT}
-                  letterSpacing="0.8"
-                >
-                  {hotspot.name}
-                </text>
-              </g>
-            ))}
-          </g>
-        ) : null}
 
         {/* Precomputed Static Incident Points (Smooth WebGL/GPU Pipeline) */}
         {pointPaths.map(({ type, contextPath, selectedPath }) => (
