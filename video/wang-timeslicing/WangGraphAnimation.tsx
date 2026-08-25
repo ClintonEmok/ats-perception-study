@@ -12,7 +12,7 @@ import {
   DARK_TEXT,
   MUTED_TEXT,
   TIMELINE_WIDTH,
-  TIMELINE_X,
+  TUE_RED,
   UNIFORM_DURATIONS,
   UNIFORM_TIME_LABELS,
   WANG_DURATIONS,
@@ -57,7 +57,7 @@ export const WangGraphAnimation: React.FC = () => {
         justifyContent: 'flex-start',
         position: 'relative',
         fontFamily: FONT_FAMILY,
-        paddingTop: 50,
+        padding: '36px 80px',
       }}
     >
       {/* ---------------------------------------------------- */}
@@ -65,35 +65,55 @@ export const WangGraphAnimation: React.FC = () => {
       {/* ---------------------------------------------------- */}
       <div
         style={{
-          textAlign: 'center',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           opacity: titleOpacity,
           transform: `translateY(${titleY}px)`,
           zIndex: 20,
-          marginBottom: 24,
+          marginBottom: 16,
+          borderBottom: '1.5px solid rgba(15, 23, 42, 0.08)',
+          paddingBottom: 14,
         }}
       >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 40,
-            fontWeight: 900,
-            color: DARK_TEXT,
-            letterSpacing: 2.5,
-            textTransform: 'uppercase',
-          }}
-        >
-          NON-UNIFORM TIMESLICING
-        </h1>
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 34,
+              fontWeight: 900,
+              color: DARK_TEXT,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+            }}
+          >
+            NON-UNIFORM TIMESLICING
+          </h1>
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 15,
+              fontWeight: 650,
+              color: MUTED_TEXT,
+            }}
+          >
+            Balancing visual complexity across dynamic graph snapshots
+          </div>
+        </div>
+
         <div
           style={{
-            marginTop: 6,
-            fontSize: 17,
-            fontWeight: 700,
-            color: MUTED_TEXT,
-            letterSpacing: 1.2,
+            fontSize: 16,
+            fontWeight: 800,
+            color: DARK_TEXT,
+            fontFamily: MONO_FONT,
+            backgroundColor: 'rgba(15, 23, 42, 0.06)',
+            padding: '6px 14px',
+            borderRadius: 8,
           }}
         >
-          Wang et al. (2019) · Dynamic Graph Snapshots
+          Wang et al. (2019) · IEEE VIS
         </div>
       </div>
 
@@ -104,20 +124,20 @@ export const WangGraphAnimation: React.FC = () => {
         style={{
           width: TIMELINE_WIDTH,
           zIndex: 10,
-          marginBottom: 30,
+          marginBottom: 20,
         }}
       >
         <WangTimeline
           progress={transformationProgress}
           width={TIMELINE_WIDTH}
-          height={180}
-          baselineY={100}
+          height={140}
+          baselineY={70}
           eventDotSize={20}
         />
       </div>
 
       {/* ---------------------------------------------------- */}
-      {/* 3. RESULTING 5 DYNAMIC GRAPH SNAPSHOTS               */}
+      {/* 3. RESULTING 5 LARGE DYNAMIC GRAPH SNAPSHOTS         */}
       {/* ---------------------------------------------------- */}
       <div
         style={{
@@ -128,47 +148,63 @@ export const WangGraphAnimation: React.FC = () => {
           alignItems: 'center',
         }}
       >
-        {/* Subheader */}
+        {/* Subheader Callout */}
         <div
           style={{
+            width: '100%',
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            marginBottom: 16,
+            justifyContent: 'space-between',
+            marginBottom: 14,
           }}
         >
-          <span
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 850,
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+                color: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                padding: '4px 10px',
+                borderRadius: 6,
+              }}
+            >
+              GRAPH SNAPSHOTS (SMALL MULTIPLES)
+            </span>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 650,
+                color: MUTED_TEXT,
+              }}
+            >
+              {transformationProgress < 0.5
+                ? 'Uniform Timeslicing: Extreme clutter/hairball in burst interval 3'
+                : 'Non-Uniform Timeslicing: Equal visual complexity across all 5 snapshots (~13 edges each)'}
+            </span>
+          </div>
+
+          <div
             style={{
               fontSize: 13,
-              fontWeight: 800,
-              letterSpacing: 1.5,
-              textTransform: 'uppercase',
-              color: '#2563eb',
-              backgroundColor: 'rgba(37, 99, 235, 0.08)',
-              padding: '3px 10px',
-              borderRadius: 999,
+              fontWeight: 750,
+              fontFamily: MONO_FONT,
+              color: transformationProgress > 0.5 ? '#16a34a' : TUE_RED,
             }}
           >
-            Graph Snapshots (Small Multiples)
-          </span>
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: MUTED_TEXT,
-            }}
-          >
-            {transformationProgress < 0.5
-              ? 'Uniform Timeslicing: Hairball clutter in burst interval 3'
-              : 'Non-Uniform Timeslicing: Equal visual complexity across all snapshots (~13 edges)'}
-          </span>
+            {transformationProgress > 0.5
+              ? '✓ Visual Complexity Equalized'
+              : '⚠️ High Variance in Visual Complexity'}
+          </div>
         </div>
 
-        {/* 5 Network Graph Cards */}
+        {/* 5 Large Network Graph Cards (Height 560px) */}
         <div
           style={{
             display: 'flex',
-            gap: 20,
+            gap: 18,
             width: '100%',
             justifyContent: 'space-between',
           }}
