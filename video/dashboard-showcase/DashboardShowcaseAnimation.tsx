@@ -353,14 +353,14 @@ export function DashboardShowcaseAnimation() {
           style={{
             position: 'absolute',
             left: 795,
-            bottom: 44,
+            top: 116,
             transform: 'translateX(-50%)',
             opacity: Number(opacity),
             border: '1.5px solid rgba(15, 23, 42, 0.14)',
             borderRadius: 10,
             background: 'rgba(255, 255, 255, 0.98)',
-            padding: '12px 28px',
-            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.14)',
+            padding: '10px 24px',
+            boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -368,10 +368,10 @@ export function DashboardShowcaseAnimation() {
             pointerEvents: 'none',
           }}
         >
-          <div style={{ color: String(tagColor), fontSize: 11, fontWeight: 850, letterSpacing: 2, textTransform: 'uppercase', fontFamily: MONO_FONT }}>
+          <div style={{ color: String(tagColor), fontSize: 10.5, fontWeight: 850, letterSpacing: 2, textTransform: 'uppercase', fontFamily: MONO_FONT }}>
             {String(tag)}
           </div>
-          <div style={{ color: '#0f172a', fontSize: 18, fontWeight: 800, marginTop: 4 }}>
+          <div style={{ color: '#0f172a', fontSize: 16, fontWeight: 800, marginTop: 3 }}>
             {String(title)}
           </div>
         </div>
