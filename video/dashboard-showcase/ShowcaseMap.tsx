@@ -46,15 +46,22 @@ const displayType = (type: string) =>
 
 const pointPaths = Array.from(new Set(REAL_WEEK_RECORDS.map((r) => displayType(r.type)))).map((type) => {
   const records = REAL_WEEK_RECORDS.filter((r) => displayType(r.type) === type);
-  const buildPath = (selected: boolean) =>
-    records
-      .filter((r) => isSelectedRecord(r) === selected)
+  const buildPath = (selected: boolean, countLimit?: number) => {
+    const filtered = records.filter((r) => isSelectedRecord(r) === selected);
+    const sliced = countLimit !== undefined ? filtered.slice(0, countLimit) : filtered;
+    return sliced
       .map((r) => {
         const point = project(r.lon, r.lat);
         return `M${point.x.toFixed(1)},${point.y.toFixed(1)}h0.01`;
       })
       .join(' ');
-  return { type, contextPath: buildPath(false), selectedPath: buildPath(true) };
+  };
+  return {
+    type,
+    totalRecords: records.length,
+    contextPath: (limit?: number) => buildPath(false, limit),
+    selectedPath: (limit?: number) => buildPath(true, limit),
+  };
 });
 
 const labelNames = new Set(['ROGERS PARK', 'AUSTIN', 'NEAR NORTH SIDE', 'LOOP', 'ENGLEWOOD', 'HYDE PARK']);
@@ -69,11 +76,30 @@ const labels = areas
     return { name: area.name, ...project(center.lon / points.length, center.lat / points.length) };
   });
 
-export function ShowcaseMap({ selectionProgress }: { selectionProgress: number }) {
+export function ShowcaseMap({
+  selectionProgress,
+  buildProgress = 1,
+  highlightHotspots = false,
+}: {
+  selectionProgress: number;
+  buildProgress?: number;
+  highlightHotspots?: boolean;
+}) {
+  const baseMapOpacity = interpolate(buildProgress, [0, 0.3], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  const pointsReveal = interpolate(buildProgress, [0.2, 0.9], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
   const selectedOpacity = interpolate(selectionProgress, [0.15, 0.7], [0.55, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
+
   const contextOpacity = interpolate(selectionProgress, [0.15, 0.75], [0.65, 0.12], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
@@ -92,8 +118,9 @@ export function ShowcaseMap({ selectionProgress }: { selectionProgress: number }
     >
       <svg width="100%" height="100%" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none">
         <rect width={WIDTH} height={HEIGHT} fill="#f1f5f9" />
-        {/* Community Areas */}
-        <g>
+
+        {/* 1. Community Areas Basemap */}
+        <g opacity={baseMapOpacity}>
           {areaPaths.map((area, index) => (
             <path
               key={area.number}
@@ -105,8 +132,9 @@ export function ShowcaseMap({ selectionProgress }: { selectionProgress: number }
             />
           ))}
         </g>
-        {/* Neighborhood Labels */}
-        <g opacity="0.65">
+
+        {/* 2. Neighborhood Labels */}
+        <g opacity={baseMapOpacity * 0.7}>
           {labels.map((label) => (
             <text
               key={label.name}
@@ -123,37 +151,65 @@ export function ShowcaseMap({ selectionProgress }: { selectionProgress: number }
             </text>
           ))}
         </g>
-        {/* Incident Points */}
-        {pointPaths.map(({ type, contextPath, selectedPath }) => (
-          <g key={type}>
-            <path
-              d={contextPath}
-              fill="none"
-              stroke={colorForType(type)}
-              strokeWidth="3.2"
-              strokeLinecap="round"
-              opacity={contextOpacity}
-            />
-            {selectionProgress > 0.4 ? (
+
+        {/* 3. Hotspot Focus Rings (When Highlighted) */}
+        {highlightHotspots ? (
+          <g>
+            {[
+              { name: 'LOOP', x: 670, y: 260, r: 42 },
+              { name: 'AUSTIN', x: 280, y: 250, r: 36 },
+              { name: 'NEAR NORTH', x: 660, y: 190, r: 32 },
+            ].map((hotspot) => (
+              <g key={hotspot.name}>
+                <circle
+                  cx={hotspot.x}
+                  cy={hotspot.y}
+                  r={hotspot.r}
+                  fill="rgba(37, 99, 235, 0.08)"
+                  stroke="#2563eb"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                />
+                <circle cx={hotspot.x} cy={hotspot.y} r={hotspot.r + 10} fill="rgba(37, 99, 235, 0.04)" />
+              </g>
+            ))}
+          </g>
+        ) : null}
+
+        {/* 4. Incident Points (Stream In) */}
+        {pointPaths.map(({ type, totalRecords, contextPath, selectedPath }) => {
+          const countLimit = Math.floor(totalRecords * pointsReveal);
+          return (
+            <g key={type} opacity={Math.min(1, pointsReveal * 1.5)}>
               <path
-                d={selectedPath}
+                d={contextPath(countLimit)}
                 fill="none"
                 stroke={colorForType(type)}
-                strokeWidth="8.5"
+                strokeWidth="3.2"
                 strokeLinecap="round"
-                opacity={0.14 * selectedOpacity}
+                opacity={contextOpacity}
               />
-            ) : null}
-            <path
-              d={selectedPath}
-              fill="none"
-              stroke={colorForType(type)}
-              strokeWidth="3.8"
-              strokeLinecap="round"
-              opacity={selectedOpacity}
-            />
-          </g>
-        ))}
+              {selectionProgress > 0.4 ? (
+                <path
+                  d={selectedPath(countLimit)}
+                  fill="none"
+                  stroke={colorForType(type)}
+                  strokeWidth="8.5"
+                  strokeLinecap="round"
+                  opacity={0.15 * selectedOpacity}
+                />
+              ) : null}
+              <path
+                d={selectedPath(countLimit)}
+                fill="none"
+                stroke={colorForType(type)}
+                strokeWidth="3.8"
+                strokeLinecap="round"
+                opacity={selectedOpacity}
+              />
+            </g>
+          );
+        })}
       </svg>
 
       {/* Mode Badge (Top Left) */}
@@ -196,7 +252,7 @@ export function ShowcaseMap({ selectionProgress }: { selectionProgress: number }
       >
         {selectionProgress > 0.4
           ? '31 July Selected · 734 Incidents'
-          : `${SOURCE_RECORD_COUNT.toLocaleString()} Geocoded Incidents`}
+          : `${Math.floor(SOURCE_RECORD_COUNT * pointsReveal).toLocaleString()} Incidents Loaded`}
       </div>
 
       {/* Legend (Bottom Left) */}

@@ -13,7 +13,7 @@ import { ShowcaseMap } from './ShowcaseMap';
 import { ShowcaseTimeline } from './ShowcaseTimeline';
 import { ShowcaseWorkflowRail } from './ShowcaseWorkflowRail';
 
-type Layout = { x: number; y: number; width: number; height: number; rotate: number };
+type Layout = { x: number; y: number; width: number; height: number; scale: number; rotate: number; opacity: number };
 
 const clamp = {
   extrapolateLeft: 'clamp' as const,
@@ -25,103 +25,59 @@ const mix = (from: number, to: number, progress: number) =>
 
 function DashboardSurface({
   title,
-  role,
-  detail,
   accent,
-  enterAt,
-  isolated,
-  assembled,
-  assembly,
-  opacity = 1,
+  layout,
   children,
 }: {
   title: string;
-  role: string;
-  detail: string;
   accent: string;
-  enterAt: number;
-  isolated: Layout;
-  assembled: Layout;
-  assembly: number;
-  opacity?: number;
+  layout: Layout;
   children: ReactNode;
 }) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const entrance = spring({
-    frame: frame - enterAt,
-    fps,
-    durationInFrames: 42,
-    config: { damping: 22, stiffness: 130 },
-  });
-  const float = Math.sin((frame - enterAt) / 28) * 4 * (1 - assembly);
-
   const style: CSSProperties = {
     position: 'absolute',
-    left: mix(isolated.x, assembled.x, assembly),
-    top: mix(isolated.y, assembled.y, assembly) + float,
-    width: mix(isolated.width, assembled.width, assembly),
-    height: mix(isolated.height, assembled.height, assembly),
+    left: layout.x,
+    top: layout.y,
+    width: layout.width,
+    height: layout.height,
     border: '1.5px solid rgba(15, 23, 42, 0.13)',
-    borderRadius: mix(16, 10, assembly),
+    borderRadius: 12,
     background: '#ffffff',
-    boxShadow: `0 ${mix(28, 8, assembly)}px ${mix(70, 24, assembly)}px rgba(15, 23, 42, ${mix(0.13, 0.05, assembly)})`,
-    overflow: 'visible',
-    opacity: entrance * opacity,
-    transform: `translateY(${(1 - entrance) * 70}px) scale(${0.92 + entrance * 0.08}) rotate(${mix(isolated.rotate, assembled.rotate, assembly)}deg)`,
-    transformOrigin: 'center',
+    boxShadow: '0 12px 36px rgba(15, 23, 42, 0.08)',
+    overflow: 'hidden',
+    opacity: layout.opacity,
+    transform: `scale(${layout.scale}) rotate(${layout.rotate}deg)`,
+    transformOrigin: 'center center',
     fontFamily: FONT_FAMILY,
+    zIndex: Math.round(layout.scale * 10),
   };
-
-  const labelOpacity = interpolate(assembly, [0, 0.45], [1, 0], clamp);
 
   return (
     <div style={style}>
-      <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', overflow: 'hidden' }}>
-        {/* Surface Title Bar */}
-        <div
-          style={{
-            height: 38,
-            borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
-            background: 'rgba(15, 23, 42, 0.02)',
-            padding: '0 14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a', fontSize: 12, fontWeight: 800 }}>
-            <i style={{ width: 8, height: 8, borderRadius: 99, background: accent }} />
-            {title}
-          </div>
-          <div style={{ color: '#64748b', fontSize: 9, fontFamily: MONO_FONT, letterSpacing: 1.2, fontWeight: 700 }}>
-            CHICAGO CRIME · JUL 2025
-          </div>
-        </div>
-
-        {/* Content Viewport */}
-        <div style={{ height: 'calc(100% - 38px)' }}>{children}</div>
-      </div>
-
-      {/* Floating Role Label during isolated entrance */}
+      {/* Surface Header Bar */}
       <div
         style={{
-          position: 'absolute',
-          left: 0,
-          top: -64,
-          opacity: labelOpacity,
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none',
+          height: 38,
+          borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
+          background: 'rgba(15, 23, 42, 0.02)',
+          padding: '0 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxSizing: 'border-box',
         }}
       >
-        <div style={{ color: accent, fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', fontFamily: MONO_FONT }}>
-          {role}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a', fontSize: 12, fontWeight: 800 }}>
+          <i style={{ width: 8, height: 8, borderRadius: 99, background: accent }} />
+          {title}
         </div>
-        <div style={{ color: '#0f172a', fontSize: 20, fontWeight: 850, marginTop: 4 }}>
-          {detail}
+        <div style={{ color: '#64748b', fontSize: 9, fontFamily: MONO_FONT, letterSpacing: 1.2, fontWeight: 700 }}>
+          CHICAGO CRIME · JUL 2025
         </div>
       </div>
+
+      {/* Surface Viewport */}
+      <div style={{ height: 'calc(100% - 38px)' }}>{children}</div>
     </div>
   );
 }
@@ -130,52 +86,150 @@ export function DashboardShowcaseAnimation() {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // 1. Initial Title Card
+  // ---------------------------------------------------------
+  // TIMELINE CHAPTERS (Total 1800 frames / 60 seconds @ 30fps)
+  // ---------------------------------------------------------
+  // 0:00 - 0:04 (0 - 120): Opening Title Card
+  // 0:04 - 0:14 (120 - 420): Chapter 1: 2D Spatial Map Deep-Dive
+  // 0:14 - 0:27 (420 - 810): Chapter 2: 3D Space-Time Cube & Orbital Camera
+  // 0:27 - 0:38 (810 - 1140): Chapter 3: Dual Timeline & Multi-Scale Brushing
+  // 0:38 - 0:48 (1140 - 1440): Chapter 4: Full Synchronized Convergence
+  // 0:48 - 0:55 (1440 - 1650): Chapter 5: Adaptive Visual Allocation Climax
+  // 0:55 - 1:00 (1650 - 1800): Chapter 6: Final Freeze Frame Hold (Last 5s)
+
+  // 1. Opening Title Card
   const titleIn = spring({ frame, fps, durationInFrames: 45, config: { damping: 200 } });
-  const titleOut = interpolate(frame, [60, 95], [1, 0], clamp);
+  const titleOut = interpolate(frame, [80, 115], [1, 0], clamp);
 
-  // 2. Assembly into coordinated dashboard (Frames 100 to 220 / 3.3s to 7.3s)
-  const assembly = interpolate(frame, [100, 220], [0, 1], {
-    ...clamp,
-    easing: Easing.inOut(Easing.cubic),
-  });
+  // 2. Progressive Chapter Progress Variables
+  const mapBuild = interpolate(frame, [120, 360], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  const mapHotspots = frame >= 270 && frame < 420;
 
-  // 3. Brush temporal selection on Thursday 31 July (Frames 230 to 330 / 7.6s to 11.0s)
-  const selection = interpolate(frame, [230, 330], [0, 1], {
-    ...clamp,
-    easing: Easing.inOut(Easing.cubic),
-  });
+  const cubeBuild = interpolate(frame, [420, 680], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  const cubeOrbit = interpolate(frame, [420, 1650], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
 
-  // 4. Viewport switch from 2D Map to 3D Space-Time Cube (Frames 335 to 400 / 11.1s to 13.3s)
-  const toggle = interpolate(frame, [335, 400], [0, 1], {
-    ...clamp,
-    easing: Easing.inOut(Easing.cubic),
-  });
+  const timelineDensityHighlight = frame >= 810 && frame < 960;
+  const timelineBrushProgress = interpolate(frame, [880, 1020], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  const timelineDetailHighlight = frame >= 980 && frame < 1140;
 
-  // 5. Adaptive Visual Allocation Activation (Frames 410 to 500 / 13.6s to 16.6s)
-  const warpProgress = interpolate(frame, [410, 500], [0, 1], {
-    ...clamp,
-    easing: Easing.inOut(Easing.cubic),
-  });
+  // Chapter 4: Assembling into unified dashboard (1140 to 1260)
+  const dashboardAssembly = interpolate(frame, [1140, 1260], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+
+  // Chapter 5: Visual Allocation Expansion (1440 to 1580)
+  const warpProgress = interpolate(frame, [1440, 1580], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
   const multiplier = interpolate(warpProgress, [0, 1], [1.0, 2.5]);
 
-  // 6. Smooth 3D Camera Orbit Sweep throughout the video
-  const cameraProgress = interpolate(frame, [0, 520], [0, 1], {
-    ...clamp,
-    easing: Easing.inOut(Easing.cubic),
-  });
+  // Chrome UI (Nav bar and workflow rail)
+  const chromeOpacity = interpolate(dashboardAssembly, [0.3, 1], [0, 1], clamp);
 
-  const cubeIsActive = toggle > 0.5;
-  const mapAssemblyOpacity =
-    interpolate(assembly, [0, 0.65, 1], [1, 1, 1], clamp) * (1 - toggle);
-  const cubeAssemblyOpacity =
-    interpolate(assembly, [0, 0.45, 0.9, 1], [1, 1, 0, 0], clamp) + toggle;
-  const dashboardChrome = interpolate(assembly, [0.5, 1], [0, 1], clamp);
+  // ---------------------------------------------------------
+  // CAMERA / SURFACE INTERPOLATIONS ACROSS CHAPTERS
+  // ---------------------------------------------------------
+  // Define layout states:
+  // Map Hero (120-420), Cube Hero (420-810), Timeline Hero (810-1140), Assembled Grid (1140-1800)
 
-  // Dynamic Floating Captions
-  const caption1 = interpolate(frame, [110, 140, 200, 225], [0, 1, 1, 0], clamp);
-  const caption2 = interpolate(frame, [235, 260, 315, 335], [0, 1, 1, 0], clamp);
-  const caption3 = interpolate(frame, [415, 435, 490, 515], [0, 1, 1, 0], clamp);
+  const getMapLayout = (): Layout => {
+    if (frame < 120) {
+      return { x: 260, y: 160, width: 1400, height: 780, scale: 0.95, rotate: -1, opacity: 0 };
+    }
+    if (frame < 420) {
+      // Hero Stage for Map
+      const enter = spring({ frame: frame - 120, fps, durationInFrames: 35, config: { damping: 20 } });
+      return { x: 260, y: 160, width: 1400, height: 780, scale: enter, rotate: 0, opacity: enter };
+    }
+    if (frame < 810) {
+      // Map slides to background left while Cube is hero
+      const trans = interpolate(frame, [420, 480], [0, 1], clamp);
+      return {
+        x: mix(260, 40, trans),
+        y: mix(160, 104, trans),
+        width: mix(1400, 740, trans),
+        height: mix(780, 580, trans),
+        scale: mix(1, 0.96, trans),
+        rotate: mix(0, -1, trans),
+        opacity: mix(1, 0.25, trans),
+      };
+    }
+    if (frame < 1140) {
+      // Map remains small background
+      return { x: 40, y: 104, width: 740, height: 580, scale: 0.96, rotate: -1, opacity: 0.25 };
+    }
+    // Assembled Layout (Crossfades or shares viewport with Cube)
+    const activeToggle = frame >= 1320 ? 0 : 1; // Shows 2D map first in coordinated mode, then switches to 3D cube
+    return {
+      x: 40,
+      y: 104,
+      width: 1510,
+      height: 580,
+      scale: 1,
+      rotate: 0,
+      opacity: dashboardAssembly * activeToggle,
+    };
+  };
+
+  const getCubeLayout = (): Layout => {
+    if (frame < 420) {
+      return { x: 260, y: 160, width: 1400, height: 780, scale: 0.9, rotate: 2, opacity: 0 };
+    }
+    if (frame < 810) {
+      // Hero Stage for 3D Cube
+      const enter = spring({ frame: frame - 420, fps, durationInFrames: 38, config: { damping: 22 } });
+      return { x: 260, y: 160, width: 1400, height: 780, scale: enter, rotate: 0, opacity: enter };
+    }
+    if (frame < 1140) {
+      // Cube slides to background while Timeline is hero
+      const trans = interpolate(frame, [810, 870], [0, 1], clamp);
+      return {
+        x: mix(260, 40, trans),
+        y: mix(160, 104, trans),
+        width: mix(1400, 1510, trans),
+        height: mix(780, 580, trans),
+        scale: mix(1, 0.96, trans),
+        rotate: mix(0, 0.5, trans),
+        opacity: mix(1, 0.25, trans),
+      };
+    }
+    // Assembled Layout
+    const activeToggle = frame >= 1320 ? 1 : 0;
+    return {
+      x: 40,
+      y: 104,
+      width: 1510,
+      height: 580,
+      scale: 1,
+      rotate: 0,
+      opacity: dashboardAssembly * activeToggle,
+    };
+  };
+
+  const getTimelineLayout = (): Layout => {
+    if (frame < 810) {
+      return { x: 260, y: 320, width: 1400, height: 460, scale: 0.9, rotate: -1, opacity: 0 };
+    }
+    if (frame < 1140) {
+      // Hero Stage for Timeline
+      const enter = spring({ frame: frame - 810, fps, durationInFrames: 35, config: { damping: 20 } });
+      return { x: 260, y: 320, width: 1400, height: 460, scale: enter, rotate: 0, opacity: enter };
+    }
+    // Assembled Layout (Bottom strip)
+    const trans = interpolate(frame, [1140, 1260], [0, 1], clamp);
+    return {
+      x: mix(260, 40, trans),
+      y: mix(320, 700, trans),
+      width: mix(1400, 1510, trans),
+      height: mix(460, 340, trans),
+      scale: 1,
+      rotate: 0,
+      opacity: 1,
+    };
+  };
+
+  // Chapter Badges (Top Center Overlays)
+  const badge1 = interpolate(frame, [125, 150, 390, 415], [0, 1, 1, 0], clamp);
+  const badge2 = interpolate(frame, [425, 450, 780, 805], [0, 1, 1, 0], clamp);
+  const badge3 = interpolate(frame, [815, 840, 1110, 1135], [0, 1, 1, 0], clamp);
+  const badge4 = interpolate(frame, [1150, 1175, 1400, 1425], [0, 1, 1, 0], clamp);
+  const badge5 = interpolate(frame, [1445, 1470, 1630, 1650], [0, 1, 1, 0], clamp);
 
   return (
     <AbsoluteFill
@@ -188,7 +242,7 @@ export function DashboardShowcaseAnimation() {
       }}
     >
       {/* ---------------------------------------------------- */}
-      {/* 1. INITIAL TITLE CARD                                */}
+      {/* 1. INITIAL HERO TITLE                                */}
       {/* ---------------------------------------------------- */}
       <div
         style={{
@@ -217,7 +271,7 @@ export function DashboardShowcaseAnimation() {
           }}
         >
           <i style={{ width: 40, height: 3, background: '#2563eb', borderRadius: 2 }} />
-          Prototype Showcase · Solution Demonstration
+          Solution Showcase · Interactive Architecture
         </div>
         <h1
           style={{
@@ -241,23 +295,12 @@ export function DashboardShowcaseAnimation() {
             fontWeight: 500,
           }}
         >
-          A coordinated analytical environment keeping a 3D Space-Time Cube, 2D Map, and Dual Timeline synchronized around adaptive visual scaling.
-        </p>
-        <p
-          style={{
-            margin: '14px 0 0',
-            color: '#64748b',
-            fontSize: 14,
-            fontFamily: MONO_FONT,
-            fontWeight: 700,
-          }}
-        >
-          5,152 Chicago Incidents · 28 July – 4 August 2025
+          Building a synchronized spatiotemporal visualization system that scales visual space around crime density bursts.
         </p>
       </div>
 
       {/* ---------------------------------------------------- */}
-      {/* 2. TOP DASHBOARD NAVIGATION BAR                      */}
+      {/* 2. TOP NAVIGATION BAR (Active in Assembled State)    */}
       {/* ---------------------------------------------------- */}
       <div
         style={{
@@ -274,7 +317,7 @@ export function DashboardShowcaseAnimation() {
           justifyContent: 'space-between',
           padding: '0 20px',
           boxSizing: 'border-box',
-          opacity: dashboardChrome,
+          opacity: chromeOpacity,
           zIndex: 30,
           boxShadow: '0 4px 14px rgba(0, 0, 0, 0.04)',
         }}
@@ -290,9 +333,9 @@ export function DashboardShowcaseAnimation() {
 
         <div style={{ display: 'flex', gap: 10 }}>
           {[
-            ['ACTIVE VIEW', cubeIsActive ? '3D CUBE (Z-WARP)' : '2D MAP (SPATIAL)'],
+            ['PRIMARY VIEW', frame >= 1320 ? '3D SPACE-TIME CUBE' : '2D GEOGRAPHIC MAP'],
             ['SYNC STATUS', 'SYNCHRONIZED'],
-            ['DATASET WINDOW', '28 JUL – 4 AUG (5,152 INCIDENTS)'],
+            ['DATASET', '5,152 CHICAGO RECORDS'],
           ].map(([label, value], index) => (
             <div
               key={label}
@@ -324,66 +367,44 @@ export function DashboardShowcaseAnimation() {
       </div>
 
       {/* ---------------------------------------------------- */}
-      {/* 3. SURFACE A: 2D MAP (Left Viewport)                 */}
+      {/* 3. SURFACE A: 2D MAP                                 */}
       {/* ---------------------------------------------------- */}
-      <DashboardSurface
-        title="2D Map"
-        role="Spatial Mode"
-        detail="Locate incident hotspots in geographic space"
-        accent="#2563eb"
-        enterAt={80}
-        isolated={{ x: 70, y: 240, width: 780, height: 460, rotate: -2.0 }}
-        assembled={{ x: 40, y: 104, width: 1510, height: 580, rotate: 0 }}
-        assembly={assembly}
-        opacity={mapAssemblyOpacity}
-      >
-        <ShowcaseMap selectionProgress={selection} />
+      <DashboardSurface title="2D Map (Spatial View)" accent="#2563eb" layout={getMapLayout()}>
+        <ShowcaseMap
+          selectionProgress={timelineBrushProgress}
+          buildProgress={mapBuild}
+          highlightHotspots={mapHotspots}
+        />
       </DashboardSurface>
 
       {/* ---------------------------------------------------- */}
-      {/* 4. SURFACE B: 3D SPACE-TIME CUBE (Right Viewport)    */}
+      {/* 4. SURFACE B: 3D SPACE-TIME CUBE                     */}
       {/* ---------------------------------------------------- */}
-      <DashboardSurface
-        title="3D Space-Time Cube"
-        role="Spatiotemporal Mode"
-        detail="Inspect sequence, clusters, and temporal trajectories"
-        accent="#C8102E"
-        enterAt={180}
-        isolated={{ x: 1070, y: 230, width: 780, height: 460, rotate: 2.2 }}
-        assembled={{ x: 40, y: 104, width: 1510, height: 580, rotate: 0 }}
-        assembly={assembly}
-        opacity={Math.min(1, cubeAssemblyOpacity)}
-      >
+      <DashboardSurface title="3D Space-Time Cube (Spatiotemporal View)" accent="#C8102E" layout={getCubeLayout()}>
         <ShowcaseCube
-          selectionProgress={selection}
+          selectionProgress={timelineBrushProgress}
           warpProgress={warpProgress}
           multiplier={multiplier}
-          cameraProgress={cameraProgress}
+          cameraProgress={cubeOrbit}
+          buildProgress={cubeBuild}
         />
       </DashboardSurface>
 
       {/* ---------------------------------------------------- */}
-      {/* 5. SURFACE C: DUAL TIMELINE (Bottom Control Strip)   */}
+      {/* 5. SURFACE C: DUAL TIMELINE                          */}
       {/* ---------------------------------------------------- */}
-      <DashboardSurface
-        title="Dual Timeline"
-        role="Temporal Control"
-        detail="Brush time intervals and scale resolution"
-        accent="#0f172a"
-        enterAt={130}
-        isolated={{ x: 380, y: 780, width: 1160, height: 260, rotate: -0.6 }}
-        assembled={{ x: 40, y: 700, width: 1510, height: 340, rotate: 0 }}
-        assembly={assembly}
-      >
+      <DashboardSurface title="Dual Timeline (Temporal Control)" accent="#0f172a" layout={getTimelineLayout()}>
         <ShowcaseTimeline
-          selectionProgress={selection}
+          selectionProgress={timelineBrushProgress}
           warpProgress={warpProgress}
           multiplier={multiplier}
+          highlightDensity={timelineDensityHighlight}
+          highlightDetail={timelineDetailHighlight}
         />
       </DashboardSurface>
 
       {/* ---------------------------------------------------- */}
-      {/* 6. RIGHT-SIDE WORKFLOW & METRICS RAIL                */}
+      {/* 6. RIGHT WORKFLOW RAIL                               */}
       {/* ---------------------------------------------------- */}
       <div
         style={{
@@ -396,48 +417,79 @@ export function DashboardShowcaseAnimation() {
           borderRadius: 10,
           overflow: 'hidden',
           boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
-          opacity: dashboardChrome,
-          transform: `translateX(${(1 - dashboardChrome) * 60}px)`,
+          opacity: chromeOpacity,
+          transform: `translateX(${(1 - chromeOpacity) * 60}px)`,
           zIndex: 25,
         }}
       >
         <ShowcaseWorkflowRail
-          cubeActive={cubeIsActive}
+          cubeActive={frame >= 1320}
           warpProgress={warpProgress}
           multiplier={multiplier}
         />
       </div>
 
       {/* ---------------------------------------------------- */}
-      {/* 7. FLOATING DYNAMIC NARRATIVE CAPTIONS               */}
+      {/* 7. CINEMATIC CHAPTER ANNOTATION BADGES               */}
       {/* ---------------------------------------------------- */}
       {[
-        [caption1, 'Separate views converge.', ' One synchronized analytical dashboard.'],
-        [caption2, 'Brushing 31 July.', ' Synchronously filters 2D map & 3D space-time slice.'],
-        [caption3, 'Visual Allocation triggers.', ` Dense burst expands vertically (${multiplier.toFixed(1)}×).`],
-      ].map(([captionOpacity, first, second], idx) => (
+        [
+          badge1,
+          '1. SPATIAL FOUNDATION',
+          'Chicago Basemap & 5,152 Geocoded Crime Incidents',
+          '#2563eb',
+        ],
+        [
+          badge2,
+          '2. 3D SPACE-TIME CUBE',
+          '7 Daily Temporal Layers Rise with Dynamic 3D Camera Orbit',
+          '#C8102E',
+        ],
+        [
+          badge3,
+          '3. DUAL TIMELINE NAVIGATION',
+          'Overview Density Strip + 24-Hour Detail Multi-Scale Brushing',
+          '#0f172a',
+        ],
+        [
+          badge4,
+          '4. COORDINATED CONVERGENCE',
+          'Brushing Thursday 31 July Instantly Slices Map & 3D Volume',
+          '#16a34a',
+        ],
+        [
+          badge5,
+          '5. VISUAL ALLOCATION',
+          `Z-Axis Dynamically Expands Dense Crime Burst (${multiplier.toFixed(1)}×)`,
+          '#2563eb',
+        ],
+      ].map(([opacity, tag, title, tagColor], index) => (
         <div
-          key={`caption-${idx}`}
+          key={`chapter-badge-${index}`}
           style={{
             position: 'absolute',
             left: '50%',
-            top: 480,
-            transform: 'translate(-50%, -50%)',
-            opacity: Number(captionOpacity),
-            border: '1.5px solid rgba(15, 23, 42, 0.16)',
+            bottom: 48,
+            transform: 'translateX(-50%)',
+            opacity: Number(opacity),
+            border: '1.5px solid rgba(15, 23, 42, 0.14)',
             borderRadius: 10,
-            padding: '14px 24px',
             background: 'rgba(255, 255, 255, 0.98)',
-            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.14)',
-            fontSize: 22,
-            fontWeight: 800,
+            padding: '12px 28px',
+            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
             zIndex: 60,
             pointerEvents: 'none',
-            whiteSpace: 'nowrap',
           }}
         >
-          <span style={{ color: '#0f172a' }}>{String(first)} </span>
-          <span style={{ color: '#2563eb' }}>{String(second)}</span>
+          <div style={{ color: String(tagColor), fontSize: 11, fontWeight: 850, letterSpacing: 2, textTransform: 'uppercase', fontFamily: MONO_FONT }}>
+            {String(tag)}
+          </div>
+          <div style={{ color: '#0f172a', fontSize: 18, fontWeight: 800, marginTop: 4 }}>
+            {String(title)}
+          </div>
         </div>
       ))}
     </AbsoluteFill>

@@ -34,22 +34,25 @@ function DensityStrip({
   layout,
   selectionLeft,
   selectionWidth,
+  highlight = false,
 }: {
   bins: number[];
   maximum: number;
   layout?: AdaptiveDayLayout[];
   selectionLeft?: number;
   selectionWidth?: number;
+  highlight?: boolean;
 }) {
   return (
     <div
       style={{
         position: 'relative',
-        height: 10,
+        height: 12,
         display: layout ? 'block' : 'flex',
         overflow: 'hidden',
-        border: '1px solid rgba(15, 23, 42, 0.12)',
-        borderRadius: 3,
+        border: `1.5px solid ${highlight ? '#2563eb' : 'rgba(15, 23, 42, 0.12)'}`,
+        borderRadius: 4,
+        boxShadow: highlight ? '0 0 14px rgba(37, 99, 235, 0.35)' : undefined,
       }}
     >
       {bins.map((value, index) => {
@@ -90,10 +93,14 @@ export function ShowcaseTimeline({
   selectionProgress,
   warpProgress,
   multiplier,
+  highlightDensity = false,
+  highlightDetail = false,
 }: {
   selectionProgress: number;
   warpProgress: number;
   multiplier: number;
+  highlightDensity?: boolean;
+  highlightDetail?: boolean;
 }) {
   const hourLayout = buildAdaptiveHourLayout(warpProgress, multiplier);
   const selectedDay = 3; // Thursday
@@ -148,7 +155,7 @@ export function ShowcaseTimeline({
             DUAL TIMELINE
           </span>
           <span style={{ fontSize: 13, fontWeight: 750, color: '#0f172a' }}>
-            Synchronized Temporal Navigation
+            Multi-Scale Temporal Navigation & Adaptive Scaling
           </span>
         </div>
 
@@ -178,6 +185,7 @@ export function ShowcaseTimeline({
             maximum={OVERVIEW_MAX}
             selectionLeft={currentLeft}
             selectionWidth={selectedWidth}
+            highlight={highlightDensity}
           />
         </div>
 
@@ -228,6 +236,7 @@ export function ShowcaseTimeline({
               border: '2px solid #2563eb',
               background: 'rgba(37,99,235,0.15)',
               boxSizing: 'border-box',
+              boxShadow: '0 0 16px rgba(37, 99, 235, 0.4)',
             }}
           >
             <i
@@ -278,12 +287,21 @@ export function ShowcaseTimeline({
       </div>
 
       {/* 3. Detail Strip (24 Hours with Adaptive Visual Allocation) */}
-      <div style={{ opacity: detailReveal }}>
+      <div
+        style={{
+          opacity: detailReveal,
+          borderRadius: 6,
+          padding: highlightDetail ? '6px 8px' : 0,
+          background: highlightDetail ? 'rgba(37, 99, 235, 0.04)' : 'transparent',
+          border: highlightDetail ? '1.5px solid rgba(37, 99, 235, 0.3)' : '1.5px solid transparent',
+          transition: 'all 0.3s ease',
+        }}
+      >
         <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', columnGap: 12, alignItems: 'center' }}>
           <div style={{ color: '#2563eb', fontSize: 10, fontFamily: MONO_FONT, fontWeight: 800 }}>
             DETAIL (24H)
           </div>
-          <DensityStrip bins={DETAIL_BINS} maximum={DETAIL_MAX} layout={hourLayout} />
+          <DensityStrip bins={DETAIL_BINS} maximum={DETAIL_MAX} layout={hourLayout} highlight={highlightDetail} />
         </div>
 
         {/* Adaptive Detail Bars */}
@@ -303,7 +321,7 @@ export function ShowcaseTimeline({
                     : value / DETAIL_MAX > 0.35
                     ? '#f59e0b'
                     : '#2563eb',
-                opacity: 0.75,
+                opacity: 0.85,
                 borderRadius: '2px 2px 0 0',
               }}
             />

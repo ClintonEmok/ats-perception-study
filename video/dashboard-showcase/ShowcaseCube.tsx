@@ -11,7 +11,6 @@ import {
 
 type ScreenPoint = { x: number; y: number; depth: number };
 
-// 3D perspective projection engine with dynamic camera rotation and pitch
 const project3D = (
   x: number,
   y: number,
@@ -26,22 +25,18 @@ const project3D = (
   const yaw = (yawDeg * Math.PI) / 180;
   const pitch = (pitchDeg * Math.PI) / 180;
 
-  // Center coordinate around (0, 0, 0)
   const cX = x;
   const cY = y;
   const cZ = timeZ - 50;
 
-  // Yaw rotation (around Z-up axis)
   const x1 = cX * Math.cos(yaw) - cY * Math.sin(yaw);
   const y1 = cX * Math.sin(yaw) + cY * Math.cos(yaw);
   const z1 = cZ;
 
-  // Pitch rotation (tilt)
   const x2 = x1;
   const y2 = y1 * Math.cos(pitch) - z1 * Math.sin(pitch);
   const z2 = y1 * Math.sin(pitch) + z1 * Math.cos(pitch);
 
-  // Perspective foreshortening
   const factor = cameraDist / (cameraDist + y2);
   const screenX = centerX + x2 * scale * factor;
   const screenY = centerY - z2 * scale * factor;
@@ -66,7 +61,7 @@ const cornersAt = (
   project3D(-size, size, timeZ, yaw, pitch, centerX, centerY, scale),
 ];
 
-const selectedDay = Math.floor((SELECTED_START - WEEK_START) / 86400); // Day 3 = Thursday
+const selectedDay = Math.floor((SELECTED_START - WEEK_START) / 86400); // Thursday = 3
 const dayCells = Array.from({ length: 7 }, (_, day) =>
   CUBE_CELLS.filter((cell) => Math.floor((cell.time - WEEK_START) / 86400) === day)
 );
@@ -79,20 +74,22 @@ export function ShowcaseCube({
   warpProgress,
   multiplier,
   cameraProgress = 0,
+  buildProgress = 1,
 }: {
   selectionProgress: number;
   warpProgress: number;
   multiplier: number;
   cameraProgress?: number;
+  buildProgress?: number;
 }) {
   const hourLayout = buildAdaptiveHourLayout(warpProgress, multiplier);
 
-  // Dynamic Camera Movement (Smooth Apple-style orbital rotation & tilt)
-  const yaw = interpolate(cameraProgress, [0, 0.4, 0.7, 1], [-32, -22, -26, -24], {
+  // Dynamic Camera Movement (Apple orbital rotation & elevation sweep)
+  const yaw = interpolate(cameraProgress, [0, 0.25, 0.5, 0.75, 1], [-38, -28, -20, -28, -24], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const pitch = interpolate(cameraProgress, [0, 0.4, 0.7, 1], [30, 24, 27, 25], {
+  const pitch = interpolate(cameraProgress, [0, 0.25, 0.5, 0.75, 1], [34, 28, 22, 28, 25], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -103,7 +100,7 @@ export function ShowcaseCube({
   });
 
   const contextOpacity =
-    interpolate(selectionProgress, [0.12, 0.8], [0.65, 0.08], {
+    interpolate(selectionProgress, [0.12, 0.8], [0.68, 0.08], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     }) *
@@ -114,8 +111,7 @@ export function ShowcaseCube({
     extrapolateRight: 'clamp',
   });
 
-  // Vertical Time calculation with adaptive height expansion
-  const cubeHeight = 100; // Base normalized height 0 to 100
+  const cubeHeight = 100;
   const base = cornersAt(0, yaw, pitch);
   const top = cornersAt(cubeHeight, yaw, pitch);
 
@@ -126,6 +122,12 @@ export function ShowcaseCube({
 
   const detailDomainTime = (localTime: number) =>
     interpolate(domainProgress, [0, 1], [(selectedDay + localTime) / 7, localTime]) * cubeHeight;
+
+  // Progressive build-up of temporal layers (0 to 7)
+  const visibleLayersCount = interpolate(buildProgress, [0.15, 0.85], [1, 7], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
 
   return (
     <div
@@ -141,24 +143,20 @@ export function ShowcaseCube({
       <svg width="100%" height="100%" viewBox="0 0 1000 610" preserveAspectRatio="xMidYMid meet">
         <defs>
           <radialGradient id="kde-low-showcase">
-            <stop offset="0" stopColor="#38bdf8" stopOpacity="0.7" />
+            <stop offset="0" stopColor="#38bdf8" stopOpacity="0.75" />
             <stop offset="1" stopColor="#38bdf8" stopOpacity="0" />
           </radialGradient>
           <radialGradient id="kde-mid-showcase">
-            <stop offset="0" stopColor="#f59e0b" stopOpacity="0.8" />
+            <stop offset="0" stopColor="#f59e0b" stopOpacity="0.82" />
             <stop offset="1" stopColor="#f59e0b" stopOpacity="0" />
           </radialGradient>
           <radialGradient id="kde-high-showcase">
-            <stop offset="0" stopColor="#C8102E" stopOpacity="0.88" />
+            <stop offset="0" stopColor="#C8102E" stopOpacity="0.9" />
             <stop offset="1" stopColor="#C8102E" stopOpacity="0" />
           </radialGradient>
           <linearGradient id="map-plane-showcase" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="1" stopColor="#f1f5f9" stopOpacity="0.95" />
-          </linearGradient>
-          <linearGradient id="glass-wall" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="rgba(37, 99, 235, 0.08)" />
-            <stop offset="1" stopColor="rgba(37, 99, 235, 0.01)" />
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.98" />
+            <stop offset="1" stopColor="#f1f5f9" stopOpacity="0.98" />
           </linearGradient>
         </defs>
 
@@ -181,7 +179,7 @@ export function ShowcaseCube({
           );
         })}
 
-        {/* Base Grid Lines (Coordinate Grid) */}
+        {/* Coordinate Grid on Base Plane */}
         {[-0.5, 0, 0.5].map((factor) => {
           const a = project3D(-50, factor * 50, 0, yaw, pitch);
           const b = project3D(50, factor * 50, 0, yaw, pitch);
@@ -212,14 +210,21 @@ export function ShowcaseCube({
         {/* Top Cube Frame */}
         <polygon points={polygon(top)} fill="none" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4 4" />
 
-        {/* 3. Weekly Context Slices (7 Days) */}
+        {/* 3. Weekly Temporal Slices (Rising Up in 3D Space) */}
         {Array.from({ length: 7 }, (_, day) => {
-          const normalizedTime = ((day + 0.5) / 7) * cubeHeight;
+          if (day >= visibleLayersCount) return null;
+          const layerRise = interpolate(visibleLayersCount, [day, day + 1], [0, 1], {
+            extrapolateLeft: 'clamp',
+            extrapolateRight: 'clamp',
+          });
+
+          const normalizedTime = (((day + 0.5) / 7) * cubeHeight) * layerRise;
           const points = cornersAt(normalizedTime, yaw, pitch);
           const selected = day === selectedDay;
           if (selected) return null;
+
           return (
-            <g key={`week-day-${day}`} opacity={contextOpacity}>
+            <g key={`week-day-${day}`} opacity={contextOpacity * layerRise}>
               <polygon
                 points={polygon(points)}
                 fill="rgba(15, 23, 42, 0.02)"
@@ -253,7 +258,7 @@ export function ShowcaseCube({
 
         {/* 4. Active Selected Slab (Thursday 31 July) with 3D Adaptive Z-Axis Stretching */}
         <g opacity={selectedOpacity}>
-          {/* Transparent Glass Volume Enclosure */}
+          {/* Glass Enclosure Slabs */}
           <polygon
             points={polygon(cornersAt(detailDomainTime(0), yaw, pitch))}
             fill="rgba(37, 99, 235, 0.06)"
