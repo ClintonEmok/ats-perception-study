@@ -4,7 +4,6 @@ import {
   Easing,
   interpolate,
   useCurrentFrame,
-  useVideoConfig,
 } from 'remotion';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 import { ShowcaseCube } from './ShowcaseCube';
@@ -23,41 +22,54 @@ export function DashboardShowcaseAnimation() {
   // ---------------------------------------------------------
   // 60-SECOND SHOWCASE TIMELINE (1800 frames @ 30fps)
   // ---------------------------------------------------------
-  // 0:00 - 0:12 (0 - 360): Act 1: 2D Geographic Map & Incident Hotspots
-  // 0:12 - 0:26 (360 - 780): Act 2: 3D Space-Time Cube & Smooth Orbital Camera
-  // 0:26 - 0:38 (780 - 1140): Act 3: Dual Timeline & Multi-Scale Navigation
-  // 0:38 - 0:48 (1140 - 1440): Act 4: Coordinated Cross-Filtering
-  // 0:48 - 0:55 (1440 - 1650): Act 5: Adaptive Visual Allocation Climax (Z-axis 2.5x expansion)
-  // 0:55 - 1:00 (1650 - 1800): Act 6: Final Freeze Frame Hold (Last 5s)
+  // 0:00 - 0:09 (0 - 270): Act 1: 2D Geographic Map & Incident Hotspots
+  // 0:09 - 0:18 (270 - 540): Act 2: 3D STKDE Space-Time Cube & Slices Rising
+  // 0:18 - 0:32 (540 - 960): Act 3: Top-Down Temporal Evolution Scan (NEW)
+  // 0:32 - 0:42 (960 - 1260): Act 4: Dual Timeline & Multi-Scale Navigation
+  // 0:42 - 0:49 (1260 - 1470): Act 5: Coordinated Cross-Filtering
+  // 0:49 - 0:55 (1470 - 1650): Act 6: Adaptive Visual Allocation Climax (2.5x Z-expansion)
+  // 0:55 - 1:00 (1650 - 1800): Act 7: Final Freeze Frame Hold (Last 5s)
 
   // 1. Act 1: 2D Map reveal & hotspot pulse
-  const mapPointsReveal = interpolate(frame, [0, 150], [0.3, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
-  const mapHotspotsActive = frame >= 120 && frame < 360;
+  const mapPointsReveal = interpolate(frame, [0, 120], [0.3, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  const mapHotspotsActive = frame >= 90 && frame < 270;
 
-  // 2. Act 2: 3D Cube layer rising & continuous orbital camera rotation
-  const cubeBuild = interpolate(frame, [360, 600], [0.2, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
-  const cubeOrbit = interpolate(frame, [360, 1650], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-
-  // 3. Act 3 & 4: Timeline Brushing
-  const timelineDensityHighlight = frame >= 780 && frame < 940;
-  const timelineDetailHighlight = frame >= 940 && frame < 1140;
-  const brushProgress = interpolate(frame, [860, 1020], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-
-  // Crossfade between 2D Map and 3D Cube in Primary Viewport
-  // Frame 0-360: Map (100%), Frame 360-420: Crossfade to Cube, Frame 420-1800: Cube active
-  const cubeFade = interpolate(frame, [360, 420], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  // Crossfade between 2D Map and 3D Cube in Primary Viewport (Frames 270 to 330)
+  const cubeFade = interpolate(frame, [270, 330], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
   const cubeIsActive = cubeFade > 0.5;
 
-  // 4. Act 5: Adaptive Visual Allocation Expansion (1440 to 1580)
-  const warpProgress = interpolate(frame, [1440, 1580], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  // 2. Act 2: 3D Cube layer rising & initial orbital rotation
+  const cubeBuild = interpolate(frame, [270, 480], [0.2, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  const cubeOrbit = interpolate(frame, [270, 1650], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+
+  // 3. Act 3: Top-Down Temporal Evolution Camera Tilt & Slice Scanning (Frames 540 to 960)
+  // Camera tilts to overhead at 540-600, holds top-down 600-880, tilts back to 3D oblique 880-960
+  const topDownProgress = interpolate(frame, [540, 600, 880, 940], [0, 1, 1, 0], {
+    ...clamp,
+    easing: Easing.inOut(Easing.cubic),
+  });
+
+  // Active scanning through Day 0 to Day 6.99 (Monday to Sunday)
+  const scanDayProgress = frame >= 600 && frame < 880
+    ? interpolate(frame, [600, 880], [0, 6.99], clamp)
+    : -1;
+
+  // 4. Act 4: Timeline Brushing (Frames 960 to 1260)
+  const timelineDensityHighlight = frame >= 960 && frame < 1100;
+  const timelineDetailHighlight = frame >= 1100 && frame < 1260;
+  const brushProgress = interpolate(frame, [1020, 1160], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+
+  // 5. Act 6: Adaptive Visual Allocation Expansion (1470 to 1590)
+  const warpProgress = interpolate(frame, [1470, 1590], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
   const multiplier = interpolate(warpProgress, [0, 1], [1.0, 2.5]);
 
   // Chapter Badges (Bottom Floating Overlays)
-  const badge1 = interpolate(frame, [10, 30, 330, 355], [0, 1, 1, 0], clamp);
-  const badge2 = interpolate(frame, [365, 390, 750, 775], [0, 1, 1, 0], clamp);
-  const badge3 = interpolate(frame, [785, 810, 1110, 1135], [0, 1, 1, 0], clamp);
-  const badge4 = interpolate(frame, [1145, 1170, 1400, 1425], [0, 1, 1, 0], clamp);
-  const badge5 = interpolate(frame, [1445, 1470, 1640, 1650], [0, 1, 1, 0], clamp);
+  const badge1 = interpolate(frame, [10, 30, 245, 265], [0, 1, 1, 0], clamp);
+  const badge2 = interpolate(frame, [275, 295, 515, 535], [0, 1, 1, 0], clamp);
+  const badge3 = interpolate(frame, [545, 570, 930, 955], [0, 1, 1, 0], clamp);
+  const badge4 = interpolate(frame, [965, 990, 1235, 1255], [0, 1, 1, 0], clamp);
+  const badge5 = interpolate(frame, [1265, 1290, 1445, 1465], [0, 1, 1, 0], clamp);
+  const badge6 = interpolate(frame, [1475, 1500, 1640, 1650], [0, 1, 1, 0], clamp);
 
   return (
     <AbsoluteFill
@@ -168,7 +180,11 @@ export function DashboardShowcaseAnimation() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a', fontSize: 12, fontWeight: 800 }}>
             <i style={{ width: 8, height: 8, borderRadius: 99, background: cubeIsActive ? '#C8102E' : '#2563eb' }} />
-            {cubeIsActive ? '3D STKDE Space-Time Cube (Stacked Density Slices)' : '2D Geographic Map (Spatial View)'}
+            {cubeIsActive
+              ? topDownProgress > 0.5
+                ? 'Top-Down STKDE Slice Scan (Temporal Evolution)'
+                : '3D STKDE Space-Time Cube (Stacked Density Slices)'
+              : '2D Geographic Map (Spatial View)'}
           </div>
           <div style={{ color: '#64748b', fontSize: 9, fontFamily: MONO_FONT, letterSpacing: 1.2, fontWeight: 700 }}>
             CHICAGO CRIME · 28 JUL – 4 AUG 2025
@@ -208,6 +224,8 @@ export function DashboardShowcaseAnimation() {
               multiplier={multiplier}
               cameraProgress={cubeOrbit}
               buildProgress={cubeBuild}
+              topDownProgress={topDownProgress}
+              scanDayProgress={scanDayProgress}
             />
           </div>
         </div>
@@ -302,24 +320,30 @@ export function DashboardShowcaseAnimation() {
         [
           badge2,
           '2. STKDE SPACE-TIME CUBE',
-          '7 Daily STKDE Density Slices Rise with Dynamic 3D Camera Orbit',
+          '7 Daily STKDE Density Slices in 3D Perspective',
           '#C8102E',
         ],
         [
           badge3,
-          '3. DUAL TIMELINE NAVIGATION',
+          '3. TOP-DOWN EVOLUTION',
+          'Overhead STKDE Scan Reveals Hotspot Migration Across Days',
+          '#6366f1',
+        ],
+        [
+          badge4,
+          '4. DUAL TIMELINE NAVIGATION',
           'Overview Density Strip + 24-Hour Detail Multi-Scale Brushing',
           '#0f172a',
         ],
         [
-          badge4,
-          '4. COORDINATED CONVERGENCE',
+          badge5,
+          '5. COORDINATED CONVERGENCE',
           'Brushing Thursday 31 July Instantly Synchronizes Map & 3D Cube',
           '#16a34a',
         ],
         [
-          badge5,
-          '5. VISUAL ALLOCATION',
+          badge6,
+          '6. VISUAL ALLOCATION',
           `Z-Axis Dynamically Expands Dense Crime Burst (${multiplier.toFixed(1)}×)`,
           '#2563eb',
         ],
