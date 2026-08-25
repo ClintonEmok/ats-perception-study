@@ -5,7 +5,6 @@ import {
   buildAdaptiveHourLayout,
   DAILY_COUNTS,
   SELECTED_HOURLY_COUNTS,
-  SELECTED_START,
 } from '../real/data';
 
 const DAY_LABELS = ['Mon 28', 'Tue 29', 'Wed 30', 'Thu 31', 'Fri 01', 'Sat 02', 'Sun 03'];
@@ -40,7 +39,7 @@ export function RealDashboardTimeline({
         height: '100%',
         background: '#090d16',
         color: '#f8fafc',
-        padding: '16px 20px',
+        padding: '14px 20px',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
         display: 'flex',
@@ -67,39 +66,62 @@ export function RealDashboardTimeline({
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 6, height: 6, borderRadius: 99, background: '#38bdf8' }} />
             <span style={{ fontSize: 9.5, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
-              OVERVIEW TEMPORAL RESOLUTION (7 DAYS)
+              OVERVIEW TEMPORAL RESOLUTION (7 DAYS · DENSITY STRIP)
             </span>
           </div>
           <span style={{ fontSize: 10, color: '#38bdf8', fontFamily: MONO_FONT, fontWeight: 750 }}>
-            {selectionProgress > 0.5 ? 'BRUSH LOCKED: THU 31 JUL' : 'DRAGGABLE BRUSH WINDOW'}
+            {selectionProgress > 0.5 ? 'BRUSH LOCKED: THU 31 JUL (723 INCIDENTS)' : 'DRAGGABLE BRUSH WINDOW'}
           </span>
         </div>
 
         {/* 7-Day Density Bars & Continuous Gradient */}
         <div style={{ position: 'relative', height: 44, width: '100%' }}>
-          {/* Interactive Brush Selection Window */}
+          {/* Continuous STKDE 1D Density Heat Strip (Background) */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 6,
+              borderRadius: 3,
+              background: 'linear-gradient(90deg, #224cff 0%, #00d4ff 35%, #ffd640 65%, #ff4060 100%)',
+              opacity: 0.85,
+            }}
+          />
+
+          {/* Interactive Brush Selection Window with Resize Grips */}
           <div
             style={{
               position: 'absolute',
               left: `${currentBrushX}%`,
               width: `${currentBrushWidth}%`,
-              top: 0,
-              bottom: 0,
+              top: -2,
+              bottom: -2,
               border: '2px solid #38bdf8',
               borderRadius: 6,
-              background: 'rgba(56, 189, 248, 0.15)',
-              boxShadow: '0 0 16px rgba(56, 189, 248, 0.35)',
+              background: 'rgba(56, 189, 248, 0.16)',
+              boxShadow: '0 0 18px rgba(56, 189, 248, 0.4)',
               zIndex: 10,
               transition: 'all 0.1s ease',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '0 2px',
             }}
-          />
+          >
+            {/* Left Grip Handle */}
+            <div style={{ width: 4, height: 16, background: '#38bdf8', borderRadius: 2, opacity: 0.8 }} />
+            {/* Right Grip Handle */}
+            <div style={{ width: 4, height: 16, background: '#38bdf8', borderRadius: 2, opacity: 0.8 }} />
+          </div>
 
           {/* Daily Histogram Bars */}
-          <div style={{ display: 'flex', height: '100%', width: '100%', gap: 6, alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', height: '100%', width: '100%', gap: 6, alignItems: 'flex-end', paddingBottom: 8 }}>
             {DAILY_COUNTS.map((count, index) => {
               const heightPct = Math.max(15, (count / maxDaily) * 100);
               const isThu = index === 3;
@@ -130,7 +152,7 @@ export function RealDashboardTimeline({
         </div>
 
         {/* Day Labels */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
           {DAY_LABELS.map((day, idx) => (
             <span
               key={day}
@@ -168,11 +190,25 @@ export function RealDashboardTimeline({
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 6, height: 6, borderRadius: 99, background: warpProgress > 0.1 ? '#ef4444' : '#38bdf8' }} />
             <span style={{ fontSize: 9.5, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
               DETAIL TEMPORAL RESOLUTION · THURSDAY 31 JULY (24 HOURS)
+            </span>
+            <span
+              style={{
+                padding: '2px 6px',
+                borderRadius: 4,
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#f87171',
+                fontSize: 8.5,
+                fontWeight: 800,
+                fontFamily: MONO_FONT,
+              }}
+            >
+              BURST: 17:00 – 20:00
             </span>
           </div>
           <span
@@ -191,6 +227,20 @@ export function RealDashboardTimeline({
 
         {/* 24-Hour Adaptive Bins Layout */}
         <div style={{ position: 'relative', height: 44, width: '100%', display: 'flex', gap: 2 }}>
+          {/* Continuous Adaptive Density Heat Strip (Bottom) */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 5,
+              borderRadius: 3,
+              background: 'linear-gradient(90deg, #224cff 0%, #00d4ff 45%, #ffd640 70%, #ff4060 85%, #00d4ff 100%)',
+              opacity: 0.85,
+            }}
+          />
+
           {hourLayout.map((hourBin, idx) => {
             const count = SELECTED_HOURLY_COUNTS[idx];
             const heightPct = Math.max(15, (count / maxHourly) * 100);
@@ -206,6 +256,7 @@ export function RealDashboardTimeline({
                   flexDirection: 'column',
                   justifyContent: 'flex-end',
                   transition: 'width 0.1s ease',
+                  paddingBottom: 7,
                 }}
               >
                 <div
@@ -220,6 +271,7 @@ export function RealDashboardTimeline({
                     alignItems: 'flex-start',
                     justifyContent: 'center',
                     paddingTop: 2,
+                    boxShadow: isBurst ? '0 0 10px rgba(239, 68, 68, 0.4)' : 'none',
                   }}
                 >
                   {hourBin.width > 0.035 ? (
@@ -234,7 +286,7 @@ export function RealDashboardTimeline({
         </div>
 
         {/* Hour Ticks */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
           {[0, 4, 8, 12, 16, 18, 20, 24].map((h) => (
             <span
               key={`tick-${h}`}
@@ -253,3 +305,4 @@ export function RealDashboardTimeline({
     </div>
   );
 }
+

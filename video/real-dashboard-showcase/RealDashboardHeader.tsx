@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, CheckCircle2, ChevronDown, GitCompareArrows, Layers, Map, Sparkles } from 'lucide-react';
+import { Box, CheckCircle2, ChevronDown, Flame, GitCompareArrows, Layers, Map, MapPin, Sparkles } from 'lucide-react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 
 export function RealDashboardHeader({
@@ -163,24 +163,56 @@ export function RealDashboardHeader({
           ))}
         </div>
 
-        {/* STKDE Layer Toggle Button */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            padding: '6px 10px',
-            borderRadius: 8,
-            background: 'rgba(30, 41, 59, 0.8)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#38bdf8',
-            fontSize: 11,
-            fontWeight: 700,
-            fontFamily: MONO_FONT,
-          }}
-        >
-          <Layers style={{ width: 13, height: 13 }} />
-          <span>STKDE</span>
+        {/* Layer Toggles (POI, Flame, Heatmap) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: 'rgba(30, 41, 59, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#94a3b8',
+            }}
+          >
+            <MapPin style={{ width: 14, height: 14 }} />
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '6px 10px',
+              borderRadius: 8,
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#f87171',
+              fontSize: 11,
+              fontWeight: 800,
+              fontFamily: MONO_FONT,
+            }}
+          >
+            <Flame style={{ width: 13, height: 13 }} />
+            <span>STKDE</span>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: 'rgba(30, 41, 59, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#38bdf8',
+            }}
+          >
+            <Layers style={{ width: 14, height: 14 }} />
+          </div>
         </div>
       </div>
     </header>
