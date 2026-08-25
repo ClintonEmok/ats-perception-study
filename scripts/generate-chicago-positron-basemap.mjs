@@ -4,11 +4,11 @@ import path from 'path';
 import sharp from 'sharp';
 import { WebMercatorViewport } from '@math.gl/web-mercator';
 
-const WIDTH = 1680;
-const HEIGHT = 960;
-const LONGITUDE = -87.67;
-const LATITUDE = 41.84;
-const ZOOM = 10.55;
+const WIDTH = 1510;
+const HEIGHT = 542;
+const LONGITUDE = -87.68;
+const LATITUDE = 41.83;
+const ZOOM = 9.6;
 
 const viewport = new WebMercatorViewport({
   width: WIDTH,
@@ -119,7 +119,8 @@ async function main() {
     .png({ quality: 100 })
     .toFile(outFile);
 
-  console.log(`Saved flawless high-res basemap to ${outFile}!`);
+  fs.copyFileSync(outFile, path.resolve('public/chicago-positron-basemap.png'));
+  console.log(`Saved flawless high-res basemap to ${outFile} and public/chicago-positron-basemap.png!`);
 }
 
 main().catch(console.error);

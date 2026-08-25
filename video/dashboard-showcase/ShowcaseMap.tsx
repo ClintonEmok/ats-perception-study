@@ -1,34 +1,46 @@
 import React from 'react';
-import { interpolate } from 'remotion';
+import { Img, interpolate, staticFile } from 'remotion';
+import { WebMercatorViewport } from '@math.gl/web-mercator';
 import communityAreaData from '../data/chicago-community-areas.json';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
-import { colorForType, isSelectedRecord, REAL_WEEK_RECORDS, SOURCE_RECORD_COUNT } from '../real/data';
+import {
+  colorForType,
+  isSelectedRecord,
+  REAL_WEEK_RECORDS,
+  SOURCE_RECORD_COUNT,
+} from '../real/data';
 
 type Coordinate = [number, number];
 type CommunityArea = { name: string; number: string; rings: Coordinate[][] };
 
-const WIDTH = 1000;
-const HEIGHT = 610;
-const MARGIN = 24;
-const BOUNDS = { west: -87.94, east: -87.52, south: 41.64, north: 42.03 };
-const areas = communityAreaData.areas as CommunityArea[];
+const MAP_WIDTH = 1510;
+const MAP_HEIGHT = 542;
 
-const project = (lon: number, lat: number) => ({
-  x: MARGIN + ((lon - BOUNDS.west) / (BOUNDS.east - BOUNDS.west)) * (WIDTH - MARGIN * 2),
-  y: MARGIN + ((BOUNDS.north - lat) / (BOUNDS.north - BOUNDS.south)) * (HEIGHT - MARGIN * 2),
+// Exact WebMercator projection matching MapLibre 2D viewport
+export const MAPLIBRE_VIEWPORT = new WebMercatorViewport({
+  width: MAP_WIDTH,
+  height: MAP_HEIGHT,
+  longitude: -87.68,
+  latitude: 41.83,
+  zoom: 9.6,
 });
 
-const ringPath = (ring: Coordinate[]) =>
-  ring
-    .map(([lon, lat], index) => {
-      const point = project(lon, lat);
-      return `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`;
-    })
-    .join(' ') + ' Z';
+const areas = communityAreaData.areas as CommunityArea[];
 
+// Project GeoJSON community area boundaries
 const areaPaths = areas.map((area) => ({
-  ...area,
-  path: area.rings.map(ringPath).join(' '),
+  number: area.number,
+  name: area.name,
+  path: area.rings
+    .map((ring) =>
+      ring
+        .map(([lon, lat], index) => {
+          const [x, y] = MAPLIBRE_VIEWPORT.project([lon, lat]);
+          return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(' ') + ' Z'
+    )
+    .join(' '),
 }));
 
 const displayType = (type: string) =>
@@ -44,7 +56,7 @@ const displayType = (type: string) =>
     ? type
     : 'OTHER';
 
-// Precompute static SVG path strings once at module evaluation to prevent frame-by-frame string thrashing
+// Precompute static SVG path strings for all 5,152 Chicago records
 const pointPaths = Array.from(new Set(REAL_WEEK_RECORDS.map((r) => displayType(r.type)))).map((type) => {
   const records = REAL_WEEK_RECORDS.filter((r) => displayType(r.type) === type);
   const contextRecords = records.filter((r) => !isSelectedRecord(r));
@@ -53,8 +65,8 @@ const pointPaths = Array.from(new Set(REAL_WEEK_RECORDS.map((r) => displayType(r
   const buildPath = (list: typeof records) =>
     list
       .map((r) => {
-        const point = project(r.lon, r.lat);
-        return `M${point.x.toFixed(1)},${point.y.toFixed(1)}h0.01`;
+        const [x, y] = MAPLIBRE_VIEWPORT.project([r.lon, r.lat]);
+        return `M${x.toFixed(1)},${y.toFixed(1)}h0.01`;
       })
       .join(' ');
 
@@ -65,17 +77,12 @@ const pointPaths = Array.from(new Set(REAL_WEEK_RECORDS.map((r) => displayType(r
   };
 });
 
-const labelNames = new Set(['ROGERS PARK', 'AUSTIN', 'NEAR NORTH SIDE', 'LOOP', 'ENGLEWOOD', 'HYDE PARK']);
-const labels = areas
-  .filter((area) => labelNames.has(area.name))
-  .map((area) => {
-    const points = area.rings.flat();
-    const center = points.reduce(
-      (sum, [lon, lat]) => ({ lon: sum.lon + lon, lat: sum.lat + lat }),
-      { lon: 0, lat: 0 }
-    );
-    return { name: area.name, ...project(center.lon / points.length, center.lat / points.length) };
-  });
+// Projected Hotspot centroids
+const HOTSPOTS = [
+  { name: 'THE LOOP', ...(() => { const [x, y] = MAPLIBRE_VIEWPORT.project([-87.6298, 41.8781]); return { x, y }; })(), r: 42 },
+  { name: 'AUSTIN', ...(() => { const [x, y] = MAPLIBRE_VIEWPORT.project([-87.765, 41.89]); return { x, y }; })(), r: 38 },
+  { name: 'NEAR NORTH SIDE', ...(() => { const [x, y] = MAPLIBRE_VIEWPORT.project([-87.635, 41.898]); return { x, y }; })(), r: 35 },
+];
 
 export function ShowcaseMap({
   selectionProgress = 0,
@@ -91,10 +98,11 @@ export function ShowcaseMap({
     extrapolateRight: 'clamp',
   });
 
-  const contextOpacity = interpolate(selectionProgress, [0.15, 0.75], [0.72, 0.12], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  }) * revealProgress;
+  const contextOpacity =
+    interpolate(selectionProgress, [0.15, 0.75], [0.75, 0.15], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    }) * revealProgress;
 
   return (
     <div
@@ -102,97 +110,118 @@ export function ShowcaseMap({
         width: '100%',
         height: '100%',
         position: 'relative',
-        background: '#f1f5f9',
+        background: '#f8fafc',
         overflow: 'hidden',
         fontFamily: FONT_FAMILY,
       }}
     >
-      <svg width="100%" height="100%" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="xMidYMid meet">
-        <rect width={WIDTH} height={HEIGHT} fill="#f1f5f9" />
+      {/* 1. Authentic 2D MapLibre Flat CARTO Positron Basemap */}
+      <Img
+        src={staticFile('chicago-positron-basemap.png')}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'fill',
+        }}
+      />
 
-        {/* 1. Community Areas */}
-        <g>
-          {areaPaths.map((area, index) => (
-            <path
-              key={area.number}
-              d={area.path}
-              fill={index % 2 === 0 ? '#ffffff' : '#f8fafc'}
-              stroke="#cbd5e1"
-              strokeWidth="0.9"
-              fillRule="evenodd"
-            />
+      {/* 2. SVG Vector Overlays: Boundaries, Hotspots & 5,152 Crime Incidents */}
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+        preserveAspectRatio="none"
+        style={{ position: 'absolute', inset: 0 }}
+      >
+        {/* Subtle MapLibre Community Area Boundary Outlines */}
+        <g stroke="#64748b" strokeWidth="0.8" strokeLinejoin="round" fill="none" opacity="0.32">
+          {areaPaths.map((area) => (
+            <path key={area.number} d={area.path} />
           ))}
         </g>
 
-        {/* 2. Neighborhood Labels */}
-        <g opacity="0.65">
-          {labels.map((label) => (
-            <text
-              key={label.name}
-              x={label.x}
-              y={label.y}
-              textAnchor="middle"
-              fill="#64748b"
-              fontSize="7.5"
-              fontWeight="700"
-              letterSpacing="0.6"
-              fontFamily={FONT_FAMILY}
-            >
-              {label.name}
-            </text>
-          ))}
-        </g>
-
-        {/* 3. Hotspot Pulse Rings (Optional Chapter 1 Highlight) */}
+        {/* Hotspot Pulse Rings (Chapter 1 Spatial Foundation) */}
         {highlightHotspots ? (
           <g>
-            {[
-              { name: 'LOOP', x: 670, y: 260, r: 44 },
-              { name: 'AUSTIN', x: 280, y: 250, r: 38 },
-              { name: 'NEAR NORTH', x: 660, y: 190, r: 34 },
-            ].map((hotspot) => (
+            {HOTSPOTS.map((hotspot) => (
               <g key={hotspot.name}>
                 <circle
                   cx={hotspot.x}
                   cy={hotspot.y}
                   r={hotspot.r}
-                  fill="rgba(37, 99, 235, 0.08)"
+                  fill="rgba(37, 99, 235, 0.12)"
                   stroke="#2563eb"
-                  strokeWidth="1.6"
+                  strokeWidth="2.2"
                   strokeDasharray="4 4"
                 />
-                <circle cx={hotspot.x} cy={hotspot.y} r={hotspot.r + 10} fill="rgba(37, 99, 235, 0.03)" />
+                <circle
+                  cx={hotspot.x}
+                  cy={hotspot.y}
+                  r={hotspot.r + 14}
+                  fill="rgba(37, 99, 235, 0.04)"
+                  stroke="#2563eb"
+                  strokeWidth="1"
+                  opacity="0.6"
+                />
+                <rect
+                  x={hotspot.x - 48}
+                  y={hotspot.y - hotspot.r - 20}
+                  width="96"
+                  height="16"
+                  rx="4"
+                  fill="rgba(15, 23, 42, 0.88)"
+                />
+                <text
+                  x={hotspot.x}
+                  y={hotspot.y - hotspot.r - 9}
+                  textAnchor="middle"
+                  fill="#ffffff"
+                  fontSize="8.5"
+                  fontWeight="850"
+                  fontFamily={MONO_FONT}
+                  letterSpacing="0.8"
+                >
+                  {hotspot.name}
+                </text>
               </g>
             ))}
           </g>
         ) : null}
 
-        {/* 4. Precomputed Static Incident Points (Smooth GPU Rendering) */}
+        {/* Precomputed Static Incident Points (Smooth WebGL/GPU Pipeline) */}
         {pointPaths.map(({ type, contextPath, selectedPath }) => (
           <g key={type}>
+            {/* Context Incidents (Unselected Time Window) */}
             <path
               d={contextPath}
               fill="none"
               stroke={colorForType(type)}
-              strokeWidth="3.2"
+              strokeWidth="3.4"
               strokeLinecap="round"
               opacity={contextOpacity}
             />
+
+            {/* Glowing Selected Halo (Synchronized Selection) */}
             {selectionProgress > 0.4 ? (
               <path
                 d={selectedPath}
                 fill="none"
                 stroke={colorForType(type)}
-                strokeWidth="8.5"
+                strokeWidth="9"
                 strokeLinecap="round"
-                opacity={0.15 * selectedOpacity * revealProgress}
+                opacity={0.22 * selectedOpacity * revealProgress}
               />
             ) : null}
+
+            {/* Selected Incidents (Thursday 31 July) */}
             <path
               d={selectedPath}
               fill="none"
               stroke={colorForType(type)}
-              strokeWidth="3.8"
+              strokeWidth="4"
               strokeLinecap="round"
               opacity={selectedOpacity * revealProgress}
             />
@@ -200,7 +229,7 @@ export function ShowcaseMap({
         ))}
       </svg>
 
-      {/* Mode Badge (Top Left) */}
+      {/* Top Left Spatial View Badge */}
       <div
         style={{
           position: 'absolute',
@@ -217,56 +246,63 @@ export function ShowcaseMap({
           Spatial Distribution
         </div>
         <div style={{ color: '#0f172a', fontSize: 13, fontWeight: 800, marginTop: 2 }}>
-          Chicago Geographic Map
+          2D MapLibre Geographic Map
         </div>
       </div>
 
-      {/* Selection Pill (Top Right) */}
+      {/* Top Right Coordinated MapLibre Engine Badge */}
       <div
         style={{
           position: 'absolute',
           right: 18,
           top: 18,
-          border: '1.5px solid rgba(15, 23, 42, 0.12)',
+          border: '1px solid rgba(15, 23, 42, 0.12)',
           borderRadius: 8,
-          background: '#ffffff',
+          background: 'rgba(255, 255, 255, 0.96)',
           padding: '8px 12px',
+          color: '#0f172a',
           fontSize: 10,
           fontFamily: MONO_FONT,
           fontWeight: 750,
-          color: selectionProgress > 0.4 ? '#2563eb' : '#475569',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
         }}
       >
-        {selectionProgress > 0.4
-          ? '31 July Selected · 734 Incidents'
-          : `${SOURCE_RECORD_COUNT.toLocaleString()} Geocoded Incidents`}
+        <span style={{ width: 6, height: 6, borderRadius: 99, background: '#16a34a' }} />
+        <span>MapLibre GL · CARTO Positron Light</span>
       </div>
 
-      {/* Legend (Bottom Left) */}
+      {/* Bottom Right Crime Category Legend */}
       <div
         style={{
           position: 'absolute',
-          left: 18,
+          right: 18,
           bottom: 16,
-          display: 'flex',
-          gap: 10,
-          border: '1.5px solid rgba(15, 23, 42, 0.12)',
+          border: '1px solid rgba(15, 23, 42, 0.12)',
           borderRadius: 8,
           background: 'rgba(255, 255, 255, 0.96)',
-          padding: '6px 12px',
-          fontSize: 9,
-          fontFamily: MONO_FONT,
-          fontWeight: 700,
-          color: '#334155',
+          padding: '8px 12px',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
         }}
       >
-        {['THEFT', 'BATTERY', 'ASSAULT', 'CRIMINAL DAMAGE'].map((type) => (
-          <span key={type} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <i style={{ width: 7, height: 7, borderRadius: 99, background: colorForType(type) }} />
-            {type}
-          </span>
+        {[
+          ['THEFT', colorForType('THEFT')],
+          ['BATTERY', colorForType('BATTERY')],
+          ['ASSAULT', colorForType('ASSAULT')],
+          ['CRIMINAL DAMAGE', colorForType('CRIMINAL DAMAGE')],
+          ['OTHER', colorForType('OTHER')],
+        ].map(([label, color]) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 7, height: 7, borderRadius: 99, background: color }} />
+            <span style={{ fontSize: 9, fontWeight: 750, fontFamily: MONO_FONT, color: '#334155' }}>
+              {label}
+            </span>
+          </div>
         ))}
       </div>
     </div>
