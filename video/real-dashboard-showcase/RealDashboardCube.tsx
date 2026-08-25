@@ -20,9 +20,9 @@ const project3D = (
   timeZ: number,
   yawDeg: number,
   pitchDeg: number,
-  centerX = 500,
-  centerY = 310,
-  scale = 3.6,
+  centerX = 800,
+  centerY = 355,
+  scale = 4.2,
   cameraDist = 550
 ): ScreenPoint => {
   const yaw = (yawDeg * Math.PI) / 180;
@@ -54,9 +54,9 @@ const cornersAt = (
   yaw: number,
   pitch: number,
   size = 55,
-  centerX = 500,
-  centerY = 310,
-  scale = 3.6
+  centerX = 800,
+  centerY = 355,
+  scale = 4.2
 ): ScreenPoint[] => [
   project3D(-size, -size, timeZ, yaw, pitch, centerX, centerY, scale),
   project3D(size, -size, timeZ, yaw, pitch, centerX, centerY, scale),
@@ -108,11 +108,12 @@ export function RealDashboardCube({
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const centerY = interpolate(topDownProgress, [0, 1], [310, 295], {
+  const centerX = 800;
+  const centerY = interpolate(topDownProgress, [0, 1], [355, 340], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const scale = interpolate(topDownProgress, [0, 1], [3.6, 4.4], {
+  const scale = interpolate(topDownProgress, [0, 1], [4.2, 5.0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -135,8 +136,8 @@ export function RealDashboardCube({
   });
 
   const cubeHeight = 100;
-  const base = cornersAt(0, yaw, pitch, 55, 500, centerY, scale);
-  const top = cornersAt(cubeHeight, yaw, pitch, 55, 500, centerY, scale);
+  const base = cornersAt(0, yaw, pitch, 55, centerX, centerY, scale);
+  const top = cornersAt(cubeHeight, yaw, pitch, 55, centerX, centerY, scale);
 
   const adaptiveHourPosition = (hour: number) => {
     const index = Math.max(0, Math.min(23, Math.floor(hour)));
@@ -165,7 +166,7 @@ export function RealDashboardCube({
         fontFamily: FONT_FAMILY,
       }}
     >
-      <svg width="100%" height="100%" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+      <svg width="100%" height="100%" viewBox="0 0 1600 710" preserveAspectRatio="xMidYMid meet">
         <defs>
           <radialGradient id="dark-stkde-low">
             <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.85" />
@@ -194,10 +195,10 @@ export function RealDashboardCube({
 
         {/* Base Grid Lines */}
         {[-0.5, 0, 0.5].map((factor) => {
-          const a = project3D(-50, factor * 50, 0, yaw, pitch, 500, centerY, scale);
-          const b = project3D(50, factor * 50, 0, yaw, pitch, 500, centerY, scale);
-          const c = project3D(factor * 50, -50, 0, yaw, pitch, 500, centerY, scale);
-          const d = project3D(factor * 50, 50, 0, yaw, pitch, 500, centerY, scale);
+          const a = project3D(-50, factor * 50, 0, yaw, pitch, centerX, centerY, scale);
+          const b = project3D(50, factor * 50, 0, yaw, pitch, centerX, centerY, scale);
+          const c = project3D(factor * 50, -50, 0, yaw, pitch, centerX, centerY, scale);
+          const d = project3D(factor * 50, 50, 0, yaw, pitch, centerX, centerY, scale);
           return (
             <g key={`dark-grid-${factor}`} opacity="0.35">
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#475569" strokeWidth="0.9" strokeDasharray="3 3" />
@@ -232,7 +233,7 @@ export function RealDashboardCube({
           });
 
           const normalizedTime = (((day + 0.5) / 7) * cubeHeight) * layerRise;
-          const points = cornersAt(normalizedTime, yaw, pitch, 55, 500, centerY, scale);
+          const points = cornersAt(normalizedTime, yaw, pitch, 55, centerX, centerY, scale);
           const selected = day === selectedDay && !isScanning;
 
           const isCurrentScan = isScanning && day === currentScanDay;
@@ -254,7 +255,7 @@ export function RealDashboardCube({
               />
 
               {dayCells[day].map((cell, index) => {
-                const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, 500, centerY, scale);
+                const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, centerX, centerY, scale);
                 const intensity = Math.min(1, cell.count / 7);
                 const gradient =
                   intensity > 0.66
@@ -288,19 +289,19 @@ export function RealDashboardCube({
           <g opacity={selectedOpacity}>
             {/* Glass Enclosure Slabs */}
             <polygon
-              points={polygon(cornersAt(detailDomainTime(0), yaw, pitch, 55, 500, centerY, scale))}
+              points={polygon(cornersAt(detailDomainTime(0), yaw, pitch, 55, centerX, centerY, scale))}
               fill="rgba(56, 189, 248, 0.06)"
               stroke="#38bdf8"
               strokeWidth="2"
             />
             <polygon
-              points={polygon(cornersAt(detailDomainTime(1), yaw, pitch, 55, 500, centerY, scale))}
+              points={polygon(cornersAt(detailDomainTime(1), yaw, pitch, 55, centerX, centerY, scale))}
               fill="rgba(56, 189, 248, 0.06)"
               stroke="#38bdf8"
               strokeWidth="2"
             />
-            {cornersAt(detailDomainTime(0), yaw, pitch, 55, 500, centerY, scale).map((point, index) => {
-              const end = cornersAt(detailDomainTime(1), yaw, pitch, 55, 500, centerY, scale)[index];
+            {cornersAt(detailDomainTime(0), yaw, pitch, 55, centerX, centerY, scale).map((point, index) => {
+              const end = cornersAt(detailDomainTime(1), yaw, pitch, 55, centerX, centerY, scale)[index];
               return (
                 <line
                   key={`dark-slab-wall-${index}`}
@@ -320,7 +321,7 @@ export function RealDashboardCube({
               const hour = (time - SELECTED_START) / 3600;
               const normalizedTime = detailDomainTime(adaptiveHourPosition(hour));
               const cells = dayCells[selectedDay].filter((c) => c.time === time);
-              const sliceCorners = cornersAt(normalizedTime, yaw, pitch, 55, 500, centerY, scale);
+              const sliceCorners = cornersAt(normalizedTime, yaw, pitch, 55, centerX, centerY, scale);
 
               return (
                 <g key={`dark-stkde-layer-${time}`}>
@@ -332,7 +333,7 @@ export function RealDashboardCube({
                   />
 
                   {cells.map((cell, index) => {
-                    const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, 500, centerY, scale);
+                    const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, centerX, centerY, scale);
                     const intensity = Math.min(1, cell.count / 7);
                     const gradient =
                       intensity > 0.66
@@ -364,7 +365,7 @@ export function RealDashboardCube({
                     ? cells
                         .filter((c) => c.count >= 3)
                         .map((cell, index) => {
-                          const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, 500, centerY, scale);
+                          const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, centerX, centerY, scale);
                           const colHeight = 10 + cell.count * 2.4;
                           return (
                             <g key={`dark-col-${cell.x}-${cell.z}-${index}`}>
@@ -400,8 +401,8 @@ export function RealDashboardCube({
         {/* 5. Left Vertical Coordinate Time Axis (Z) */}
         <g opacity={1 - topDownProgress}>
           {(() => {
-            const axisOrigin = project3D(-65, -55, 0, yaw, pitch, 500, centerY, scale);
-            const axisPeak = project3D(-65, -55, cubeHeight, yaw, pitch, 500, centerY, scale);
+            const axisOrigin = project3D(-65, -55, 0, yaw, pitch, centerX, centerY, scale);
+            const axisPeak = project3D(-65, -55, cubeHeight, yaw, pitch, centerX, centerY, scale);
             return (
               <g>
                 <line x1={axisOrigin.x} y1={axisOrigin.y} x2={axisPeak.x} y2={axisPeak.y} stroke="#38bdf8" strokeWidth="2.2" />
@@ -424,7 +425,7 @@ export function RealDashboardCube({
           <g opacity={1 - domainProgress}>
             {DAY_NAMES.map((day, index) => {
               const timeVal = ((index + 0.5) / 7) * cubeHeight;
-              const pt = project3D(-65, -55, timeVal, yaw, pitch, 500, centerY, scale);
+              const pt = project3D(-65, -55, timeVal, yaw, pitch, centerX, centerY, scale);
               const isSel = index === selectedDay;
               return (
                 <g key={`dark-axis-day-${day}`}>
@@ -449,7 +450,7 @@ export function RealDashboardCube({
             {[0, 4, 8, 12, 16, 20, 24].map((hour) => {
               const localTime = hour === 24 ? 1 : hourLayout[hour].start;
               const timeVal = detailDomainTime(localTime);
-              const pt = project3D(-65, -55, timeVal, yaw, pitch, 500, centerY, scale);
+              const pt = project3D(-65, -55, timeVal, yaw, pitch, centerX, centerY, scale);
               return (
                 <g key={`dark-axis-hour-${hour}`}>
                   <line x1={pt.x - 6} y1={pt.y} x2={pt.x + 6} y2={pt.y} stroke="#38bdf8" strokeWidth="1.8" />

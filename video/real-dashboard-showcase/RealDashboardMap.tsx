@@ -12,15 +12,15 @@ import {
 type Coordinate = [number, number];
 type CommunityArea = { name: string; number: string; rings: Coordinate[][] };
 
-const MAP_WIDTH = 1490;
-const MAP_HEIGHT = 560;
+const MAP_WIDTH = 1600;
+const MAP_HEIGHT = 710;
 
 export const MAPLIBRE_VIEWPORT = new WebMercatorViewport({
   width: MAP_WIDTH,
   height: MAP_HEIGHT,
   longitude: -87.68,
   latitude: 41.83,
-  zoom: 9.6,
+  zoom: 9.9,
 });
 
 const areas = communityAreaData.areas as CommunityArea[];
