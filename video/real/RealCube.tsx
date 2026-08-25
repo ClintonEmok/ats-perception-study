@@ -22,7 +22,8 @@ const selectedTimeLayers = Array.from(new Set(dayCells[selectedDay].map((cell) =
 
 export function RealCube({ selectionProgress, warpProgress, multiplier }: { selectionProgress: number; warpProgress: number; multiplier: number }) {
   const hourLayout = buildAdaptiveHourLayout(warpProgress, multiplier);
-  const contextOpacity = interpolate(selectionProgress, [0.12, 0.8], [0.68, 0.12], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const domainProgress = interpolate(selectionProgress, [0.35, 1], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const contextOpacity = interpolate(selectionProgress, [0.12, 0.8], [0.68, 0.12], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) * (1 - domainProgress);
   const selectedOpacity = interpolate(selectionProgress, [0.2, 0.75], [0.52, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const base = cornersAt(0);
   const top = cornersAt(1);
@@ -30,6 +31,11 @@ export function RealCube({ selectionProgress, warpProgress, multiplier }: { sele
     const index = Math.max(0, Math.min(23, Math.floor(hour)));
     return hourLayout[index].start + (hour - index) * hourLayout[index].width;
   };
+  const detailDomainTime = (localTime: number) => interpolate(
+    domainProgress,
+    [0, 1],
+    [(selectedDay + localTime) / 7, localTime],
+  );
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', background: '#f7f7f5', overflow: 'hidden' }}>
@@ -82,16 +88,16 @@ export function RealCube({ selectionProgress, warpProgress, multiplier }: { sele
         })}
 
         <g opacity={selectedOpacity}>
-          {[selectedDay / 7, (selectedDay + 1) / 7].map((time, index) => (
-            <polygon key={`slab-boundary-${index}`} points={polygon(cornersAt(time))} fill="rgba(124,58,237,0.055)" stroke="#7c3aed" strokeWidth="1.8" />
+          {[0, 1].map((localTime, index) => (
+            <polygon key={`slab-boundary-${index}`} points={polygon(cornersAt(detailDomainTime(localTime)))} fill="rgba(124,58,237,0.055)" stroke="#7c3aed" strokeWidth="1.8" />
           ))}
-          {cornersAt(selectedDay / 7).map((point, index) => {
-            const end = cornersAt((selectedDay + 1) / 7)[index];
+          {cornersAt(detailDomainTime(0)).map((point, index) => {
+            const end = cornersAt(detailDomainTime(1))[index];
             return <line key={`slab-edge-${index}`} x1={point.x} y1={point.y} x2={end.x} y2={end.y} stroke="#7c3aed" strokeWidth="1.3" opacity="0.7" />;
           })}
           {selectedTimeLayers.map((time, layerIndex) => {
             const hour = (time - SELECTED_START) / 3600;
-            const normalizedTime = (selectedDay + adaptiveHourPosition(hour)) / 7;
+            const normalizedTime = detailDomainTime(adaptiveHourPosition(hour));
             const cells = dayCells[selectedDay].filter((cell) => cell.time === time);
             return (
               <g key={time}>
@@ -116,17 +122,28 @@ export function RealCube({ selectionProgress, warpProgress, multiplier }: { sele
         <line x1="163" y1="530" x2="163" y2="105" stroke="#7c3aed" strokeWidth="1.6" />
         <path d="M156 116L163 103L170 116" fill="none" stroke="#7c3aed" strokeWidth="1.6" />
         <text x="124" y="91" fill="#6d28d9" fontSize="10" fontWeight="700">TIME</text>
-        {['MON 28', 'TUE 29', 'WED 30', 'THU 31', 'FRI 01', 'SAT 02', 'SUN 03'].map((day, index) => {
-          const position = project(-50, 58, (index + 0.5) / 7);
-          return <g key={day}><line x1="157" y1={position.y} x2="169" y2={position.y} stroke={index === selectedDay ? '#7c3aed' : '#a1a1aa'} /><text x="115" y={position.y + 3} fill={index === selectedDay ? '#6d28d9' : '#777'} fontSize="8" fontWeight={index === selectedDay ? 700 : 400}>{day}</text></g>;
-        })}
+        <g opacity={1 - domainProgress}>
+          {['MON 28', 'TUE 29', 'WED 30', 'THU 31', 'FRI 01', 'SAT 02', 'SUN 03'].map((day, index) => {
+            const position = project(-50, 58, (index + 0.5) / 7);
+            return <g key={day}><line x1="157" y1={position.y} x2="169" y2={position.y} stroke={index === selectedDay ? '#7c3aed' : '#a1a1aa'} /><text x="115" y={position.y + 3} fill={index === selectedDay ? '#6d28d9' : '#777'} fontSize="8" fontWeight={index === selectedDay ? 700 : 400}>{day}</text></g>;
+          })}
+        </g>
+        <g opacity={domainProgress}>
+          {[0, 4, 8, 12, 16, 20, 24].map((hour) => {
+            const localTime = hour === 24 ? 1 : hourLayout[hour].start;
+            const position = project(-50, 58, detailDomainTime(localTime));
+            return <g key={hour}><line x1="157" y1={position.y} x2="169" y2={position.y} stroke="#7c3aed" /><text x="121" y={position.y + 3} fill="#6d28d9" fontSize="8" fontWeight="650">{String(hour).padStart(2, '0')}:00</text></g>;
+          })}
+        </g>
       </svg>
 
       <div style={{ position: 'absolute', left: 18, top: 18, border: '1px solid #d4d4d4', borderRadius: 8, background: 'rgba(255,255,255,0.94)', padding: '9px 12px', boxShadow: '0 5px 18px rgba(0,0,0,0.08)' }}>
         <div style={{ color: '#777', fontSize: 8, letterSpacing: 1.7, textTransform: 'uppercase' }}>3D spatiotemporal mode</div>
         <div style={{ color: '#191919', fontSize: 13, fontWeight: 680, marginTop: 3 }}>Stacked STKDE surfaces</div>
       </div>
-      <div style={{ position: 'absolute', right: 18, top: 18, border: '1px solid #c4b5fd', background: '#faf5ff', color: '#6d28d9', borderRadius: 7, padding: '8px 11px', fontSize: 9 }}>Active slab · 31 July 2025</div>
+      <div style={{ position: 'absolute', right: 18, top: 18, border: '1px solid #c4b5fd', background: '#faf5ff', color: '#6d28d9', borderRadius: 7, padding: '8px 11px', fontSize: 9 }}>
+        {domainProgress < 0.5 ? 'Weekly domain · 28 July–4 August' : 'Detail domain · 31 July · 00:00–24:00'}
+      </div>
       <div style={{ position: 'absolute', right: 18, bottom: 16, display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #ddd', borderRadius: 7, background: 'rgba(255,255,255,0.94)', padding: '7px 10px', fontSize: 8, color: '#666' }}>
         <span>Low</span><i style={{ width: 84, height: 7, borderRadius: 2, background: 'linear-gradient(90deg,#38bdf8,#f59e0b,#ef4444)' }} /><span>High intensity</span>
       </div>

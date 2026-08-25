@@ -7,10 +7,30 @@ import {
   ConstructingRealDashboard,
   type ConstructingRealDashboardProps,
 } from './ConstructingRealDashboard';
+import { CubeExplainer, TimelineExplainer } from './ComponentExplainers';
+import { CubeEvolutionExplainer } from './CubeEvolutionExplainer';
+import { DensityApproachesAnimation } from './density-approaches';
+import { EqualTimeAnimation } from './equal-time-concept';
 
 export const RemotionRoot = () => {
   return (
     <>
+      <Composition
+        id="DensityApproachesConcept"
+        component={DensityApproachesAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="EqualTimeConcept"
+        component={EqualTimeAnimation}
+        durationInFrames={2700}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="ConstructingDashboard"
         component={ConstructingDashboard}
@@ -34,6 +54,30 @@ export const RemotionRoot = () => {
           heading: 'Constructing the Coordinated Dashboard',
           subtext: 'Real weekly records become one analytical workflow through shared temporal selection.',
         } satisfies ConstructingRealDashboardProps}
+      />
+      <Composition
+        id="TimelineExplainer"
+        component={TimelineExplainer}
+        durationInFrames={720}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="CubeExplainer"
+        component={CubeExplainer}
+        durationInFrames={720}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="CubeEvolutionExplainer"
+        component={CubeEvolutionExplainer}
+        durationInFrames={900}
+        fps={30}
+        width={1920}
+        height={1080}
       />
     </>
   );

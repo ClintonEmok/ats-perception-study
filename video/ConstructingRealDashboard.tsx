@@ -99,7 +99,6 @@ export function ConstructingRealDashboard({ heading, subtext }: ConstructingReal
   const selectionCaption = interpolate(frame, [520, 545, 595, 620], [0, 1, 1, 0], clamp);
   const toggleCaption = interpolate(frame, [620, 640, 675, 700], [0, 1, 1, 0], clamp);
   const warpCaption = interpolate(frame, [690, 710, 770, 798], [0, 1, 1, 0], clamp);
-  const closing = spring({ frame: frame - 805, fps, durationInFrames: 42, config: { damping: 200 } });
 
   return (
     <AbsoluteFill style={{ background: '#efefec', color: '#181818', fontFamily: FONT_FAMILY, overflow: 'hidden' }}>
@@ -164,13 +163,6 @@ export function ConstructingRealDashboard({ heading, subtext }: ConstructingReal
         <RealWorkflowRail cubeActive={cubeIsActive} warpProgress={warpProgress} multiplier={multiplier} />
       </div>
 
-      <div style={{ position: 'absolute', left: 1508, top: 145, display: 'flex', padding: 4, gap: 4, border: '1px solid #ddd', borderRadius: 99, background: '#fff', opacity: dashboardChrome }}>
-        {['2D', '3D'].map((label, index) => {
-          const active = cubeIsActive ? index === 1 : index === 0;
-          return <div key={label} style={{ width: 38, height: 26, borderRadius: 99, display: 'grid', placeItems: 'center', background: active ? '#171717' : '#fff', color: active ? '#fff' : '#777', fontSize: 8, fontWeight: 750 }}>{label}</div>;
-        })}
-      </div>
-
       {[
         [convergeCaption, 'Two spatial modes.', ' One shared viewport.'],
         [selectionCaption, 'One day selected.', ' Every view responds.'],
@@ -180,13 +172,6 @@ export function ConstructingRealDashboard({ heading, subtext }: ConstructingReal
         <div key={String(first)} style={{ position: 'absolute', left: '50%', top: 500, transform: 'translate(-50%, -50%)', opacity: Number(opacity), border: '1px solid #d7d7d7', borderRadius: 8, padding: '13px 20px', background: 'rgba(255,255,255,0.96)', boxShadow: '0 16px 45px rgba(0,0,0,0.14)', fontSize: 22, fontWeight: 650 }}>{String(first)}<span style={{ color: '#6d28d9' }}>{String(second)}</span></div>
       ))}
 
-      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', opacity: closing, pointerEvents: 'none' }}>
-        <div style={{ width: 1370, border: '1px solid #d0d0d0', borderRadius: 15, background: 'rgba(255,255,255,0.96)', padding: '40px 52px 44px', boxShadow: '0 28px 90px rgba(0,0,0,0.18)', transform: `translateY(${(1 - closing) * 34}px)` }}>
-          <div style={{ color: '#6d28d9', fontSize: 11, fontWeight: 750, letterSpacing: 2.7, textTransform: 'uppercase' }}>Research contribution · coordinated analytical workflow</div>
-          <div style={{ marginTop: 18, fontSize: 50, lineHeight: 1.08, letterSpacing: -2.5, fontWeight: 650 }}>The contribution is a <span style={{ color: '#7c3aed' }}>workflow</span>,<br />not only an axis transformation.</div>
-          <div style={{ marginTop: 25, color: '#666', fontSize: 14 }}>Real weekly records remain linked as the analyst moves between timeline, 2D map, and 3D cube.</div>
-        </div>
-      </div>
     </AbsoluteFill>
   );
 }

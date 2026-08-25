@@ -96,13 +96,12 @@ export function RealTimeline({ selectionProgress, warpProgress, multiplier }: { 
         <DensityStrip bins={DETAIL_BINS} maximum={DETAIL_MAX} layout={hourLayout} />
       </div>
 
-      <div style={{ position: 'relative', height: 66, margin: '5px 0 0 50px', borderBottom: '1px solid #999', opacity: detailReveal }}>
-        {[0.33, 0.66].map((position) => <i key={position} style={{ position: 'absolute', left: 0, right: 0, bottom: `${position * 100}%`, height: 1, background: '#ececec' }} />)}
+      <div style={{ position: 'relative', height: 66, margin: '5px 0 0 50px', opacity: detailReveal }}>
         {DETAIL_BINS.map((value, index) => (
           <i key={`${index}-${value}`} style={{ position: 'absolute', left: `${hourLayout[index].start * 100}%`, width: `${Math.max(0.25, hourLayout[index].width * 100 - 0.16)}%`, bottom: 0, height: `${Math.max(3, (value / DETAIL_MAX) * 59)}px`, background: warpProgress > 0.4 && value > DETAIL_MAX * 0.72 ? 'rgba(245,158,11,0.28)' : 'rgba(59,130,246,0.2)', border: '1px solid rgba(148,163,184,0.45)', boxSizing: 'border-box' }} />
         ))}
         {hourLayout.slice(1).map((hour, index) => <i key={`hour-${index}`} style={{ position: 'absolute', left: `${hour.start * 100}%`, top: 0, bottom: 0, width: 1, background: 'rgba(148,163,184,0.18)' }} />)}
-        <div style={{ position: 'absolute', inset: '3px 0', border: '2px solid rgba(74,222,128,0.92)', background: 'rgba(16,185,129,0.16)', opacity: 0.32 + selectionProgress * 0.35 }} />
+        <div style={{ position: 'absolute', inset: '3px 0', borderLeft: '2px solid rgba(74,222,128,0.92)', borderRight: '2px solid rgba(74,222,128,0.92)', background: 'rgba(16,185,129,0.11)', opacity: 0.32 + selectionProgress * 0.35 }} />
         <div style={{ position: 'absolute', left: `${cursorX}%`, top: 0, bottom: 0, width: 2, background: '#10b981', boxShadow: '0 0 5px rgba(16,185,129,0.65)' }}>
           <i style={{ position: 'absolute', top: -4, left: -4, width: 10, height: 10, borderRadius: 99, border: '2px solid #fff', background: '#10b981', boxShadow: '0 0 5px rgba(16,185,129,0.5)' }} />
         </div>

@@ -545,8 +545,8 @@ def step4_density_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
     print('  Step 4: Event Density Analysis')
     print('=' * 72)
 
-    bin_sizes_hours = [1, 6, 24, 168]
-    bin_labels = ['1 hour', '6 hours', '1 day', '1 week']
+    bin_sizes_hours = [1, 6, 24, 168, 730]
+    bin_labels = ['1 hour', '6 hours', '1 day', '1 week', '1 month']
     table = []
 
     for label, ts in subsets.items():
@@ -564,6 +564,20 @@ def step4_density_analysis(subsets: dict[str, np.ndarray], output_dir: Path):
                   f'μ={m["mean"]:>9.2f}  var={m["variance"]:>11.1f}  '
                   f'CV={m["cv"]:>6.3f}  Gini={m["gini"]:>6.3f}  '
                   f'empty={m["empty_pct"]:>5.1f}%')
+
+    # Hour-of-day CV: aggregate all events into 24 hour-of-day bins
+    print(f'\n  ── Hour-of-day CV ──')
+    for label, ts in subsets.items():
+        if len(ts) < 24:
+            continue
+        hours = np.array([datetime.fromtimestamp(t, tz=timezone.utc).hour for t in ts])
+        hod_counts = np.bincount(hours, minlength=24).astype(float)
+        m = density_metrics(hod_counts)
+        peak_h = int(np.argmax(hod_counts))
+        trough_h = int(np.argmin(hod_counts))
+        ratio = hod_counts[peak_h] / hod_counts[trough_h] if hod_counts[trough_h] > 0 else float('inf')
+        print(f'    {label:55s}  CV={m["cv"]:>6.3f}  peak={peak_h:02d}:00 ({int(hod_counts[peak_h]):>7,d})  '
+              f'trough={trough_h:02d}:00 ({int(hod_counts[trough_h]):>7,d})  ratio={ratio:.2f}x')
 
     # Figures for full dataset
     full_ts = subsets.get('After cleanup', np.array([]))
