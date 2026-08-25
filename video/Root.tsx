@@ -12,7 +12,7 @@ import { CubeEvolutionExplainer } from './CubeEvolutionExplainer';
 import { DensityApproachesAnimation } from './density-approaches';
 import { EqualTimeAnimation } from './equal-time-concept';
 import { VisualAllocationAnimation } from './visual-allocation';
-import { WangAnimation } from './wang-timeslicing';
+import { WangAnimation, WangGraphAnimation } from './wang-timeslicing';
 
 export const RemotionRoot = () => {
   return (
@@ -20,6 +20,14 @@ export const RemotionRoot = () => {
       <Composition
         id="WangTimeslicing"
         component={WangAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="WangTimeslicingWithGraphs"
+        component={WangGraphAnimation}
         durationInFrames={1800}
         fps={30}
         width={1920}
