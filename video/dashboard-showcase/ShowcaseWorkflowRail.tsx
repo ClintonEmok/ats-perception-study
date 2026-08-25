@@ -96,7 +96,7 @@ export function ShowcaseWorkflowRail({
               borderRadius: 8,
             }}
           >
-            {['2D MAP', '3D CUBE'].map((label, index) => {
+            {['2D MAP', '3D STKDE'].map((label, index) => {
               const active = cubeActive ? index === 1 : index === 0;
               return (
                 <div

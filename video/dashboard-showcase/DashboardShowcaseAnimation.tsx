@@ -102,7 +102,7 @@ export function DashboardShowcaseAnimation() {
 
         <div style={{ display: 'flex', gap: 10 }}>
           {[
-            ['PRIMARY VIEW', cubeIsActive ? '3D SPACE-TIME CUBE' : '2D GEOGRAPHIC MAP'],
+            ['PRIMARY VIEW', cubeIsActive ? '3D STKDE DENSITY SLICES' : '2D GEOGRAPHIC MAP'],
             ['SYNC STATUS', 'SYNCHRONIZED'],
             ['DATASET', '5,152 CHICAGO RECORDS'],
           ].map(([label, value], index) => (
@@ -168,7 +168,7 @@ export function DashboardShowcaseAnimation() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a', fontSize: 12, fontWeight: 800 }}>
             <i style={{ width: 8, height: 8, borderRadius: 99, background: cubeIsActive ? '#C8102E' : '#2563eb' }} />
-            {cubeIsActive ? '3D Space-Time Cube (Spatiotemporal View)' : '2D Geographic Map (Spatial View)'}
+            {cubeIsActive ? '3D STKDE Space-Time Cube (Stacked Density Slices)' : '2D Geographic Map (Spatial View)'}
           </div>
           <div style={{ color: '#64748b', fontSize: 9, fontFamily: MONO_FONT, letterSpacing: 1.2, fontWeight: 700 }}>
             CHICAGO CRIME · 28 JUL – 4 AUG 2025
@@ -301,8 +301,8 @@ export function DashboardShowcaseAnimation() {
         ],
         [
           badge2,
-          '2. 3D SPACE-TIME CUBE',
-          '7 Daily Temporal Layers Rise with Dynamic 3D Camera Orbit',
+          '2. STKDE SPACE-TIME CUBE',
+          '7 Daily STKDE Density Slices Rise with Dynamic 3D Camera Orbit',
           '#C8102E',
         ],
         [

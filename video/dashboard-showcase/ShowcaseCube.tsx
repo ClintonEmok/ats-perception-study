@@ -11,6 +11,7 @@ import {
 
 type ScreenPoint = { x: number; y: number; depth: number };
 
+// 3D perspective projection engine with dynamic camera rotation and pitch
 const project3D = (
   x: number,
   y: number,
@@ -70,15 +71,15 @@ const selectedTimeLayers = Array.from(new Set(dayCells[selectedDay].map((cell) =
 );
 
 export function ShowcaseCube({
-  selectionProgress,
-  warpProgress,
-  multiplier,
+  selectionProgress = 0,
+  warpProgress = 0,
+  multiplier = 1,
   cameraProgress = 0,
   buildProgress = 1,
 }: {
-  selectionProgress: number;
-  warpProgress: number;
-  multiplier: number;
+  selectionProgress?: number;
+  warpProgress?: number;
+  multiplier?: number;
   cameraProgress?: number;
   buildProgress?: number;
 }) {
@@ -123,7 +124,7 @@ export function ShowcaseCube({
   const detailDomainTime = (localTime: number) =>
     interpolate(domainProgress, [0, 1], [(selectedDay + localTime) / 7, localTime]) * cubeHeight;
 
-  // Progressive build-up of temporal layers (0 to 7)
+  // Progressive build-up of temporal STKDE layers (0 to 7)
   const visibleLayersCount = interpolate(buildProgress, [0.15, 0.85], [1, 7], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
@@ -142,26 +143,35 @@ export function ShowcaseCube({
     >
       <svg width="100%" height="100%" viewBox="0 0 1000 610" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <radialGradient id="kde-low-showcase">
-            <stop offset="0" stopColor="#38bdf8" stopOpacity="0.75" />
-            <stop offset="1" stopColor="#38bdf8" stopOpacity="0" />
+          {/* STKDE Kernel Gradients */}
+          <radialGradient id="stkde-low">
+            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#60a5fa" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="kde-mid-showcase">
-            <stop offset="0" stopColor="#f59e0b" stopOpacity="0.82" />
-            <stop offset="1" stopColor="#f59e0b" stopOpacity="0" />
+          <radialGradient id="stkde-mid">
+            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.88" />
+            <stop offset="60%" stopColor="#fbbf24" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="kde-high-showcase">
-            <stop offset="0" stopColor="#C8102E" stopOpacity="0.9" />
-            <stop offset="1" stopColor="#C8102E" stopOpacity="0" />
+          <radialGradient id="stkde-high">
+            <stop offset="0%" stopColor="#C8102E" stopOpacity="0.95" />
+            <stop offset="45%" stopColor="#ef4444" stopOpacity="0.75" />
+            <stop offset="85%" stopColor="#f97316" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#C8102E" stopOpacity="0" />
           </radialGradient>
-          <linearGradient id="map-plane-showcase" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0.98" />
-            <stop offset="1" stopColor="#f1f5f9" stopOpacity="0.98" />
+          <linearGradient id="stkde-slice-plane" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+            <stop offset="100%" stopColor="rgba(241, 245, 249, 0.85)" />
+          </linearGradient>
+          <linearGradient id="stkde-active-slice" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="rgba(37, 99, 235, 0.08)" />
+            <stop offset="100%" stopColor="rgba(37, 99, 235, 0.02)" />
           </linearGradient>
         </defs>
 
         {/* 1. Base Geographic Map Plane */}
-        <polygon points={polygon(base)} fill="url(#map-plane-showcase)" stroke="#94a3b8" strokeWidth="1.6" />
+        <polygon points={polygon(base)} fill="url(#stkde-slice-plane)" stroke="#94a3b8" strokeWidth="1.6" />
 
         {/* Lake Michigan Shoreline on Base Plane */}
         {[0, 1, 2, 3].map((idx) => {
@@ -179,7 +189,7 @@ export function ShowcaseCube({
           );
         })}
 
-        {/* Coordinate Grid on Base Plane */}
+        {/* Base Coordinate Grid */}
         {[-0.5, 0, 0.5].map((factor) => {
           const a = project3D(-50, factor * 50, 0, yaw, pitch);
           const b = project3D(50, factor * 50, 0, yaw, pitch);
@@ -210,7 +220,7 @@ export function ShowcaseCube({
         {/* Top Cube Frame */}
         <polygon points={polygon(top)} fill="none" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="4 4" />
 
-        {/* 3. Weekly Temporal Slices (Rising Up in 3D Space) */}
+        {/* 3. Weekly Context STKDE Slices (Rising in 3D Space) */}
         {Array.from({ length: 7 }, (_, day) => {
           if (day >= visibleLayersCount) return null;
           const layerRise = interpolate(visibleLayersCount, [day, day + 1], [0, 1], {
@@ -224,39 +234,55 @@ export function ShowcaseCube({
           if (selected) return null;
 
           return (
-            <g key={`week-day-${day}`} opacity={contextOpacity * layerRise}>
+            <g key={`week-stkde-slice-${day}`} opacity={contextOpacity * layerRise}>
+              {/* Planar STKDE Slice Surface */}
               <polygon
                 points={polygon(points)}
                 fill="rgba(15, 23, 42, 0.02)"
                 stroke="#cbd5e1"
                 strokeWidth="0.85"
               />
+
+              {/* STKDE Continuous Density Field Kernels */}
               {dayCells[day].map((cell, index) => {
                 const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch);
                 const intensity = Math.min(1, cell.count / 7);
                 const gradient =
                   intensity > 0.66
-                    ? 'url(#kde-high-showcase)'
+                    ? 'url(#stkde-high)'
                     : intensity > 0.32
-                    ? 'url(#kde-mid-showcase)'
-                    : 'url(#kde-low-showcase)';
-                const radius = 6.5 + Math.sqrt(cell.count) * 4;
+                    ? 'url(#stkde-mid)'
+                    : 'url(#stkde-low)';
+                const radius = 8 + Math.sqrt(cell.count) * 5.2;
+
                 return (
-                  <circle
-                    key={`cell-${day}-${index}`}
-                    cx={pt.x}
-                    cy={pt.y}
-                    r={radius}
-                    fill={gradient}
-                    opacity="0.6"
-                  />
+                  <g key={`stkde-cell-${day}-${index}`}>
+                    {/* Continuous KDE Density Field */}
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={radius}
+                      fill={gradient}
+                      opacity="0.65"
+                    />
+                    {/* Isochrone Contour Ring */}
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={radius * 0.65}
+                      fill="none"
+                      stroke={intensity > 0.66 ? '#C8102E' : intensity > 0.32 ? '#f59e0b' : '#38bdf8'}
+                      strokeWidth="0.6"
+                      opacity="0.5"
+                    />
+                  </g>
                 );
               })}
             </g>
           );
         })}
 
-        {/* 4. Active Selected Slab (Thursday 31 July) with 3D Adaptive Z-Axis Stretching */}
+        {/* 4. Active Selected STKDE Slab (Thursday 31 July) with 3D Adaptive Z-Axis Stretching */}
         <g opacity={selectedOpacity}>
           {/* Glass Enclosure Slabs */}
           <polygon
@@ -287,7 +313,7 @@ export function ShowcaseCube({
             );
           })}
 
-          {/* Temporal Hourly Slices & 3D Incident Point Extrusions */}
+          {/* Temporal Hourly STKDE Slices */}
           {selectedTimeLayers.map((time, layerIndex) => {
             const hour = (time - SELECTED_START) / 3600;
             const normalizedTime = detailDomainTime(adaptiveHourPosition(hour));
@@ -295,39 +321,60 @@ export function ShowcaseCube({
             const sliceCorners = cornersAt(normalizedTime, yaw, pitch);
 
             return (
-              <g key={`time-layer-${time}`}>
-                {/* Horizontal Slice Plane */}
+              <g key={`stkde-layer-${time}`}>
+                {/* Horizontal STKDE Slice Plane */}
                 <polygon
                   points={polygon(sliceCorners)}
-                  fill={layerIndex % 2 === 0 ? 'rgba(37, 99, 235, 0.04)' : 'rgba(200, 16, 46, 0.03)'}
-                  stroke="rgba(37, 99, 235, 0.4)"
-                  strokeWidth="0.8"
+                  fill="url(#stkde-active-slice)"
+                  stroke="rgba(37, 99, 235, 0.45)"
+                  strokeWidth="0.9"
                 />
 
-                {/* STKDE Density Heatmap Circles */}
+                {/* STKDE Continuous Density Field & Isochrone Contours */}
                 {cells.map((cell, index) => {
                   const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch);
                   const intensity = Math.min(1, cell.count / 7);
                   const gradient =
                     intensity > 0.66
-                      ? 'url(#kde-high-showcase)'
+                      ? 'url(#stkde-high)'
                       : intensity > 0.32
-                      ? 'url(#kde-mid-showcase)'
-                      : 'url(#kde-low-showcase)';
-                  const radius = 7 + Math.sqrt(cell.count) * 4.2;
+                      ? 'url(#stkde-mid)'
+                      : 'url(#stkde-low)';
+                  const radius = 9 + Math.sqrt(cell.count) * 5.5;
+
                   return (
-                    <circle
-                      key={`active-cell-${cell.x}-${cell.z}-${index}`}
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={radius}
-                      fill={gradient}
-                      opacity="0.85"
-                    />
+                    <g key={`active-stkde-kernel-${cell.x}-${cell.z}-${index}`}>
+                      {/* Density Heatmap Kernel */}
+                      <circle
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={radius}
+                        fill={gradient}
+                        opacity="0.88"
+                      />
+                      {/* Isochrone Density Contour Iso-Line */}
+                      <circle
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={radius * 0.65}
+                        fill="none"
+                        stroke={intensity > 0.66 ? '#C8102E' : intensity > 0.32 ? '#f59e0b' : '#38bdf8'}
+                        strokeWidth="0.8"
+                        opacity="0.75"
+                      />
+                      {/* Density Hotspot Centroid Core */}
+                      <circle
+                        cx={pt.x}
+                        cy={pt.y}
+                        r="2.5"
+                        fill="#ffffff"
+                        opacity="0.95"
+                      />
+                    </g>
                   );
                 })}
 
-                {/* 3D Incident Columns (Extrusions) */}
+                {/* 3D Spatiotemporal Incident Extrusions */}
                 {selectionProgress > 0.45
                   ? cells
                       .filter((c) => c.count >= 3)
@@ -344,7 +391,7 @@ export function ShowcaseCube({
                               stroke={colorForType(cell.dominantType)}
                               strokeWidth="3"
                               strokeLinecap="round"
-                              opacity="0.8"
+                              opacity="0.85"
                             />
                             <circle
                               cx={pt.x}
@@ -451,18 +498,18 @@ export function ShowcaseCube({
           position: 'absolute',
           left: 18,
           top: 18,
-          border: '1px solid rgba(15, 23, 42, 0.12)',
+          border: '1.5px solid rgba(15, 23, 42, 0.12)',
           borderRadius: 8,
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: 'rgba(255, 255, 255, 0.96)',
           padding: '8px 12px',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
         }}
       >
         <div style={{ color: '#64748b', fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 700 }}>
-          3D Perspective Space
+          Spatiotemporal Density
         </div>
         <div style={{ color: '#0f172a', fontSize: 13, fontWeight: 800, marginTop: 2 }}>
-          Adaptive Space-Time Cube
+          STKDE Space-Time Cube
         </div>
       </div>
 
@@ -483,7 +530,7 @@ export function ShowcaseCube({
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
         }}
       >
-        {domainProgress < 0.5 ? 'Weekly Domain · 28 Jul – 4 Aug' : 'Adaptive Z-Axis · 31 Jul (Expanded 2.5×)'}
+        {domainProgress < 0.5 ? 'Weekly STKDE Slices · 28 Jul – 4 Aug' : 'Adaptive STKDE Slices · 31 Jul (2.5×)'}
       </div>
 
       {/* Intensity Legend (Bottom Right) */}
@@ -495,9 +542,9 @@ export function ShowcaseCube({
           display: 'flex',
           alignItems: 'center',
           gap: 7,
-          border: '1px solid rgba(15, 23, 42, 0.12)',
+          border: '1.5px solid rgba(15, 23, 42, 0.12)',
           borderRadius: 8,
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: 'rgba(255, 255, 255, 0.96)',
           padding: '6px 12px',
           fontSize: 9,
           fontFamily: MONO_FONT,
@@ -506,7 +553,7 @@ export function ShowcaseCube({
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
         }}
       >
-        <span>Low</span>
+        <span>Low STKDE</span>
         <i
           style={{
             width: 84,
@@ -515,7 +562,7 @@ export function ShowcaseCube({
             background: 'linear-gradient(90deg, #38bdf8, #f59e0b, #C8102E)',
           }}
         />
-        <span>High Density</span>
+        <span>High STKDE</span>
       </div>
     </div>
   );
