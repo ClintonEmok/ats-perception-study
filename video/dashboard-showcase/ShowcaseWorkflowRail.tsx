@@ -8,7 +8,7 @@ import {
 } from '../real/data';
 
 const METRICS = [
-  ['COVERAGE', 'CITYWIDE CHICAGO'],
+  ['INCIDENTS', SOURCE_RECORD_COUNT.toLocaleString()],
   ['SELECTED DAY', SELECTED_RECORD_COUNT.toLocaleString()],
   ['PEAK HOUR', `${String(SELECTED_PEAK_HOUR).padStart(2, '0')}:00`],
   ['TOP CRIME', SELECTED_TOP_CRIME],

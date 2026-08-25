@@ -116,7 +116,7 @@ export function DashboardShowcaseAnimation() {
           {[
             ['PRIMARY VIEW', cubeIsActive ? '3D STKDE DENSITY SLICES' : '2D GEOGRAPHIC MAP'],
             ['SYNC STATUS', 'SYNCHRONIZED'],
-            ['DATASET', 'CHICAGO CRIME DATA'],
+            ['DATASET', 'CHICAGO INCIDENTS'],
           ].map(([label, value], index) => (
             <div
               key={label}
