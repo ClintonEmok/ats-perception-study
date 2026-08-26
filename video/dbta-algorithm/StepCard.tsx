@@ -32,20 +32,19 @@ export const StepCard: React.FC<StepCardProps> = ({
         width,
         height,
         backgroundColor: '#ffffff',
-        borderRadius: 16,
+        borderRadius: 18,
         border: isActive
-          ? `2px solid ${step.accentColor}`
+          ? `2.5px solid ${step.accentColor}`
           : '1.5px solid rgba(15, 23, 42, 0.1)',
         boxShadow: isActive
-          ? `0 16px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px ${step.accentColor}22`
-          : '0 4px 16px rgba(0, 0, 0, 0.03)',
+          ? `0 20px 48px rgba(0, 0, 0, 0.08), 0 0 0 1px ${step.accentColor}22`
+          : '0 6px 20px rgba(0, 0, 0, 0.03)',
         transform: `scale(${scale})`,
         opacity: cardOpacity,
         display: 'flex',
         flexDirection: 'column',
-        padding: '18px 18px 16px 18px',
+        padding: '24px 22px 20px 22px',
         boxSizing: 'border-box',
-        transition: 'border 0.2s ease, transform 0.2s ease, opacity 0.2s ease',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -56,19 +55,19 @@ export const StepCard: React.FC<StepCardProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 6,
+          marginBottom: 8,
         }}
       >
         <div
           style={{
-            padding: '3px 8px',
+            padding: '4px 10px',
             borderRadius: 6,
             backgroundColor: isActive
               ? `${step.accentColor}18`
               : 'rgba(15, 23, 42, 0.05)',
             color: isActive ? step.accentColor : DARK_TEXT,
             fontFamily: MONO_FONT,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 800,
             letterSpacing: 0.5,
           }}
@@ -78,7 +77,7 @@ export const StepCard: React.FC<StepCardProps> = ({
 
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             fontFamily: FONT_FAMILY,
             fontWeight: 700,
             color: MUTED_TEXT,
@@ -92,11 +91,11 @@ export const StepCard: React.FC<StepCardProps> = ({
       <h3
         style={{
           margin: 0,
-          fontSize: 17,
+          fontSize: 20,
           fontFamily: FONT_FAMILY,
           fontWeight: 900,
           color: DARK_TEXT,
-          letterSpacing: -0.2,
+          letterSpacing: -0.3,
           lineHeight: 1.2,
         }}
       >
@@ -106,13 +105,13 @@ export const StepCard: React.FC<StepCardProps> = ({
       {/* Formula Badge */}
       <div
         style={{
-          marginTop: 8,
-          padding: '6px 8px',
-          borderRadius: 6,
+          marginTop: 10,
+          padding: '8px 12px',
+          borderRadius: 8,
           backgroundColor: 'rgba(15, 23, 42, 0.04)',
           border: '1px solid rgba(15, 23, 42, 0.08)',
           fontFamily: MONO_FONT,
-          fontSize: 10.5,
+          fontSize: 12,
           fontWeight: 800,
           color: isActive ? step.accentColor : DARK_TEXT,
           letterSpacing: -0.2,
@@ -128,23 +127,24 @@ export const StepCard: React.FC<StepCardProps> = ({
       {/* Middle Interactive Mini Diagram */}
       <div
         style={{
-          marginTop: 10,
-          marginBottom: 10,
+          marginTop: 14,
+          marginBottom: 14,
           flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: 'rgba(15, 23, 42, 0.015)',
-          borderRadius: 8,
+          borderRadius: 10,
           border: '1px solid rgba(15, 23, 42, 0.05)',
-          padding: '4px 2px',
+          padding: '8px 4px',
+          boxSizing: 'border-box',
         }}
       >
         <StepDiagram
           stepIndex={index}
           progress={activationProgress}
-          width={width - 40}
-          height={115}
+          width={width - 52}
+          height={260}
         />
       </div>
 
@@ -152,11 +152,11 @@ export const StepCard: React.FC<StepCardProps> = ({
       <p
         style={{
           margin: '0',
-          fontSize: 12.5,
+          fontSize: 13.5,
           fontFamily: FONT_FAMILY,
           fontWeight: 500,
           color: MUTED_TEXT,
-          lineHeight: 1.35,
+          lineHeight: 1.4,
         }}
       >
         {step.description}

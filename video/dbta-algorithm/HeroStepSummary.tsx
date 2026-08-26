@@ -9,12 +9,12 @@ interface HeroStepSummaryProps {
 }
 
 export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height }) => {
-  const padX = 40;
+  const padX = 35;
   const stageW = width - 2 * padX;
 
-  const cardWidth = 330;
-  const cardHeight = 440;
-  const cardGap = 24;
+  const cardWidth = 348;
+  const cardHeight = 630;
+  const cardGap = 20;
 
   return (
     <div
@@ -59,7 +59,7 @@ export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height 
                   justifyContent: 'center',
                   width: cardGap,
                   color: '#0f172a',
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: 900,
                   fontFamily: MONO_FONT,
                   userSelect: 'none',
@@ -72,17 +72,18 @@ export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height 
         ))}
       </div>
 
-      {/* Subtle Footer */}
+      {/* Clean Invariant Footer */}
       <div
         style={{
-          marginTop: 26,
+          marginTop: 28,
           display: 'flex',
           alignItems: 'center',
-          fontSize: 15,
+          fontSize: 16,
           fontFamily: MONO_FONT,
           fontWeight: 800,
           color: MUTED_TEXT,
           userSelect: 'none',
+          letterSpacing: 0.5,
         }}
       >
         <span>Time Complexity: O(N)</span>
