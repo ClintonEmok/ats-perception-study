@@ -31,9 +31,10 @@
     "video:render-wang-graphs": "remotion render video/index.ts WangTimeslicingWithGraphs output/wang-timeslicing/wang-timeslicing-graphs.mp4 --gl=angle",
     "video:still-visual-allocation": "remotion still video/index.ts VisualAllocationConcept output/visual-allocation/visual-allocation-summary.png --frame=360",
     "video:still-wang": "remotion still video/index.ts WangTimeslicing output/wang-timeslicing/wang-timeslicing-summary.png --frame=360",
-    "video:still-wang-graphs": "remotion still video/index.ts WangTimeslicingWithGraphs output/wang-timeslicing/wang-timeslicing-graphs-summary.png --frame=360",
-    "video:render-design-requirements": "remotion render video/index.ts DesignRequirements output/design-requirements/design-requirements.mp4 --gl=angle",
-    "video:still-design-requirements": "remotion still video/index.ts DesignRequirements output/design-requirements/design-requirements-summary.png --frame=360",
+    "video:render-slide15": "remotion render video/index.ts Slide15DesignRequirements output/slide-15-design-requirements/slide-15-design-requirements.mp4 --gl=angle",
+    "video:still-slide15": "remotion still video/index.ts Slide15DesignRequirements output/slide-15-design-requirements/slide-15-design-requirements-summary.png --frame=345",
+    "video:render-design-requirements": "remotion render video/index.ts Slide15DesignRequirements output/slide-15-design-requirements/slide-15-design-requirements.mp4 --gl=angle",
+    "video:still-design-requirements": "remotion still video/index.ts Slide15DesignRequirements output/slide-15-design-requirements/slide-15-design-requirements-summary.png --frame=345",
     "video:data": "node scripts/generate-remotion-week-data.mjs",
     "video:map-data": "node scripts/generate-remotion-map-data.mjs",
     "postinstall": "patch-package && mkdir -p node_modules/duckdb/lib/binding/3 && ln -sf ../duckdb.node node_modules/duckdb/lib/binding/3/duckdb.node"
