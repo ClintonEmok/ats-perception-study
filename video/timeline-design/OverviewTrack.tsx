@@ -1,21 +1,21 @@
 import React from 'react';
-import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { interpolate, useCurrentFrame } from 'remotion';
 import { MONO_FONT } from '../theme';
 import {
   ANNUAL_SUB_BINS,
   ANNUAL_SUB_BINS_MAX,
   DENSITY_HEAT_STOPS,
   MONTH_NAMES,
-  MONTHLY_COUNTS,
-  MONTHLY_MAX,
   THEME,
   TIMELINE_WIDTH,
 } from './data';
 
+const clamp = { extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const };
+
 interface OverviewTrackProps {
-  // Selection animation progress: 0 (no selection) -> 1 (July fully selected)
+  // Selection progress (0 -> 1 during frames 90..160)
   selectionProgress: number;
-  // Ambient pulse for Phase 6
+  // Ambient pulse during Phase 7 (frames 540+)
   isAnatomyPhase?: boolean;
 }
 
@@ -24,27 +24,22 @@ export const OverviewTrack: React.FC<OverviewTrackProps> = ({
   isAnatomyPhase = false,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
   // July spans from index 6/12 to 7/12 (50.0% to 58.333%)
   const julyStartPct = (6 / 12) * 100; // 50.0%
   const julyWidthPct = (1 / 12) * 100; // 8.333%
 
-  // Brush emergence: starts near center or shrinks in from 0 width to July
+  // Brush emergence
   const currentBrushWidthPct = interpolate(
     selectionProgress,
     [0, 1],
     [0, julyWidthPct],
-    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    clamp
   );
-
   const currentBrushLeftPct = julyStartPct + (julyWidthPct - currentBrushWidthPct) / 2;
-  const brushOpacity = interpolate(selectionProgress, [0, 0.25], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  const brushOpacity = interpolate(selectionProgress, [0, 0.25], [0, 1], clamp);
 
-  // Ambient breathing opacity during Phase 6 (540+ frames)
+  // Ambient breathing opacity during Phase 7
   const breathingOpacity = isAnatomyPhase
     ? 0.15 + 0.08 * Math.sin(frame / 24)
     : 0.16;
@@ -90,7 +85,7 @@ export const OverviewTrack: React.FC<OverviewTrackProps> = ({
             OVERVIEW
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, color: THEME.textPrimary }}>
-            Complete Annual Temporal Domain
+            Yearly Temporal Overview
           </span>
           <span
             style={{
@@ -100,7 +95,7 @@ export const OverviewTrack: React.FC<OverviewTrackProps> = ({
               color: THEME.textMuted,
             }}
           >
-            (12 Months · 365 Days)
+            (12 Months · Monthly Granularity)
           </span>
         </div>
 
@@ -130,7 +125,7 @@ export const OverviewTrack: React.FC<OverviewTrackProps> = ({
         </div>
       </div>
 
-      {/* 1. Density Heat Strip (48 Sub-bins) */}
+      {/* 1. Annual Density Heat Strip (48 Sub-bins) */}
       <div
         style={{
           position: 'relative',
@@ -213,7 +208,7 @@ export const OverviewTrack: React.FC<OverviewTrackProps> = ({
           );
         })}
 
-        {/* Granular Activity Bars (48 sub-bins) */}
+        {/* Granular Activity Bars (48 sub-bins across the 12 months) */}
         {ANNUAL_SUB_BINS.map((value, index) => {
           const heightPx = Math.max(4, (value / ANNUAL_SUB_BINS_MAX) * 44);
           const isJulySubBin = index >= 24 && index < 28;
@@ -271,14 +266,7 @@ export const OverviewTrack: React.FC<OverviewTrackProps> = ({
                 justifyContent: 'center',
               }}
             >
-              <div
-                style={{
-                  width: 1,
-                  height: 10,
-                  backgroundColor: '#ffffff',
-                  opacity: 0.85,
-                }}
-              />
+              <div style={{ width: 1, height: 10, backgroundColor: '#ffffff', opacity: 0.85 }} />
             </div>
 
             {/* Right Handle Pill */}
@@ -298,14 +286,7 @@ export const OverviewTrack: React.FC<OverviewTrackProps> = ({
                 justifyContent: 'center',
               }}
             >
-              <div
-                style={{
-                  width: 1,
-                  height: 10,
-                  backgroundColor: '#ffffff',
-                  opacity: 0.85,
-                }}
-              />
+              <div style={{ width: 1, height: 10, backgroundColor: '#ffffff', opacity: 0.85 }} />
             </div>
           </div>
         )}

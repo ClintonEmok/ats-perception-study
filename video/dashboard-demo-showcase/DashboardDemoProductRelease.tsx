@@ -164,7 +164,7 @@ function CubeReleaseScene({ frame, fps, seconds }: { frame: number; fps: number;
   const build = interpolate(local, [0.6, 5.2], [0.15, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
   const orbit = interpolate(local, [0, 12], [0, 1], clamp);
   const topDown = interpolate(local, [6.2, 8.2, 10, 11.8], [0, 1, 1, 0], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-  const sliceEvolution = interpolate(local, [8.15, 10.05], [0, 6.99], clamp);
+  const sliceEvolution = interpolate(local, [8.15, 13.15], [0, 6.99], clamp);
   const rotateY = interpolate(entry, [0, 1], [-20, 1.5]);
   const rotateX = interpolate(entry, [0, 1], [5, 0]);
   const copyOpacity = interpolate(local, [0.5, 1.5, 11, 12], [0, 1, 1, 0], clamp);
@@ -175,7 +175,7 @@ function CubeReleaseScene({ frame, fps, seconds }: { frame: number; fps: number;
       <SceneCopy index="03" eyebrow="SPATIOTEMPORAL DEPTH" title="THE PATTERN, IN MOTION." body="STKDE surfaces stack through time. Orbit the same structure, then tilt overhead to reveal persistent and shifting hotspots." opacity={copyOpacity} x={92} y={150} width={510} />
       <div style={{ position: 'absolute', left: 560, top: 90, width: 1440, height: 850, transformOrigin: '50% 55%', transform: `perspective(1700px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`, overflow: 'hidden' }}>
         <div style={{ width: 1600, height: 710, transform: 'scale(1.12)', transformOrigin: 'center center' }}>
-           <DashboardDemoCube selectionProgress={1} warpProgress={0.6} multiplier={1.9} cameraProgress={orbit} buildProgress={build} topDownProgress={topDown} scanDayProgress={-1} sliceEvolutionProgress={local >= 8.15 && local <= 10.05 ? sliceEvolution : -1} />
+           <DashboardDemoCube selectionProgress={1} warpProgress={0.6} multiplier={1.9} cameraProgress={orbit} buildProgress={build} topDownProgress={topDown} scanDayProgress={-1} sliceEvolutionProgress={local >= 8.15 && local <= 13.15 ? sliceEvolution : -1} />
         </div>
       </div>
     </AbsoluteFill>

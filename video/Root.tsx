@@ -20,10 +20,35 @@ import { WangAnimation, WangGraphAnimation } from './wang-timeslicing';
 import { DesignRequirementsAnimation } from './design-requirements';
 import { TimelineDesignAnimation } from './timeline-design';
 import { STCInspectionAnimation } from './stc-inspection';
+import { STCCompareAnimation } from './stc-compare';
 
 export const RemotionRoot = () => {
   return (
     <>
+      <Composition
+        id="Slide19Compare"
+        component={STCCompareAnimation}
+        durationInFrames={1260}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="Slide19STCCompare"
+        component={STCCompareAnimation}
+        durationInFrames={1260}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="STCCompare"
+        component={STCCompareAnimation}
+        durationInFrames={1260}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="Slide18STCInspection"
         component={STCInspectionAnimation}

@@ -6,7 +6,7 @@ import { THEME, TIMELINE_LEFT, TIMELINE_WIDTH } from './data';
 const clamp = { extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const };
 
 interface AnatomyCalloutsProps {
-  // Entrance progress for callouts (0 -> 1 during frames 460..540)
+  // Entrance progress for callouts (0 -> 1 during frames 480..560)
   progress: number;
 }
 
@@ -16,46 +16,51 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
 
   if (progress <= 0) return null;
 
-  // Independent desynchronized floating offsets (2.5px amplitude, periods 5.5s - 7.8s)
-  const float1 = Math.sin((frame * 2 * Math.PI) / (6.2 * fps)) * 2.5;
-  const float2 = Math.sin(((frame + 45) * 2 * Math.PI) / (5.5 * fps)) * 2.5;
-  const float3 = Math.sin(((frame + 90) * 2 * Math.PI) / (7.1 * fps)) * 2.2;
-  const float4 = Math.sin(((frame + 135) * 2 * Math.PI) / (6.8 * fps)) * 2.5;
-  const float5 = Math.sin(((frame + 180) * 2 * Math.PI) / (7.8 * fps)) * 2.2;
+  // Restrained desynchronized floating offsets (~2.0px amplitude, periods 5.5s - 7.8s)
+  const float1 = Math.sin((frame * 2 * Math.PI) / (6.2 * fps)) * 2.0;
+  const float2 = Math.sin(((frame + 45) * 2 * Math.PI) / (5.5 * fps)) * 2.0;
+  const float3 = Math.sin(((frame + 90) * 2 * Math.PI) / (7.1 * fps)) * 1.8;
+  const float4 = Math.sin(((frame + 135) * 2 * Math.PI) / (6.8 * fps)) * 2.0;
+  const float5 = Math.sin(((frame + 180) * 2 * Math.PI) / (7.8 * fps)) * 1.8;
+  const floatR5a = Math.sin(((frame + 220) * 2 * Math.PI) / (6.0 * fps)) * 1.5;
 
-  // Staggered spring entrances for the 5 callouts
-  const s1 = spring({ frame: Math.max(0, frame - 450), fps, config: { damping: 18, stiffness: 120 } });
-  const s2 = spring({ frame: Math.max(0, frame - 470), fps, config: { damping: 18, stiffness: 120 } });
-  const s3 = spring({ frame: Math.max(0, frame - 490), fps, config: { damping: 18, stiffness: 120 } });
-  const s4 = spring({ frame: Math.max(0, frame - 510), fps, config: { damping: 18, stiffness: 120 } });
-  const s5 = spring({ frame: Math.max(0, frame - 530), fps, config: { damping: 18, stiffness: 120 } });
+  // Staggered spring entrances
+  const s1 = spring({ frame: Math.max(0, frame - 460), fps, config: { damping: 18, stiffness: 130 } });
+  const s2 = spring({ frame: Math.max(0, frame - 480), fps, config: { damping: 18, stiffness: 130 } });
+  const s3 = spring({ frame: Math.max(0, frame - 500), fps, config: { damping: 18, stiffness: 130 } });
+  const s4 = spring({ frame: Math.max(0, frame - 520), fps, config: { damping: 18, stiffness: 130 } });
+  const s5 = spring({ frame: Math.max(0, frame - 540), fps, config: { damping: 18, stiffness: 130 } });
+  const sR5a = spring({ frame: Math.max(0, frame - 490), fps, config: { damping: 18, stiffness: 130 } });
 
-  // Anchor dot pulse
-  const anchorPulse = 0.5 + 0.5 * Math.sin(frame / 12);
+  // Anchor dot gentle pulse
+  const anchorPulse = 0.5 + 0.5 * Math.sin(frame / 14);
 
-  // Geometry Coordinates:
+  // Coordinates:
   // Overview top: 220, bottom: 350
   // Detail top: 460, bottom: 620
 
-  // Callout 1 Anchor: Overview month axis (APR area -> x: 300 + 1320 * 0.28 = 670, y: 220)
-  const c1Anchor = { x: TIMELINE_LEFT + TIMELINE_WIDTH * 0.26, y: 220 };
-  const c1Card = { x: TIMELINE_LEFT + 10, y: 106 + float1, width: 380, height: 68 };
+  // 1. OVERVIEW (YEARLY): Apr area (x: 300 + 1320 * (3.5/12) = 685, y: 220)
+  const c1Anchor = { x: TIMELINE_LEFT + TIMELINE_WIDTH * (3.5 / 12), y: 220 };
+  const c1Card = { x: TIMELINE_LEFT + 20, y: 130 + float1, width: 330, height: 54 };
 
-  // Callout 2 Anchor: Overview selection brush [JUL] top edge (x: 300 + 1320 * 0.541 = 1014, y: 220)
+  // 2. SELECT [ JULY ]: July brush in overview (x: 300 + 1320 * (6.5/12) = 1015, y: 220)
   const c2Anchor = { x: TIMELINE_LEFT + TIMELINE_WIDTH * (6.5 / 12), y: 220 };
-  const c2Card = { x: TIMELINE_LEFT + TIMELINE_WIDTH * 0.44, y: 106 + float2, width: 420, height: 68 };
+  const c2Card = { x: TIMELINE_LEFT + TIMELINE_WIDTH * 0.44, y: 130 + float2, width: 340, height: 54 };
 
-  // Callout 3 Anchor: Detail header / resolution switch (x: 300 + 24 = 324, y: 485)
+  // 3. ADAPTIVE GRANULARITY (Left side): Points to Detail header / resolution switch (x: 300 + 22 = 322, y: 485)
   const c3Anchor = { x: TIMELINE_LEFT + 22, y: 485 };
-  const c3Card = { x: 36, y: 456 + float3, width: 244, height: 78 };
+  const c3Card = { x: 36, y: 456 + float3, width: 244, height: 76 };
 
-  // Callout 4 Anchor: Expanded burst day Jul 05 (x: 300 + 1320 * 0.17 = 524, y: 620)
-  const c4Anchor = { x: TIMELINE_LEFT + TIMELINE_WIDTH * 0.168, y: 620 };
-  const c4Card = { x: TIMELINE_LEFT + TIMELINE_WIDTH * 0.36, y: 668 + float4, width: 440, height: 68 };
+  // 4. DENSITY-BASED ALLOCATION & HOURLY RESOLUTION (R1): Points to expanded Day 14 slot (around 46% of detail -> x: 300 + 1320 * 0.46 = 907, y: 620)
+  const c4Anchor = { x: TIMELINE_LEFT + TIMELINE_WIDTH * 0.46, y: 620 };
+  const c4Card = { x: TIMELINE_LEFT + TIMELINE_WIDTH * 0.42, y: 668 + float4, width: 440, height: 56 };
 
-  // Callout 5 Anchor: Detail date reference Jul 01 (x: 300 + 1320 * 0.02 = 326, y: 620)
-  const c5Anchor = { x: TIMELINE_LEFT + 26, y: 620 };
-  const c5Card = { x: TIMELINE_LEFT + 10, y: 668 + float5, width: 380, height: 68 };
+  // 5. CLOCK-TIME REFERENCES (R3): Detail tick 01 (x: 300 + 20 = 320, y: 620)
+  const c5Anchor = { x: TIMELINE_LEFT + 20, y: 620 };
+  const c5Card = { x: TIMELINE_LEFT + 10, y: 668 + float5, width: 360, height: 56 };
+
+  // R5a connector badge midpoint (x: 1015, y: 395)
+  const r5aPos = { x: TIMELINE_LEFT + TIMELINE_WIDTH * (6.5 / 12) + 24, y: 395 + floatR5a };
 
   return (
     <div
@@ -76,11 +81,11 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           height: 1080,
         }}
       >
-        {/* 1. Leader Line 1: Callout 1 -> Overview Track */}
+        {/* 1. Leader Line 1: OVERVIEW */}
         {s1 > 0 && (
           <g opacity={s1}>
             <path
-              d={`M ${c1Card.x + 190} ${c1Card.y + c1Card.height} L ${c1Card.x + 190} ${c1Anchor.y - 12} L ${c1Anchor.x} ${c1Anchor.y}`}
+              d={`M ${c1Card.x + 165} ${c1Card.y + c1Card.height} L ${c1Card.x + 165} ${c1Anchor.y - 12} L ${c1Anchor.x} ${c1Anchor.y}`}
               fill="none"
               stroke="#0f172a"
               strokeWidth={1.5}
@@ -100,11 +105,11 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           </g>
         )}
 
-        {/* 2. Leader Line 2: Callout 2 -> Selection Window */}
+        {/* 2. Leader Line 2: SELECT [ JULY ] */}
         {s2 > 0 && (
           <g opacity={s2}>
             <path
-              d={`M ${c2Card.x + 180} ${c2Card.y + c2Card.height} L ${c2Card.x + 180} ${c2Anchor.y - 12} L ${c2Anchor.x} ${c2Anchor.y}`}
+              d={`M ${c2Card.x + 150} ${c2Card.y + c2Card.height} L ${c2Card.x + 150} ${c2Anchor.y - 12} L ${c2Anchor.x} ${c2Anchor.y}`}
               fill="none"
               stroke={THEME.tueRed}
               strokeWidth={1.8}
@@ -124,7 +129,7 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           </g>
         )}
 
-        {/* 3. Leader Line 3: Callout 3 -> Detail Granularity Switch */}
+        {/* 3. Leader Line 3: ADAPTIVE GRANULARITY */}
         {s3 > 0 && (
           <g opacity={s3}>
             <path
@@ -148,11 +153,11 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           </g>
         )}
 
-        {/* 4. Leader Line 4: Callout 4 -> Density-Scaled Burst Days */}
+        {/* 4. Leader Line 4: DENSITY ALLOCATION & HOURLY SUB-STRUCTURE (R1) */}
         {s4 > 0 && (
           <g opacity={s4}>
             <path
-              d={`M ${c4Card.x + 110} ${c4Card.y} L ${c4Card.x + 110} ${c4Anchor.y + 16} L ${c4Anchor.x} ${c4Anchor.y}`}
+              d={`M ${c4Card.x + 160} ${c4Card.y} L ${c4Card.x + 160} ${c4Anchor.y + 14} L ${c4Anchor.x} ${c4Anchor.y}`}
               fill="none"
               stroke={THEME.violet}
               strokeWidth={1.8}
@@ -172,11 +177,11 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           </g>
         )}
 
-        {/* 5. Leader Line 5: Callout 5 -> Original Calendar Ticks */}
+        {/* 5. Leader Line 5: CLOCK REFERENCES (R3) */}
         {s5 > 0 && (
           <g opacity={s5}>
             <path
-              d={`M ${c5Card.x + 140} ${c5Card.y} L ${c5Card.x + 140} ${c5Anchor.y + 16} L ${c5Anchor.x} ${c5Anchor.y}`}
+              d={`M ${c5Card.x + 140} ${c5Card.y} L ${c5Card.x + 140} ${c5Anchor.y + 14} L ${c5Anchor.x} ${c5Anchor.y}`}
               fill="none"
               stroke={THEME.emerald}
               strokeWidth={1.5}
@@ -198,10 +203,10 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
       </svg>
 
       {/* ========================================================= */}
-      {/* CALLOUT CARDS (HTML Layer for crisp subpixel typography) */}
+      {/* RESTRAINED HIGHLIGHT PILLS & BADGES                        */}
       {/* ========================================================= */}
 
-      {/* CALLOUT 1: FULL TEMPORAL OVERVIEW (R5a) */}
+      {/* 1. OVERVIEW (YEARLY) */}
       <div
         style={{
           position: 'absolute',
@@ -211,66 +216,42 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           background: '#ffffff',
           borderRadius: 8,
           border: '1.5px solid rgba(15, 23, 42, 0.12)',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-          padding: '10px 14px',
+          boxShadow: '0 3px 12px rgba(0, 0, 0, 0.04)',
+          padding: '8px 12px',
           boxSizing: 'border-box',
           opacity: s1,
-          transform: `translateY(${(1 - s1) * 8}px)`,
+          transform: `translateY(${(1 - s1) * 6}px)`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: '50%',
-                backgroundColor: '#0f172a',
-                color: '#ffffff',
-                fontSize: 9,
-                fontWeight: 900,
-                fontFamily: MONO_FONT,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              1
-            </div>
-            <span
-              style={{
-                fontFamily: MONO_FONT,
-                fontSize: 11,
-                fontWeight: 850,
-                letterSpacing: 0.8,
-                color: THEME.navy,
-              }}
-            >
-              FULL TEMPORAL OVERVIEW
-            </span>
-          </div>
-          {/* Requirement Tag R5a */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <span
             style={{
               fontFamily: MONO_FONT,
-              fontSize: 10,
+              fontSize: 10.5,
               fontWeight: 850,
-              color: '#0f172a',
-              backgroundColor: 'rgba(15, 23, 42, 0.08)',
-              padding: '2px 6px',
-              borderRadius: 4,
-              border: '1px solid rgba(15, 23, 42, 0.14)',
+              letterSpacing: 0.8,
+              color: THEME.navy,
             }}
           >
-            R5a
+            OVERVIEW
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 650,
+              color: THEME.textMuted,
+              fontFamily: MONO_FONT,
+            }}
+          >
+            (12 MONTHS)
           </span>
         </div>
-        <div style={{ fontSize: 12, lineHeight: 1.35, color: THEME.textSecondary, fontWeight: 550 }}>
-          Selected focus remains situated within the complete analysis period.
+        <div style={{ fontSize: 11.5, color: THEME.textSecondary, fontWeight: 550 }}>
+          Complete yearly temporal range situated above.
         </div>
       </div>
 
-      {/* CALLOUT 2: TEMPORAL FOCUS */}
+      {/* 2. SELECT [ JULY ] */}
       <div
         style={{
           position: 'absolute',
@@ -280,64 +261,90 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           background: '#ffffff',
           borderRadius: 8,
           border: `1.5px solid ${THEME.tueRedBorder}`,
-          boxShadow: '0 4px 16px rgba(200, 16, 46, 0.08)',
-          padding: '10px 14px',
+          boxShadow: '0 3px 12px rgba(200, 16, 46, 0.06)',
+          padding: '8px 12px',
           boxSizing: 'border-box',
           opacity: s2,
-          transform: `translateY(${(1 - s2) * 8}px)`,
+          transform: `translateY(${(1 - s2) * 6}px)`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: '50%',
-                backgroundColor: THEME.tueRed,
-                color: '#ffffff',
-                fontSize: 9,
-                fontWeight: 900,
-                fontFamily: MONO_FONT,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              2
-            </div>
-            <span
-              style={{
-                fontFamily: MONO_FONT,
-                fontSize: 11,
-                fontWeight: 850,
-                letterSpacing: 0.8,
-                color: THEME.tueRed,
-              }}
-            >
-              TEMPORAL FOCUS
-            </span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+          <span
+            style={{
+              fontFamily: MONO_FONT,
+              fontSize: 10.5,
+              fontWeight: 850,
+              letterSpacing: 0.8,
+              color: THEME.tueRed,
+            }}
+          >
+            SELECT [ JULY ]
+          </span>
           <span
             style={{
               fontFamily: MONO_FONT,
               fontSize: 9,
-              fontWeight: 700,
+              fontWeight: 750,
               color: THEME.tueRed,
               backgroundColor: THEME.tueRedBg,
-              padding: '2px 6px',
-              borderRadius: 4,
+              padding: '1px 5px',
+              borderRadius: 3,
             }}
           >
-            PRIMARY INTERACTION
+            MONTH FOCUS
           </span>
         </div>
-        <div style={{ fontSize: 12, lineHeight: 1.35, color: THEME.textSecondary, fontWeight: 550 }}>
-          The analyst defines the period to investigate directly through the timeline.
+        <div style={{ fontSize: 11.5, color: THEME.textSecondary, fontWeight: 550 }}>
+          Domain of interest defined directly in context.
         </div>
       </div>
 
-      {/* CALLOUT 3: ADAPTIVE DETAIL (Left side) */}
+      {/* R5a CONNECTOR BADGE (Between Year and Month) */}
+      <div
+        style={{
+          position: 'absolute',
+          left: r5aPos.x,
+          top: r5aPos.y,
+          background: '#ffffff',
+          borderRadius: 6,
+          border: '1.5px solid rgba(15, 23, 42, 0.14)',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+          padding: '4px 10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          opacity: sR5a,
+          transform: `translateX(-50%) translateY(${(1 - sR5a) * 6}px)`,
+          zIndex: 45,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: MONO_FONT,
+            fontSize: 9.5,
+            fontWeight: 900,
+            color: '#0f172a',
+            backgroundColor: 'rgba(15, 23, 42, 0.08)',
+            padding: '1px 5px',
+            borderRadius: 3,
+          }}
+        >
+          R5a
+        </span>
+        <span
+          style={{
+            fontFamily: MONO_FONT,
+            fontSize: 10,
+            fontWeight: 750,
+            color: THEME.navy,
+            letterSpacing: 0.5,
+          }}
+        >
+          OVERVIEW + FOCUS PERSISTENCE
+        </span>
+      </div>
+
+      {/* 3. ADAPTIVE GRANULARITY (Left side) */}
       <div
         style={{
           position: 'absolute',
@@ -347,49 +354,32 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           background: '#ffffff',
           borderRadius: 8,
           border: `1.5px solid ${THEME.blueBorder}`,
-          boxShadow: '0 4px 16px rgba(37, 99, 235, 0.08)',
-          padding: '10px 12px',
+          boxShadow: '0 3px 12px rgba(37, 99, 235, 0.06)',
+          padding: '8px 10px',
           boxSizing: 'border-box',
           opacity: s3,
-          transform: `translateY(${(1 - s3) * 8}px)`,
+          transform: `translateY(${(1 - s3) * 6}px)`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <div
-            style={{
-              width: 16,
-              height: 16,
-              borderRadius: '50%',
-              backgroundColor: THEME.blue,
-              color: '#ffffff',
-              fontSize: 9,
-              fontWeight: 900,
-              fontFamily: MONO_FONT,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            3
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <span
             style={{
               fontFamily: MONO_FONT,
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: 850,
               letterSpacing: 0.8,
               color: THEME.blue,
             }}
           >
-            ADAPTIVE DETAIL
+            MONTH DETAIL
           </span>
         </div>
-        <div style={{ fontSize: 11.5, lineHeight: 1.35, color: THEME.textSecondary, fontWeight: 550 }}>
-          Temporal granularity automatically responds to the selected domain scale.
+        <div style={{ fontSize: 11, color: THEME.textSecondary, fontWeight: 550, lineHeight: 1.3 }}>
+          July expands into 31 daily intervals with DBTA active allocation.
         </div>
       </div>
 
-      {/* CALLOUT 5: ORIGINAL TIME REFERENCE (R3) - Bottom Left */}
+      {/* 5. CLOCK-TIME REFERENCES (R3) - Bottom Left */}
       <div
         style={{
           position: 'absolute',
@@ -398,67 +388,46 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           width: c5Card.width,
           background: '#ffffff',
           borderRadius: 8,
-          border: '1.5px solid rgba(5, 150, 105, 0.28)',
-          boxShadow: '0 4px 16px rgba(5, 150, 105, 0.06)',
-          padding: '10px 14px',
+          border: '1.5px solid rgba(5, 150, 105, 0.25)',
+          boxShadow: '0 3px 12px rgba(5, 150, 105, 0.05)',
+          padding: '8px 12px',
           boxSizing: 'border-box',
           opacity: s5,
-          transform: `translateY(${(1 - s5) * 8}px)`,
+          transform: `translateY(${(1 - s5) * 6}px)`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: '50%',
-                backgroundColor: THEME.emerald,
-                color: '#ffffff',
-                fontSize: 9,
-                fontWeight: 900,
-                fontFamily: MONO_FONT,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              5
-            </div>
-            <span
-              style={{
-                fontFamily: MONO_FONT,
-                fontSize: 11,
-                fontWeight: 850,
-                letterSpacing: 0.8,
-                color: THEME.emerald,
-              }}
-            >
-              ORIGINAL TIME REFERENCE
-            </span>
-          </div>
-          {/* Requirement Tag R3 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <span
             style={{
               fontFamily: MONO_FONT,
-              fontSize: 10,
+              fontSize: 10.5,
+              fontWeight: 850,
+              letterSpacing: 0.8,
+              color: THEME.emerald,
+            }}
+          >
+            CALENDAR TICKS
+          </span>
+          <span
+            style={{
+              fontFamily: MONO_FONT,
+              fontSize: 9.5,
               fontWeight: 850,
               color: THEME.emerald,
               backgroundColor: THEME.emeraldBg,
-              padding: '2px 6px',
-              borderRadius: 4,
-              border: '1px solid rgba(5, 150, 105, 0.22)',
+              padding: '1px 5px',
+              borderRadius: 3,
             }}
           >
             R3
           </span>
         </div>
-        <div style={{ fontSize: 12, lineHeight: 1.35, color: THEME.textSecondary, fontWeight: 550 }}>
-          Clock-time boundaries and calendar dates remain explicitly accessible.
+        <div style={{ fontSize: 11.5, color: THEME.textSecondary, fontWeight: 550 }}>
+          Calendar day labels and clock references remain explicit.
         </div>
       </div>
 
-      {/* CALLOUT 4: DENSITY-SCALED ALLOCATION (R1) - Bottom Center/Right */}
+      {/* 4. DENSITY ALLOCATION & HOURLY SHIFT (R1) - Bottom Center/Right */}
       <div
         style={{
           position: 'absolute',
@@ -467,63 +436,44 @@ export const AnatomyCallouts: React.FC<AnatomyCalloutsProps> = ({ progress }) =>
           width: c4Card.width,
           background: '#ffffff',
           borderRadius: 8,
-          border: '1.5px solid rgba(124, 58, 237, 0.28)',
-          boxShadow: '0 4px 16px rgba(124, 58, 237, 0.08)',
-          padding: '10px 14px',
+          border: '1.5px solid rgba(124, 58, 237, 0.25)',
+          boxShadow: '0 3px 12px rgba(124, 58, 237, 0.06)',
+          padding: '8px 12px',
           boxSizing: 'border-box',
           opacity: s4,
-          transform: `translateY(${(1 - s4) * 8}px)`,
+          transform: `translateY(${(1 - s4) * 6}px)`,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: '50%',
-                backgroundColor: THEME.violet,
-                color: '#ffffff',
-                fontSize: 9,
-                fontWeight: 900,
-                fontFamily: MONO_FONT,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              4
-            </div>
             <span
               style={{
                 fontFamily: MONO_FONT,
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: 850,
                 letterSpacing: 0.8,
                 color: THEME.violet,
               }}
             >
-              DENSITY-SCALED ALLOCATION
+              EXTRA SPACE → HOURLY GRANULARITY
             </span>
           </div>
-          {/* Requirement Tag R1 */}
           <span
             style={{
               fontFamily: MONO_FONT,
-              fontSize: 10,
+              fontSize: 9.5,
               fontWeight: 850,
               color: THEME.violet,
               backgroundColor: THEME.violetBg,
-              padding: '2px 6px',
-              borderRadius: 4,
-              border: '1px solid rgba(124, 58, 237, 0.22)',
+              padding: '1px 5px',
+              borderRadius: 3,
             }}
           >
             R1
           </span>
         </div>
-        <div style={{ fontSize: 12, lineHeight: 1.35, color: THEME.textSecondary, fontWeight: 550 }}>
-          Within the domain, DBTA allocates more visual room to high-activity intervals.
+        <div style={{ fontSize: 11.5, color: THEME.textSecondary, fontWeight: 550 }}>
+          DBTA expands dense Day 14; with extra space, that day resolves its 24h hourly sub-structure.
         </div>
       </div>
     </div>
