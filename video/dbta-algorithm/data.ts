@@ -21,10 +21,10 @@ export const DBTA_STEPS: AlgorithmStep[] = [
   {
     id: 'step-1-raw-events',
     stepNumber: 'STEP 01',
-    title: 'RAW EVENT SEQUENCE',
+    title: 'EVENT SEQUENCE',
     subtitle: 'Continuous Domain',
     formula: 'T = {t_1, t_2, ..., t_N}',
-    description: 'Raw crime events with exact, irregular timestamps across continuous time.',
+    description: 'Crime events with exact, irregular timestamps across continuous time.',
     accentColor: '#475569', // Slate / Charcoal
     icon: '⚡',
   },
