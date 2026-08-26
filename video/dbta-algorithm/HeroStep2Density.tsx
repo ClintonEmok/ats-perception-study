@@ -19,30 +19,49 @@ export const HeroStep2Density: React.FC<HeroStep2DensityProps> = ({
   const padX = 40;
   const stageW = width - 2 * padX;
   const stageH = height - 100;
-  
+
   const axisMargin = 50;
   const axisW = stageW - 2 * axisMargin;
   const sliceW = axisW / 5;
   const axisY = stageH - 70;
+  const maxPlotH = stageH - 180;
 
-  // Curve rise animation
-  const curveRise = interpolate(progress, [0.1, 0.45], [0, 1], {
+  // Visual pacing beats:
+  // Beat 1 (0.05..0.45): Histogram bars rise to measured event counts
+  // Beat 2 (0.45..0.75): Peak frequency pulse badge
+  // Beat 3 (0.75..1.00): Stable hold
+  const barsRise = interpolate(progress, [0.08, 0.48], [0, 1], {
     ...clamp,
-    easing: Easing.out(Easing.cubic),
+    easing: Easing.bezier(0.25, 0.1, 0.25, 1.0),
   });
 
-  const peakPulse = interpolate(progress, [0.5, 0.7, 0.9, 1.0], [1, 1.15, 1, 1.1], clamp);
+  const peakPulse = interpolate(progress, [0.45, 0.65, 0.85, 1.0], [0, 1, 0.95, 1], clamp);
 
-  // Density curve control points
-  const p1 = { x: axisMargin, y: axisY - 10 * curveRise };
-  const p2 = { x: axisMargin + sliceW, y: axisY - 20 * curveRise };
-  const p3 = { x: axisMargin + 1.8 * sliceW, y: axisY - 55 * curveRise };
-  const peak = { x: axisMargin + 2.5 * sliceW, y: axisY - 260 * curveRise };
-  const p4 = { x: axisMargin + 3.2 * sliceW, y: axisY - 55 * curveRise };
-  const p5 = { x: axisMargin + 4 * sliceW, y: axisY - 20 * curveRise };
-  const p6 = { x: axisMargin + axisW, y: axisY - 12 * curveRise };
+  const binData = [
+    { label: '12:00–13:00', count: 2, isBurst: false },
+    { label: '13:00–14:00', count: 6, isBurst: false },
+    { label: '14:00–15:00', count: 48, isBurst: true },
+    { label: '15:00–16:00', count: 2, isBurst: false },
+    { label: '16:00–17:00', count: 7, isBurst: false },
+  ];
 
-  const pathD = `M ${p1.x} ${p1.y} C ${axisMargin + 0.6 * sliceW} ${p1.y}, ${axisMargin + 1.3 * sliceW} ${p2.y}, ${p3.x} ${p3.y} C ${axisMargin + 2.0 * sliceW} ${axisY - 180 * curveRise}, ${axisMargin + 2.2 * sliceW} ${peak.y}, ${peak.x} ${peak.y} C ${axisMargin + 2.8 * sliceW} ${peak.y}, ${axisMargin + 3.0 * sliceW} ${axisY - 180 * curveRise}, ${p4.x} ${p4.y} C ${axisMargin + 3.7 * sliceW} ${p5.y}, ${axisMargin + 4.4 * sliceW} ${p6.y}, ${p6.x} ${p6.y}`;
+  const maxCount = 48;
+
+  // Envelope curve points through the tops of the bars
+  const envelopePoints = binData.map((d, i) => {
+    const cx = axisMargin + (i + 0.5) * sliceW;
+    const h = (d.count / maxCount) * maxPlotH * barsRise;
+    const cy = axisY - h;
+    return { x: cx, y: cy };
+  });
+
+  const pathD = `M ${axisMargin} ${axisY} ` +
+    `Q ${envelopePoints[0].x} ${envelopePoints[0].y}, ${(envelopePoints[0].x + envelopePoints[1].x) / 2} ${(envelopePoints[0].y + envelopePoints[1].y) / 2} ` +
+    `Q ${envelopePoints[1].x} ${envelopePoints[1].y}, ${(envelopePoints[1].x + envelopePoints[2].x) / 2} ${envelopePoints[2].y + 60 * (1 - barsRise)} ` +
+    `Q ${envelopePoints[2].x} ${envelopePoints[2].y}, ${(envelopePoints[2].x + envelopePoints[3].x) / 2} ${envelopePoints[2].y + 60 * (1 - barsRise)} ` +
+    `Q ${envelopePoints[3].x} ${envelopePoints[3].y}, ${(envelopePoints[3].x + envelopePoints[4].x) / 2} ${(envelopePoints[3].y + envelopePoints[4].y) / 2} ` +
+    `Q ${envelopePoints[4].x} ${envelopePoints[4].y}, ${axisMargin + axisW} ${axisY}`;
+
   const areaD = `${pathD} L ${axisMargin + axisW} ${axisY} L ${axisMargin} ${axisY} Z`;
 
   return (
@@ -57,6 +76,8 @@ export const HeroStep2Density: React.FC<HeroStep2DensityProps> = ({
         justifyContent: 'flex-start',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
       }}
     >
       {/* 1. Header Info Bar */}
@@ -83,10 +104,10 @@ export const HeroStep2Density: React.FC<HeroStep2DensityProps> = ({
               border: `1px solid rgba(200, 16, 46, 0.25)`,
             }}
           >
-            ρ_i = N_i / |Δt_i|
+            {'N_i = Count(Δt_i)'}
           </div>
           <span style={{ fontSize: 16, fontWeight: 700, color: DARK_TEXT }}>
-            Continuous Temporal Density Signal Estimation
+            Hourly Event Frequency Quantification
           </span>
         </div>
       </div>
@@ -104,122 +125,175 @@ export const HeroStep2Density: React.FC<HeroStep2DensityProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Interval Grid Guides */}
-        {[0, 1, 2, 3, 4, 5].map((t) => (
-          <div
-            key={`guide-${t}`}
-            style={{
-              position: 'absolute',
-              left: axisMargin + t * sliceW,
-              top: 0,
-              width: 1,
-              height: stageH,
-              borderLeft: '1.5px dashed rgba(15, 23, 42, 0.1)',
-            }}
-          />
-        ))}
-
-        {/* SVG Curve & Signal */}
+        {/* SVG Activity Envelope Layer */}
         <svg
-          width={stageW}
-          height={stageH}
-          style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 3,
+            pointerEvents: 'none',
+          }}
         >
           <defs>
-            <linearGradient id="heroDensityGrad2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TUE_RED} stopOpacity={0.36} />
-              <stop offset="60%" stopColor={TUE_RED} stopOpacity={0.12} />
+            <linearGradient id="freqGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={TUE_RED} stopOpacity={0.25 * barsRise} />
               <stop offset="100%" stopColor={TUE_RED} stopOpacity={0.01} />
             </linearGradient>
           </defs>
 
-          {/* Area Fill */}
-          <path d={areaD} fill="url(#heroDensityGrad2)" />
-
-          {/* Density Signal Line */}
+          <path d={areaD} fill="url(#freqGrad)" />
           <path
             d={pathD}
             fill="none"
             stroke={TUE_RED}
-            strokeWidth={4}
+            strokeWidth={3}
             strokeLinecap="round"
+            strokeOpacity={0.85 * barsRise}
           />
-
-          {/* Peak Indicator Beacon */}
-          {curveRise > 0.6 && (
-            <g transform={`translate(${peak.x}, ${peak.y})`}>
-              <circle r={18 * peakPulse} fill={TUE_RED} opacity={0.25} />
-              <circle r={9} fill="#ffffff" stroke={TUE_RED} strokeWidth={3.5} />
-              <circle r={4} fill={TUE_RED} />
-            </g>
-          )}
-
-          {/* Baseline Axis */}
-          <line
-            x1={axisMargin}
-            y1={axisY}
-            x2={axisMargin + axisW}
-            y2={axisY}
-            stroke="#0f172a"
-            strokeWidth={3.5}
-            strokeLinecap="round"
-          />
-
-          {/* Ticks & Labels */}
-          {[0, 1, 2, 3, 4, 5].map((t) => {
-            const x = axisMargin + t * sliceW;
-            return (
-              <g key={`d-tick-${t}`}>
-                <line
-                  x1={x}
-                  y1={axisY - 10}
-                  x2={x}
-                  y2={axisY + 10}
-                  stroke="#0f172a"
-                  strokeWidth={2}
-                />
-                <text
-                  x={x}
-                  y={axisY + 32}
-                  textAnchor="middle"
-                  fontSize={14}
-                  fontFamily={MONO_FONT}
-                  fontWeight={800}
-                  fill={DARK_TEXT}
-                >
-                  {12 + t}:00
-                </text>
-              </g>
-            );
-          })}
         </svg>
 
-        {/* Floating Peak Card */}
-        {curveRise > 0.7 && (
+        {/* 5 Hourly Frequency Columns */}
+        {binData.map((d, i) => {
+          const colX = axisMargin + i * sliceW;
+          const barH = (d.count / maxCount) * maxPlotH * barsRise;
+          const isBurst = d.isBurst;
+
+          return (
+            <div
+              key={`freq-bin-${i}`}
+              style={{
+                position: 'absolute',
+                left: colX + 16,
+                width: sliceW - 32,
+                bottom: 70,
+                height: barH,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                zIndex: 10,
+              }}
+            >
+              {/* Count Value Badge above bar */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  opacity: barsRise,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: MONO_FONT,
+                    fontSize: isBurst ? 18 : 14,
+                    fontWeight: 900,
+                    color: isBurst ? TUE_RED : DARK_TEXT,
+                  }}
+                >
+                  {Math.round(d.count * barsRise)}
+                </span>
+                <span
+                  style={{
+                    fontFamily: MONO_FONT,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: isBurst ? TUE_RED : MUTED_TEXT,
+                  }}
+                >
+                  ev
+                </span>
+              </div>
+
+              {/* Bar Fill */}
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: isBurst ? TUE_RED : 'rgba(71, 85, 105, 0.15)',
+                  borderRadius: '6px 6px 0 0',
+                  border: isBurst ? `1.5px solid ${TUE_RED}` : '1px solid rgba(71, 85, 105, 0.25)',
+                  boxShadow: isBurst ? '0 8px 24px rgba(200, 16, 46, 0.25)' : 'none',
+                }}
+              />
+
+              {/* Bottom Interval Label */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: -46,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: MONO_FONT,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: DARK_TEXT,
+                  }}
+                >
+                  {d.label}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Peak Frequency Callout Tag */}
+        {peakPulse > 0 && (
           <div
             style={{
               position: 'absolute',
-              left: peak.x,
-              top: peak.y - 70,
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: '8px 16px',
-              borderRadius: 10,
+              left: axisMargin + 2.5 * sliceW,
+              top: axisY - maxPlotH * barsRise - 60,
+              transform: `translateX(-50%) scale(${peakPulse})`,
+              opacity: peakPulse,
+              padding: '6px 14px',
+              borderRadius: 8,
               backgroundColor: '#ffffff',
               border: `2px solid ${TUE_RED}`,
-              boxShadow: '0 8px 24px rgba(200, 16, 46, 0.18)',
+              boxShadow: '0 6px 20px rgba(200, 16, 46, 0.2)',
+              zIndex: 25,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
             }}
           >
-            <span style={{ fontSize: 11, fontFamily: MONO_FONT, fontWeight: 800, color: TUE_RED }}>
-              PEAK DENSITY INTERVAL [14:00–15:00]
-            </span>
-            <span style={{ fontSize: 16, fontFamily: MONO_FONT, fontWeight: 900, color: DARK_TEXT }}>
-              ρ_max = 48 events / hr
+            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: TUE_RED }} />
+            <span
+              style={{
+                fontFamily: MONO_FONT,
+                fontSize: 13,
+                fontWeight: 900,
+                color: TUE_RED,
+                letterSpacing: 0.5,
+              }}
+            >
+              PEAK ACTIVITY N_max = 48 events/hr
             </span>
           </div>
         )}
+
+        {/* Baseline Bar */}
+        <div
+          style={{
+            position: 'absolute',
+            left: axisMargin,
+            width: axisW,
+            bottom: 70,
+            height: 3.5,
+            backgroundColor: '#0f172a',
+            zIndex: 5,
+          }}
+        />
       </div>
     </div>
   );

@@ -41,12 +41,12 @@ export const DBTA_STEPS: AlgorithmStep[] = [
   {
     id: 'step-3-density',
     stepNumber: 'STEP 03',
-    title: 'DENSITY ESTIMATION',
-    subtitle: 'Signal Measurement',
-    formula: 'ρ_i = N_i / |Δt_i|',
-    description: 'Counts events per hour to compute the continuous temporal density signal.',
+    title: 'EVENT FREQUENCY',
+    subtitle: 'Activity Measurement',
+    formula: 'N_i = Count(Δt_i)',
+    description: 'Counts events per hour to quantify activity frequency across each interval.',
     accentColor: TUE_RED, // TU/e Red
-    icon: '📈',
+    icon: '📊',
   },
   {
     id: 'step-4-weights',

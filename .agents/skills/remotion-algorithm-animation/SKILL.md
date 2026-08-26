@@ -44,14 +44,14 @@ When animating mathematical or algorithmic processes, adhere strictly to these p
 ### A. Equal Baseline to Dynamic Redistribution
 * Always start from an intuitive **Uniform Initial State** (e.g., equal $20\%$ visual shares across all bins).
 * Show conservation laws explicitly: $\sum_{i=1}^M s_i = 100\%$ and fixed timeline canvas width $W$.
-* Animate density-driven modulation **symmetrically**:
-  - **Burst / High-density regions** expand **UP** ($20\% \rightarrow 48\%$).
-  - **Sparse regions** compress **DOWN** ($20\% \rightarrow 11.2\%$), protected by a non-zero floor guarantee ($w_i \ge 1.0$).
-  - **Moderate regions** adjust proportionally based on measured density $\rho_i$.
+* Animate frequency-driven modulation **symmetrically**:
+  - **Burst / High-frequency intervals** expand **UP** ($20\% \rightarrow 48\%$).
+  - **Sparse intervals** compress **DOWN** ($20\% \rightarrow 11.2\%$), protected by a non-zero floor guarantee ($w_i \ge 1.0$).
+  - **Moderate intervals** adjust proportionally based on measured event count $N_i$.
 
 ### B. Proportional Scaling Formula
 Always match production codebase formulations:
-$$w_i = 1 + \alpha \cdot \left(\frac{\rho_i}{\rho_{\max}}\right)^k \qquad s_i = \left(\frac{w_i}{\sum_{j=1}^M w_j}\right) \cdot 100\% \qquad x_k = W \cdot \left(\frac{\sum_{i=1}^k w_i}{W_{\text{total}}}\right)$$
+$$w_i = 1 + \alpha \cdot \left(\frac{N_i}{N_{\max}}\right)^k \qquad s_i = \left(\frac{w_i}{\sum_{j=1}^M w_j}\right) \cdot 100\% \qquad x_k = W \cdot \left(\frac{\sum_{i=1}^k w_i}{W_{\text{total}}}\right)$$
 
 ---
 

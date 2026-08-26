@@ -59,7 +59,7 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
     {
       label: '14:00–15:00',
       events: 48,
-      density: '48 ev/hr (ρ_max)',
+      density: '48 ev/hr (N_max)',
       initialShare: 20.0,
       finalShare: 48.0,
       delta: '+28.0%',
@@ -135,7 +135,7 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
             {'s_i = (w_i / Σ w_j) · 100%'}
           </div>
           <span style={{ fontSize: 16, fontWeight: 700, color: DARK_TEXT }}>
-            Temporal Space Redistribution (From Uniform 20% to Density Shares)
+            Temporal Space Redistribution (From Uniform 20% to Frequency Shares)
           </span>
         </div>
       </div>

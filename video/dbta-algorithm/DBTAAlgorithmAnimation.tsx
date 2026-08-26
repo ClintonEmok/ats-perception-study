@@ -17,7 +17,7 @@ export const DBTAAlgorithmAnimation: React.FC = () => {
   // Timeline choreography (30 fps):
   // 0s - 10s (0..300): Step 1 Event Sequence
   // 10s - 20s (300..600): Step 2 Hourly Binning
-  // 20s - 30s (600..900): Step 3 Density Estimation
+  // 20s - 30s (600..900): Step 3 Event Frequency
   // 30s - 40s (900..1200): Step 4 Space Reallocation
   // 40s - 50s (1200..1500): Step 5 Coordinate Integration
   // 50s - 65s (1500..1950): Summary View (All 5 Steps Grid)

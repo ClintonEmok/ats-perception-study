@@ -18,14 +18,13 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
   const padX = 22;
   const plotW = width - 2 * padX;
 
-  // Step 0: Raw Event Stream (Continuous Unbinned Timestamps)
+  // Step 0: Event Sequence (Continuous Unbinned Timestamps)
   if (stepIndex === 0) {
     const burstStart = padX + 0.4 * plotW;
     const burstW = 0.2 * plotW;
 
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        {/* Burst Overlap Box */}
         <rect
           x={burstStart}
           y={height / 2 - 20}
@@ -38,7 +37,6 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
           rx={4}
         />
 
-        {/* Baseline Axis */}
         <line
           x1={padX}
           y1={height / 2}
@@ -49,7 +47,6 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
           strokeLinecap="round"
         />
 
-        {/* Start & End Ticks */}
         <line x1={padX} y1={height / 2 - 10} x2={padX} y2={height / 2 + 10} stroke="#0f172a" strokeWidth={2.5} />
         <line x1={padX + plotW} y1={height / 2 - 10} x2={padX + plotW} y2={height / 2 + 10} stroke="#0f172a" strokeWidth={2.5} />
 
@@ -60,14 +57,12 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
           17:00
         </text>
 
-        {/* Scattered Event Dots */}
         <circle cx={padX + 0.08 * plotW} cy={height / 2} r={3.5} fill="#0f172a" />
         <circle cx={padX + 0.16 * plotW} cy={height / 2} r={3.5} fill="#0f172a" />
         <circle cx={padX + 0.25 * plotW} cy={height / 2} r={3.5} fill="#0f172a" />
         <circle cx={padX + 0.32 * plotW} cy={height / 2} r={3.5} fill="#0f172a" />
         <circle cx={padX + 0.37 * plotW} cy={height / 2} r={3.5} fill="#0f172a" />
 
-        {/* Burst Overplotting Dots */}
         {Array.from({ length: 12 }).map((_, i) => (
           <circle
             key={`raw-d-${i}`}
@@ -98,7 +93,6 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
 
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        {/* Interval 2 (Burst) Highlight Box */}
         <rect
           x={padX + 2 * sliceW}
           y={height / 2 - 22}
@@ -110,7 +104,6 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
           rx={4}
         />
 
-        {/* Baseline Axis */}
         <line
           x1={padX}
           y1={height / 2}
@@ -121,7 +114,6 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
           strokeLinecap="round"
         />
 
-        {/* Hourly Interval Ticks */}
         {ticks.map((t) => {
           const x = padX + t * sliceW;
           return (
@@ -149,10 +141,8 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
           );
         })}
 
-        {/* Event dots inside intervals */}
         <circle cx={padX + 0.3 * sliceW} cy={height / 2} r={3.5} fill="#0f172a" />
         <circle cx={padX + 0.7 * sliceW} cy={height / 2} r={3.5} fill="#0f172a" />
-
         <circle cx={padX + 1.3 * sliceW} cy={height / 2} r={3.5} fill="#0f172a" />
         <circle cx={padX + 1.7 * sliceW} cy={height / 2} r={3.5} fill="#0f172a" />
 
@@ -187,39 +177,65 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
     );
   }
 
-  // Step 2: Density Estimation (Continuous Signal Peak)
+  // Step 2: Event Frequency (Activity Measurement)
   if (stepIndex === 2) {
-    const pathD = `M ${padX} ${height - 18} Q ${padX + 0.3 * plotW} ${height - 22}, ${padX + 0.4 * plotW} ${height - 55} T ${padX + 0.5 * plotW} 24 T ${padX + 0.6 * plotW} ${height - 55} Q ${padX + 0.7 * plotW} ${height - 22}, ${padX + plotW} ${height - 18}`;
-    const areaD = `${pathD} L ${padX + plotW} ${height - 12} L ${padX} ${height - 12} Z`;
+    const bars = [
+      { label: 'Δt₁', count: 2, isBurst: false },
+      { label: 'Δt₂', count: 6, isBurst: false },
+      { label: 'Δt₃', count: 48, isBurst: true },
+      { label: 'Δt₄', count: 2, isBurst: false },
+      { label: 'Δt₅', count: 7, isBurst: false },
+    ];
+
+    const barW = (plotW - 28) / 5;
+    const maxPlotH = height - 48;
 
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        <defs>
-          <linearGradient id="diagDensityGrad2" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={TUE_RED} stopOpacity={0.32} />
-            <stop offset="100%" stopColor={TUE_RED} stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
+        {bars.map((bar, i) => {
+          const x = padX + i * (barW + 7);
+          const barH = (bar.count / 48) * maxPlotH;
+          const y = height - 18 - barH;
 
-        <path d={areaD} fill="url(#diagDensityGrad2)" />
-        <path d={pathD} fill="none" stroke={TUE_RED} strokeWidth={2.5} strokeLinecap="round" />
+          return (
+            <g key={`freq-bar-${i}`}>
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={barH}
+                fill={bar.isBurst ? TUE_RED : 'rgba(71, 85, 105, 0.2)'}
+                stroke={bar.isBurst ? TUE_RED : '#64748b'}
+                strokeWidth={1}
+                rx={2.5}
+              />
+              <text
+                x={x + barW / 2}
+                y={height - 6}
+                textAnchor="middle"
+                fontSize={9}
+                fontFamily={MONO_FONT}
+                fontWeight={700}
+                fill={MUTED_TEXT}
+              >
+                {bar.label}
+              </text>
+              <text
+                x={x + barW / 2}
+                y={y - 3}
+                textAnchor="middle"
+                fontSize={8.5}
+                fontFamily={MONO_FONT}
+                fontWeight={800}
+                fill={bar.isBurst ? TUE_RED : DARK_TEXT}
+              >
+                N={bar.count}
+              </text>
+            </g>
+          );
+        })}
 
-        <circle cx={padX + 0.5 * plotW} cy={24} r={8} fill={TUE_RED} opacity={0.2} />
-        <circle cx={padX + 0.5 * plotW} cy={24} r={4.5} fill="#ffffff" stroke={TUE_RED} strokeWidth={2} />
-
-        <text
-          x={padX + 0.5 * plotW}
-          y={14}
-          textAnchor="middle"
-          fontSize={9}
-          fontFamily={MONO_FONT}
-          fontWeight={800}
-          fill={TUE_RED}
-        >
-          PEAK ρ_max
-        </text>
-
-        <line x1={padX} y1={height - 12} x2={padX + plotW} y2={height - 12} stroke="#0f172a" strokeWidth={2} />
+        <line x1={padX} y1={height - 18} x2={padX + plotW} y2={height - 18} stroke="#0f172a" strokeWidth={2} />
       </svg>
     );
   }
