@@ -151,23 +151,6 @@ export const DesignRequirementsAnimation: React.FC = () => {
       <div style={{ zIndex: 10 }}>
         <DesignRequirementsGrid startFrame={255} />
       </div>
-
-      {/* Bottom Footer Tag */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 12,
-          right: 50,
-          color: DESIGN_COLORS.textMuted,
-          fontFamily: MONO_FONT,
-          fontSize: 10,
-          letterSpacing: 1.4,
-          fontWeight: 750,
-          opacity: 0.85,
-        }}
-      >
-        ADAPTIVE SPACE–TIME CUBE · SYSTEMATIC DERIVATION
-      </div>
     </AbsoluteFill>
   );
 };
