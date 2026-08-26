@@ -1,6 +1,6 @@
 import React from 'react';
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
-import { Layers, Network, ShieldCheck, Sparkles } from 'lucide-react';
+import { Layers, LayoutGrid, Network, ShieldCheck } from 'lucide-react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 import { DESIGN_COLORS } from './data';
 
@@ -61,7 +61,7 @@ export const VisualizationPrinciplesColumn: React.FC<ColumnProps> = ({ startFram
               color: DESIGN_COLORS.principles.accentDark,
             }}
           >
-            <Sparkles size={22} strokeWidth={2.4} />
+            <LayoutGrid size={22} strokeWidth={2.4} />
           </div>
           <div>
             <div

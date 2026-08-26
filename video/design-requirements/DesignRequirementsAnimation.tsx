@@ -6,7 +6,6 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
-import { Sparkles } from 'lucide-react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 import { AnalyticalTasksColumn } from './AnalyticalTasksColumn';
 import { ConvergenceStreams } from './ConvergenceStreams';

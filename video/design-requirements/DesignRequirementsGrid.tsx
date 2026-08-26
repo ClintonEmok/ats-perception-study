@@ -5,9 +5,9 @@ import {
   Clock,
   Layers,
   Link,
+  ListChecks,
   MapPin,
   Maximize2,
-  Sparkles,
 } from 'lucide-react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 import { DESIGN_COLORS, REQUIREMENTS_DATA } from './data';
@@ -76,7 +76,7 @@ export const DesignRequirementsGrid: React.FC<RequirementsGridProps> = ({ startF
             boxShadow: '0 2px 12px rgba(79, 70, 229, 0.09)',
           }}
         >
-          <Sparkles size={17} color="#4f46e5" strokeWidth={2.6} />
+          <ListChecks size={17} color="#4f46e5" strokeWidth={2.6} />
           <span
             style={{
               fontSize: 13.5,
@@ -113,7 +113,7 @@ export const DesignRequirementsGrid: React.FC<RequirementsGridProps> = ({ startF
           const itemTranslateY = interpolate(itemSpring, [0, 1], [14, 0], clamp);
           const itemScale = interpolate(itemSpring, [0, 1], [0.96, 1], clamp);
 
-          const IconComponent = ICONS_MAP[req.icon] ?? Sparkles;
+          const IconComponent = ICONS_MAP[req.icon] ?? ListChecks;
 
           return (
             <div
