@@ -180,64 +180,48 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
     );
   }
 
-  // Step 3: Proportional Weight Allocation (Base 1.0 + Proportional Scaling across all bins)
+  // Step 3: Conserved Space Redistribution (Up/Down from 20% Baseline)
   if (stepIndex === 2) {
     const bars = [
-      { label: 'Δt₁', bonus: 0.17, isBurst: false },
-      { label: 'Δt₂', bonus: 0.5, isBurst: false },
-      { label: 'Δt₃', bonus: 4.0, isBurst: true },
-      { label: 'Δt₄', bonus: 0.17, isBurst: false },
-      { label: 'Δt₅', bonus: 0.58, isBurst: false },
+      { label: 'Δt₁', share: 11.2, isBurst: false },
+      { label: 'Δt₂', share: 14.4, isBurst: false },
+      { label: 'Δt₃', share: 48.0, isBurst: true },
+      { label: 'Δt₄', share: 11.2, isBurst: false },
+      { label: 'Δt₅', share: 15.2, isBurst: false },
     ];
 
     const barW = (plotW - 32) / 5;
-    const baseH = 22;
-    const maxBonusH = height - 58;
+    const maxPlotH = height - 52;
+    const uniformH = (20.0 / 50.0) * maxPlotH;
 
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        {/* Base 1.0 Benchmark Line */}
+        {/* Uniform 20% Benchmark Line */}
         <line
           x1={padX}
-          y1={height - 20 - baseH}
+          y1={height - 20 - uniformH}
           x2={padX + plotW}
-          y2={height - 20 - baseH}
+          y2={height - 20 - uniformH}
           stroke="#94a3b8"
           strokeWidth={1.5}
           strokeDasharray="4 3"
         />
 
-        {/* Stacked Allocation Bars */}
+        {/* Reallocation Bars */}
         {bars.map((bar, i) => {
           const x = padX + i * (barW + 8);
-          const bonusH = (bar.bonus / 4.0) * maxBonusH;
-          const yBase = height - 20 - baseH;
-          const yBonus = yBase - bonusH;
+          const barH = (bar.share / 50.0) * maxPlotH;
+          const y = height - 20 - barH;
 
           return (
-            <g key={`bar-${i}`}>
-              {/* Top Density Bonus */}
-              {bonusH > 2 && (
-                <rect
-                  x={x}
-                  y={yBonus}
-                  width={barW}
-                  height={bonusH}
-                  fill={bar.isBurst ? TUE_RED : '#8b5cf6'}
-                  opacity={0.95}
-                  rx={2}
-                />
-              )}
-
-              {/* Bottom Base 1.0 Floor */}
+            <g key={`realloc-bar-${i}`}>
               <rect
                 x={x}
-                y={yBase}
+                y={y}
                 width={barW}
-                height={baseH}
-                fill="#3b82f6"
-                opacity={0.9}
-                rx={2}
+                height={barH}
+                fill={bar.isBurst ? TUE_RED : '#8b5cf6'}
+                rx={3}
               />
 
               <text
@@ -253,14 +237,14 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
               </text>
               <text
                 x={x + barW / 2}
-                y={yBonus - 4}
+                y={y - 4}
                 textAnchor="middle"
                 fontSize={9}
                 fontFamily={MONO_FONT}
                 fontWeight={800}
                 fill={bar.isBurst ? TUE_RED : DARK_TEXT}
               >
-                w={(1.0 + bar.bonus).toFixed(1)}
+                {bar.share.toFixed(1)}%
               </text>
             </g>
           );

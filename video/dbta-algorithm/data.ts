@@ -44,11 +44,11 @@ export const DBTA_STEPS: AlgorithmStep[] = [
   {
     id: 'step-3-weights',
     stepNumber: 'STEP 03',
-    title: 'WEIGHT ALLOCATION',
-    subtitle: 'Additive Base & Contrast Scaling',
-    formula: 'w_i = 1 + α · (ρ_i / ρ_max)^k',
-    description: 'Additive formulation: uniform base 1.0 guarantees visibility, while α · (ρ/ρ_max)^k expands bursts.',
-    guarantee: 'Base 1.0 prevents interval collapse',
+    title: 'SPACE REALLOCATION',
+    subtitle: 'Conserved Space Redistribution',
+    formula: 's_i = (w_i / Σ w_j) · 100%',
+    description: 'Reallocates visual space from uniform 20%: bursts expand up to 48%, sparse bins compress to 11.2%.',
+    guarantee: 'Conserved 100% space & floor guarantee',
     accentColor: '#8b5cf6', // Violet
     icon: '⚖️',
   },
@@ -57,8 +57,8 @@ export const DBTA_STEPS: AlgorithmStep[] = [
     stepNumber: 'STEP 04',
     title: 'COORDINATE INTEGRATION',
     subtitle: 'Cumulative Mapping',
-    formula: 'x_k = W · (Σ_{i=1}^k w_i) / W_total',
-    description: 'Prefix-sum integration maps timestamps to exact monotonic visual coordinates.',
+    formula: 'x_k = W · (Σ_{i=1}^k s_i) / 100%',
+    description: 'Prefix-sum integration maps reallocated space to exact monotonic visual coordinates.',
     guarantee: 'Fixed width W & strict order',
     accentColor: '#10b981', // Emerald
     icon: '🗺️',

@@ -22,87 +22,76 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
   const barColW = stageW / 5;
 
   // Visual pacing beats:
-  // Beat 1 (0.00..0.25): Base floor 1.0 is established across all bins
-  // Beat 2 (0.25..0.65): Density proportional stacks grow across ALL 5 bins
-  // Beat 3 (0.65..1.00): Visual share percentages fade in showing full dynamic resizing
-  const baseEntrance = interpolate(progress, [0.05, 0.25], [0, 1], {
-    ...clamp,
-    easing: Easing.out(Easing.cubic),
-  });
-
-  const stackGrowth = interpolate(progress, [0.25, 0.65], [0, 1], {
+  // Beat 1 (0.00..0.25): Equal 20% shares across all 5 intervals
+  // Beat 2 (0.25..0.70): Dynamic reallocation up and down based on event density
+  // Beat 3 (0.70..1.00): Delta indicators & conservation guarantee hold steady
+  const reallocateMorph = interpolate(progress, [0.22, 0.7], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
 
-  const sharesReveal = interpolate(progress, [0.65, 0.85], [0, 1], {
+  const deltaReveal = interpolate(progress, [0.65, 0.85], [0, 1], {
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
 
-  // Mathematically exact values:
-  // rho = [2, 6, 48, 2, 7]
-  // rho_hat = [0.042, 0.125, 1.000, 0.042, 0.146]
-  // alpha = 4.0
-  // w_i = 1.0 + alpha * rho_hat
-  // w = [1.17, 1.50, 5.00, 1.17, 1.58], sum = 10.42
-  // visual shares s_i = [11.2%, 14.4%, 48.0%, 11.2%, 15.2%]
   const intervalsData = [
     {
       label: '12:00–13:00',
       events: 2,
       density: '2 ev/hr',
-      base: 1.0,
-      bonus: 0.17,
-      totalWeight: 1.17,
-      share: '11.2%',
+      initialShare: 20.0,
+      finalShare: 11.2,
+      delta: '-8.8%',
+      deltaType: 'compress' as const,
       isBurst: false,
     },
     {
       label: '13:00–14:00',
       events: 6,
       density: '6 ev/hr',
-      base: 1.0,
-      bonus: 0.5,
-      totalWeight: 1.5,
-      share: '14.4%',
+      initialShare: 20.0,
+      finalShare: 14.4,
+      delta: '-5.6%',
+      deltaType: 'compress' as const,
       isBurst: false,
     },
     {
       label: '14:00–15:00',
       events: 48,
       density: '48 ev/hr (ρ_max)',
-      base: 1.0,
-      bonus: 4.0,
-      totalWeight: 5.0,
-      share: '48.0%',
+      initialShare: 20.0,
+      finalShare: 48.0,
+      delta: '+28.0%',
+      deltaType: 'expand' as const,
       isBurst: true,
     },
     {
       label: '15:00–16:00',
       events: 2,
       density: '2 ev/hr',
-      base: 1.0,
-      bonus: 0.17,
-      totalWeight: 1.17,
-      share: '11.2%',
+      initialShare: 20.0,
+      finalShare: 11.2,
+      delta: '-8.8%',
+      deltaType: 'compress' as const,
       isBurst: false,
     },
     {
       label: '16:00–17:00',
       events: 7,
       density: '7 ev/hr',
-      base: 1.0,
-      bonus: 0.58,
-      totalWeight: 1.58,
-      share: '15.2%',
+      initialShare: 20.0,
+      finalShare: 15.2,
+      delta: '-4.8%',
+      deltaType: 'compress' as const,
       isBurst: false,
     },
   ];
 
-  // Visual bar scaling heights
-  const maxBarH = stageH - 180;
-  const unitH = maxBarH / 5.0; // height per 1.0 weight unit (~60px)
+  // Visual scaling: 50% max share corresponds to maxPlotH
+  const maxPlotH = stageH - 180;
+  const uniformH = (20.0 / 50.0) * maxPlotH; // Height for 20%
+  const baselineY = stageH - 70;
 
   return (
     <div
@@ -142,10 +131,10 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
               border: `1px solid rgba(139, 92, 246, 0.25)`,
             }}
           >
-            {'w_i = 1 + α · (ρ_i / ρ_max)'}
+            {'s_i = (w_i / Σ w_j) · 100%'}
           </div>
           <span style={{ fontSize: 16, fontWeight: 700, color: DARK_TEXT }}>
-            Proportional Weight Allocation across All Temporal Bins
+            Temporal Space Redistribution (From Uniform 20% to Density Shares)
           </span>
         </div>
 
@@ -164,7 +153,7 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
           }}
         >
           <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Guarantee: Every Bin Resizes Proportionately (Base 1.0 Preserves Sparse Bins)</span>
+          <span>Conservation: Σ s_i = 100% · Guaranteed Non-Zero Width</span>
         </div>
       </div>
 
@@ -199,51 +188,73 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#3b82f6' }} />
+            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#64748b' }} />
             <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: DARK_TEXT }}>
-              Base Allocation Floor (1.0)
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#8b5cf6' }} />
-            <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: '#8b5cf6' }}>
-              Density Additions (+α·ρ̂)
+              Initial Uniform (20%)
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: TUE_RED }} />
             <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: TUE_RED }}>
-              Burst Expansion (+4.0)
+              Burst Expansion (↑ 48.0%)
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#8b5cf6' }} />
+            <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: '#8b5cf6' }}>
+              Sparse Compression (↓ 11.2%)
             </span>
           </div>
         </div>
 
-        {/* Base 1.0 Dashed Benchmark Line */}
+        {/* Uniform 20% Dashed Benchmark Line */}
         <div
           style={{
             position: 'absolute',
             left: 30,
             right: 30,
-            bottom: 70 + unitH * baseEntrance,
+            bottom: 70 + uniformH,
             height: 1.5,
             borderTop: '2px dashed #94a3b8',
             zIndex: 12,
             pointerEvents: 'none',
-            opacity: baseEntrance,
           }}
-        />
+        >
+          <div
+            style={{
+              position: 'absolute',
+              left: 10,
+              top: -24,
+              padding: '2px 10px',
+              borderRadius: 6,
+              backgroundColor: '#475569',
+              color: '#ffffff',
+              fontFamily: MONO_FONT,
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: 1,
+            }}
+          >
+            UNIFORM 20.0% BASELINE
+          </div>
+        </div>
 
-        {/* 5 Stacked Column Blocks */}
+        {/* 5 Dynamic Reallocation Column Blocks */}
         {intervalsData.map((d, i) => {
-          const currentBonus = d.bonus * stackGrowth;
-          const currentTotalWeight = d.base * baseEntrance + currentBonus;
+          // Current share interpolates from 20.0% to finalShare
+          const currentShare = interpolate(
+            reallocateMorph,
+            [0, 1],
+            [d.initialShare, d.finalShare],
+            clamp
+          );
 
-          const baseBarH = unitH * baseEntrance;
-          const bonusBarH = currentBonus * unitH;
+          const currentBarH = (currentShare / 50.0) * maxPlotH;
+          const isExpanding = d.deltaType === 'expand';
 
           return (
             <div
-              key={`stack-col-${i}`}
+              key={`realloc-col-${i}`}
               style={{
                 width: barColW - 70,
                 display: 'flex',
@@ -255,7 +266,7 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
                 zIndex: 10,
               }}
             >
-              {/* Top Weight Value & Visual Share Tag */}
+              {/* Top Share Value & Delta Pill */}
               <div
                 style={{
                   marginBottom: 10,
@@ -268,89 +279,64 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
                 <span
                   style={{
                     fontFamily: MONO_FONT,
-                    fontSize: 17,
+                    fontSize: 18,
                     fontWeight: 900,
-                    color: d.isBurst ? TUE_RED : '#0f172a',
+                    color: isExpanding ? TUE_RED : DARK_TEXT,
                   }}
                 >
-                  w_{i + 1} = {currentTotalWeight.toFixed(2)}
+                  {currentShare.toFixed(1)}%
                 </span>
 
-                {/* Resulting Visual Share Pill */}
+                {/* Delta Pill */}
                 <div
                   style={{
-                    opacity: sharesReveal,
-                    transform: `translateY(${(1 - sharesReveal) * 6}px)`,
+                    opacity: deltaReveal,
+                    transform: `translateY(${(1 - deltaReveal) * 6}px)`,
                     padding: '2px 8px',
                     borderRadius: 999,
-                    backgroundColor: d.isBurst ? 'rgba(200, 16, 46, 0.12)' : 'rgba(15, 23, 42, 0.08)',
-                    border: `1px solid ${d.isBurst ? TUE_RED : 'rgba(15, 23, 42, 0.15)'}`,
-                    fontSize: 12,
+                    backgroundColor: isExpanding
+                      ? 'rgba(200, 16, 46, 0.12)'
+                      : 'rgba(139, 92, 246, 0.12)',
+                    border: `1px solid ${isExpanding ? TUE_RED : 'rgba(139, 92, 246, 0.3)'}`,
+                    fontSize: 11.5,
                     fontFamily: MONO_FONT,
                     fontWeight: 800,
-                    color: d.isBurst ? TUE_RED : DARK_TEXT,
+                    color: isExpanding ? TUE_RED : '#8b5cf6',
                   }}
                 >
-                  Share: {d.share}
+                  {d.delta} {isExpanding ? 'EXPAND' : 'COMPRESS'}
                 </div>
               </div>
 
-              {/* Stack Container */}
+              {/* Bar Container */}
               <div
                 style={{
                   width: '100%',
+                  height: currentBarH,
+                  backgroundColor: isExpanding ? TUE_RED : '#8b5cf6',
+                  borderRadius: '10px 10px 4px 4px',
+                  boxShadow: isExpanding
+                    ? '0 10px 28px rgba(200, 16, 46, 0.28)'
+                    : '0 6px 18px rgba(139, 92, 246, 0.18)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'flex-end',
+                  justifyContent: 'center',
                   position: 'relative',
+                  transition: 'height 0.05s linear',
                 }}
               >
-                {/* Top Bonus Block (Density Expansion) */}
-                {bonusBarH > 1 && (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: bonusBarH,
-                      backgroundColor: d.isBurst ? TUE_RED : '#8b5cf6',
-                      borderRadius: '8px 8px 0 0',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.4)',
-                      boxShadow: d.isBurst ? '0 8px 24px rgba(200, 16, 46, 0.3)' : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#ffffff',
-                      fontFamily: MONO_FONT,
-                      fontSize: 12,
-                      fontWeight: 800,
-                      transition: 'height 0.05s linear',
-                    }}
-                  >
-                    {bonusBarH > 20 && `+${currentBonus.toFixed(2)}`}
-                  </div>
-                )}
-
-                {/* Bottom Base 1.0 Block (Guaranteed Floor) */}
-                <div
+                {/* Visual indicator inside bar */}
+                <span
                   style={{
-                    width: '100%',
-                    height: baseBarH,
-                    backgroundColor: '#3b82f6',
-                    borderRadius: bonusBarH > 1 ? '0 0 4px 4px' : '8px 8px 4px 4px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     color: '#ffffff',
                     fontFamily: MONO_FONT,
                     fontSize: 13,
                     fontWeight: 800,
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
                   }}
                 >
-                  <span>1.0</span>
-                  <span style={{ fontSize: 9, opacity: 0.85, fontWeight: 700 }}>BASE FLOOR</span>
-                </div>
+                  {isExpanding ? 'BURST' : 'SPARSE'}
+                </span>
               </div>
 
               {/* Bottom Interval Info */}
@@ -379,7 +365,7 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
                     fontFamily: MONO_FONT,
                     fontSize: 11,
                     fontWeight: 700,
-                    color: d.isBurst ? TUE_RED : MUTED_TEXT,
+                    color: isExpanding ? TUE_RED : MUTED_TEXT,
                   }}
                 >
                   {d.density}
