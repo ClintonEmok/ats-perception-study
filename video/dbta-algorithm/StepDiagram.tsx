@@ -180,62 +180,66 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
     );
   }
 
-  // Step 3: Weight Allocation with Floor Guarantee
+  // Step 3: Additive Weight Allocation (Base 1.0 + Burst Scaling)
   if (stepIndex === 2) {
     const bars = [
-      { label: 'Δt₁', val: 28, isBurst: false },
-      { label: 'Δt₂', val: 42, isBurst: false },
-      { label: 'Δt₃', val: 96, isBurst: true },
-      { label: 'Δt₄', val: 25, isBurst: false },
-      { label: 'Δt₅', val: 48, isBurst: false },
+      { label: 'Δt₁', bonus: 0.05, isBurst: false },
+      { label: 'Δt₂', bonus: 0.15, isBurst: false },
+      { label: 'Δt₃', bonus: 5.0, isBurst: true },
+      { label: 'Δt₄', bonus: 0.05, isBurst: false },
+      { label: 'Δt₅', bonus: 0.2, isBurst: false },
     ];
 
     const barW = (plotW - 32) / 5;
-    const floorY = height - 20 - (25 / 100) * (height - 60);
+    const baseH = 22;
+    const maxBonusH = height - 58;
 
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        {/* Top Guarantee Label */}
-        <text
-          x={padX + 4}
-          y={16}
-          textAnchor="start"
-          fontSize={9.5}
-          fontFamily={MONO_FONT}
-          fontWeight={800}
-          fill="#8b5cf6"
-        >
-          - - - w_min FLOOR GUARANTEE
-        </text>
-
-        {/* Floor Guarantee Dashed Line */}
+        {/* Base 1.0 Benchmark Line */}
         <line
           x1={padX}
-          y1={floorY}
+          y1={height - 20 - baseH}
           x2={padX + plotW}
-          y2={floorY}
-          stroke="#8b5cf6"
+          y2={height - 20 - baseH}
+          stroke="#94a3b8"
           strokeWidth={1.5}
           strokeDasharray="4 3"
         />
 
-        {/* Allocation Bars */}
+        {/* Stacked Allocation Bars */}
         {bars.map((bar, i) => {
           const x = padX + i * (barW + 8);
-          const barH = (bar.val / 100) * (height - 60);
-          const y = height - 20 - barH;
+          const bonusH = (bar.bonus / 5.0) * maxBonusH;
+          const yBase = height - 20 - baseH;
+          const yBonus = yBase - bonusH;
 
           return (
             <g key={`bar-${i}`}>
+              {/* Top Density Bonus */}
+              {bonusH > 2 && (
+                <rect
+                  x={x}
+                  y={yBonus}
+                  width={barW}
+                  height={bonusH}
+                  fill={bar.isBurst ? TUE_RED : '#8b5cf6'}
+                  opacity={0.95}
+                  rx={2}
+                />
+              )}
+
+              {/* Bottom Base 1.0 Floor */}
               <rect
                 x={x}
-                y={y}
+                y={yBase}
                 width={barW}
-                height={barH}
-                fill={bar.isBurst ? TUE_RED : '#8b5cf6'}
-                opacity={bar.isBurst ? 0.95 : 0.8}
-                rx={3}
+                height={baseH}
+                fill="#3b82f6"
+                opacity={0.9}
+                rx={2}
               />
+
               <text
                 x={x + barW / 2}
                 y={height - 6}
@@ -249,14 +253,14 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
               </text>
               <text
                 x={x + barW / 2}
-                y={y - 4}
+                y={yBonus - 4}
                 textAnchor="middle"
                 fontSize={9}
                 fontFamily={MONO_FONT}
                 fontWeight={800}
-                fill={bar.isBurst ? TUE_RED : '#8b5cf6'}
+                fill={bar.isBurst ? TUE_RED : DARK_TEXT}
               >
-                w={bar.val}
+                w={(1.0 + bar.bonus).toFixed(1)}
               </text>
             </g>
           );

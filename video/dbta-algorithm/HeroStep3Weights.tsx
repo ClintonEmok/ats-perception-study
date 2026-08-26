@@ -21,23 +21,27 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
   const stageH = height - 100;
   const barColW = stageW / 5;
 
-  // Floor activation animation: floor line rises and catches the sparse bars
-  const floorRise = interpolate(progress, [0.1, 0.45], [0, 1], {
+  // Animation: density bonus grows on top of the base weight 1.0
+  const bonusGrowth = interpolate(progress, [0.15, 0.55], [0, 1], {
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
 
-  const bars = [
-    { label: '12:00–13:00', raw: 4, allocated: 15, isBurst: false },
-    { label: '13:00–14:00', raw: 12, allocated: 22, isBurst: false },
-    { label: '14:00–15:00', raw: 96, allocated: 52, isBurst: true },
-    { label: '15:00–16:00', raw: 4, allocated: 15, isBurst: false },
-    { label: '16:00–17:00', raw: 14, allocated: 24, isBurst: false },
+  const baseWeight = 1.0;
+  const alpha = 5.0;
+
+  const intervalsData = [
+    { label: '12:00–13:00', normDensity: 0.04, isBurst: false },
+    { label: '13:00–14:00', normDensity: 0.125, isBurst: false },
+    { label: '14:00–15:00', normDensity: 1.0, isBurst: true },
+    { label: '15:00–16:00', normDensity: 0.04, isBurst: false },
+    { label: '16:00–17:00', normDensity: 0.15, isBurst: false },
   ];
 
-  const floorPercent = 15;
-  const maxPlotH = stageH - 170;
-  const floorY = stageH - 70 - (floorPercent / 100) * maxPlotH * 1.5;
+  // Base bar height in pixels (representing base 1.0)
+  const baseH = 80;
+  // Maximum bonus height for the burst interval
+  const maxBonusH = 260;
 
   return (
     <div
@@ -77,10 +81,10 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
               border: `1px solid rgba(139, 92, 246, 0.25)`,
             }}
           >
-            w_i = max(w_min, ρ_i^γ)
+            w_i = 1 + α · (ρ_i / ρ_max)^k
           </div>
           <span style={{ fontSize: 16, fontWeight: 700, color: DARK_TEXT }}>
-            Non-Linear Weight Allocation & Floor Guarantee
+            Additive Baseline Allocation (Base 1.0 + Contrast Scaling)
           </span>
         </div>
 
@@ -99,7 +103,7 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
           }}
         >
           <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Guarantee: No Temporal Collapse (w_i ≥ w_min &gt; 0)</span>
+          <span>Guarantee: Additive Base 1.0 Prevents Any Interval Collapse</span>
         </div>
       </div>
 
@@ -117,60 +121,64 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-end',
-          padding: '0 60px 70px 60px',
+          padding: '0 70px 70px 70px',
           boxSizing: 'border-box',
         }}
       >
-        {/* Floor Guarantee Line */}
+        {/* Top Legend */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 20,
+            right: 30,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            zIndex: 20,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#3b82f6' }} />
+            <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: DARK_TEXT }}>
+              Base Floor (1.0)
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: TUE_RED }} />
+            <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: TUE_RED }}>
+              Burst Expansion (+α·(ρ/ρ_max)³)
+            </span>
+          </div>
+        </div>
+
+        {/* Base 1.0 Dashed Benchmark Line across all columns */}
         <div
           style={{
             position: 'absolute',
             left: 30,
             right: 30,
-            top: floorY,
-            height: 2,
-            borderTop: '2px dashed #8b5cf6',
-            opacity: floorRise,
-            zIndex: 15,
+            bottom: 70 + baseH,
+            height: 1.5,
+            borderTop: '2px dashed #94a3b8',
+            zIndex: 12,
             pointerEvents: 'none',
           }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              right: 20,
-              top: -26,
-              padding: '3px 12px',
-              borderRadius: 6,
-              backgroundColor: '#8b5cf6',
-              color: '#ffffff',
-              fontFamily: MONO_FONT,
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: 1,
-            }}
-          >
-            w_min FLOOR GUARANTEE (15% MIN ALLOCATION)
-          </div>
-        </div>
+        />
 
-        {/* 5 Allocation Column Blocks */}
-        {bars.map((b, i) => {
-          const currentWeight = interpolate(
-            floorRise,
-            [0, 1],
-            [b.raw, b.allocated],
-            clamp
-          );
+        {/* 5 Stacked Column Blocks */}
+        {intervalsData.map((d, i) => {
+          // Density contrast bonus: alpha * (normDensity^3)
+          const contrastBonus = alpha * Math.pow(d.normDensity, 3);
+          const currentBonus = contrastBonus * bonusGrowth;
+          const totalWeight = baseWeight + currentBonus;
 
-          const barH = (currentWeight / 100) * maxPlotH * 1.5;
-          const isFloorClamped = floorRise > 0.6 && b.raw < 15 && b.allocated === 15;
+          const bonusH = (currentBonus / alpha) * maxBonusH;
 
           return (
             <div
-              key={`w-col-${i}`}
+              key={`stack-col-${i}`}
               style={{
-                width: barColW - 70,
+                width: barColW - 80,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -180,59 +188,81 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
                 zIndex: 10,
               }}
             >
-              {/* Floor protected badge floating high above */}
-              {isFloorClamped && (
-                <div
-                  style={{
-                    marginBottom: 6,
-                    whiteSpace: 'nowrap',
-                    fontSize: 10.5,
-                    fontFamily: MONO_FONT,
-                    fontWeight: 800,
-                    color: '#8b5cf6',
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                    border: '1px solid rgba(139, 92, 246, 0.25)',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                  }}
-                >
-                  FLOOR PROTECTED
-                </div>
-              )}
-
-              {/* Value Label */}
+              {/* Total Weight Tag */}
               <div
                 style={{
-                  marginBottom: 8,
+                  marginBottom: 10,
                   fontFamily: MONO_FONT,
                   fontSize: 16,
                   fontWeight: 900,
-                  color: b.isBurst ? TUE_RED : '#8b5cf6',
+                  color: d.isBurst ? TUE_RED : '#0f172a',
                 }}
               >
-                w_{i + 1} = {Math.round(currentWeight)}%
+                w_{i + 1} = {d.isBurst ? (1.0 + currentBonus).toFixed(2) : totalWeight.toFixed(2)}
               </div>
 
-              {/* Bar */}
+              {/* Stack Container */}
               <div
                 style={{
                   width: '100%',
-                  height: barH,
-                  backgroundColor: b.isBurst ? TUE_RED : '#8b5cf6',
-                  borderRadius: '10px 10px 4px 4px',
-                  boxShadow: b.isBurst
-                    ? '0 8px 24px rgba(200, 16, 46, 0.25)'
-                    : '0 6px 18px rgba(139, 92, 246, 0.15)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
                   position: 'relative',
-                  transition: 'height 0.1s ease',
                 }}
-              />
+              >
+                {/* Top Bonus Block (Density Expansion) */}
+                {bonusH > 2 && (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: bonusH,
+                      backgroundColor: d.isBurst ? TUE_RED : '#8b5cf6',
+                      borderRadius: '8px 8px 0 0',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.4)',
+                      boxShadow: d.isBurst ? '0 8px 24px rgba(200, 16, 46, 0.3)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      fontFamily: MONO_FONT,
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {d.isBurst && bonusGrowth > 0.6 ? `+${currentBonus.toFixed(1)} BURST` : ''}
+                  </div>
+                )}
 
-              {/* Bottom Label */}
+                {/* Bottom Base 1.0 Block (Guaranteed Floor) */}
+                <div
+                  style={{
+                    width: '100%',
+                    height: baseH,
+                    backgroundColor: '#3b82f6',
+                    borderRadius: bonusH > 2 ? '0 0 4px 4px' : '8px 8px 4px 4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontFamily: MONO_FONT,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
+                  }}
+                >
+                  <span>1.0</span>
+                  <span style={{ fontSize: 9.5, opacity: 0.85, fontWeight: 700 }}>BASE FLOOR</span>
+                </div>
+              </div>
+
+              {/* Bottom Interval Label */}
               <div
                 style={{
                   position: 'absolute',
-                  bottom: -48,
+                  bottom: -50,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -247,31 +277,31 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
                     color: DARK_TEXT,
                   }}
                 >
-                  {b.label}
+                  {d.label}
                 </span>
                 <span
                   style={{
                     fontFamily: FONT_FAMILY,
                     fontSize: 11,
                     fontWeight: 600,
-                    color: MUTED_TEXT,
+                    color: d.isBurst ? TUE_RED : MUTED_TEXT,
                   }}
                 >
-                  {b.isBurst ? 'Dense Interval' : 'Sparse Interval'}
+                  {d.isBurst ? '48 events (Burst)' : `${i === 1 ? '6' : i === 4 ? '7' : '2'} events`}
                 </span>
               </div>
             </div>
           );
         })}
 
-        {/* Baseline */}
+        {/* Baseline Bar */}
         <div
           style={{
             position: 'absolute',
             left: 30,
             right: 30,
-            bottom: 60,
-            height: 3,
+            bottom: 70,
+            height: 3.5,
             backgroundColor: '#0f172a',
             zIndex: 5,
           }}
