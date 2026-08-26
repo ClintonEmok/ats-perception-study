@@ -25,13 +25,15 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
   const axisY = stageH / 2 + 35;
 
   // Warp transformation progress (0 to 1)
-  const warpProgress = interpolate(progress, [0.1, 0.7], [0, 1], {
+  const warpProgress = interpolate(progress, [0.15, 0.7], [0, 1], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
 
+  // Mathematically exact prefix-sum cumulative bounds from Step 3:
+  // s = [11.2%, 14.4%, 48.0%, 11.2%, 15.2%]
   const uniformBoundaries = [0, 0.2 * axisW, 0.4 * axisW, 0.6 * axisW, 0.8 * axisW, axisW];
-  const dbtaBoundaries = [0, 0.1 * axisW, 0.24 * axisW, 0.76 * axisW, 0.88 * axisW, axisW];
+  const dbtaBoundaries = [0, 0.112 * axisW, 0.256 * axisW, 0.736 * axisW, 0.848 * axisW, axisW];
 
   const currentBoundaries = uniformBoundaries.map((uX, idx) => {
     const aX = dbtaBoundaries[idx];
@@ -43,6 +45,7 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
   const burstWidth = burstRight - burstLeft;
 
   const timeLabels = ['12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+  const finalShares = ['11.2%', '14.4%', '48.0%', '11.2%', '15.2%'];
 
   return (
     <div
@@ -157,8 +160,8 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  padding: '5px 12px',
+                  gap: 6,
+                  padding: '4px 8px',
                   borderRadius: 999,
                   backgroundColor: isBurst ? 'rgba(16, 185, 129, 0.12)' : 'rgba(15, 23, 42, 0.06)',
                   border: `1px solid ${isBurst ? '#10b981' : 'rgba(15, 23, 42, 0.12)'}`,
@@ -168,7 +171,7 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
                 <span
                   style={{
                     fontFamily: MONO_FONT,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 800,
                     color: isBurst ? '#10b981' : DARK_TEXT,
                   }}
@@ -178,15 +181,15 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
                 <span
                   style={{
                     fontFamily: MONO_FONT,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: 800,
                     backgroundColor: isBurst ? '#10b981' : '#0f172a',
                     color: '#ffffff',
-                    padding: '2px 8px',
+                    padding: '2px 6px',
                     borderRadius: 999,
                   }}
                 >
-                  {Math.round(widthCol)}px
+                  {finalShares[idx]}
                 </span>
               </div>
 
@@ -204,7 +207,7 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
                     letterSpacing: 1,
                   }}
                 >
-                  EXPANDED VISUAL SPACE (+160% VISUAL ALLOCATION)
+                  EXPANDED VISUAL SPACE (+140% ALLOCATION)
                 </div>
               )}
             </div>
@@ -260,6 +263,17 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
           <circle cx={axisMargin + currentBoundaries[0] + 0.3 * (currentBoundaries[1] - currentBoundaries[0])} cy={axisY} r={6} fill="#0f172a" />
           <circle cx={axisMargin + currentBoundaries[0] + 0.7 * (currentBoundaries[1] - currentBoundaries[0])} cy={axisY} r={6} fill="#0f172a" />
 
+          {/* Moderate Interval 2 (6 events) */}
+          {[0.15, 0.32, 0.48, 0.65, 0.8, 0.92].map((f, i) => (
+            <circle
+              key={`w-i1-dot-${i}`}
+              cx={axisMargin + currentBoundaries[1] + f * (currentBoundaries[2] - currentBoundaries[1])}
+              cy={axisY}
+              r={6}
+              fill="#0f172a"
+            />
+          ))}
+
           {/* 48 Burst Events (Dispersing smoothly across the expanding burst interval) */}
           {Array.from({ length: 48 }).map((_, i) => {
             const fraction = i / 47;
@@ -280,6 +294,17 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
           {/* Sparse Events after burst */}
           <circle cx={axisMargin + currentBoundaries[3] + 0.35 * (currentBoundaries[4] - currentBoundaries[3])} cy={axisY} r={6} fill="#0f172a" />
           <circle cx={axisMargin + currentBoundaries[3] + 0.75 * (currentBoundaries[4] - currentBoundaries[3])} cy={axisY} r={6} fill="#0f172a" />
+
+          {/* Moderate Interval 5 (7 events) */}
+          {[0.12, 0.26, 0.42, 0.58, 0.72, 0.84, 0.94].map((f, i) => (
+            <circle
+              key={`w-i4-dot-${i}`}
+              cx={axisMargin + currentBoundaries[4] + f * (currentBoundaries[5] - currentBoundaries[4])}
+              cy={axisY}
+              r={6}
+              fill="#0f172a"
+            />
+          ))}
         </svg>
       </div>
     </div>

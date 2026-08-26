@@ -180,14 +180,14 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
     );
   }
 
-  // Step 3: Additive Weight Allocation (Base 1.0 + Burst Scaling)
+  // Step 3: Proportional Weight Allocation (Base 1.0 + Proportional Scaling across all bins)
   if (stepIndex === 2) {
     const bars = [
-      { label: 'Δt₁', bonus: 0.05, isBurst: false },
-      { label: 'Δt₂', bonus: 0.15, isBurst: false },
-      { label: 'Δt₃', bonus: 5.0, isBurst: true },
-      { label: 'Δt₄', bonus: 0.05, isBurst: false },
-      { label: 'Δt₅', bonus: 0.2, isBurst: false },
+      { label: 'Δt₁', bonus: 0.17, isBurst: false },
+      { label: 'Δt₂', bonus: 0.5, isBurst: false },
+      { label: 'Δt₃', bonus: 4.0, isBurst: true },
+      { label: 'Δt₄', bonus: 0.17, isBurst: false },
+      { label: 'Δt₅', bonus: 0.58, isBurst: false },
     ];
 
     const barW = (plotW - 32) / 5;
@@ -210,7 +210,7 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
         {/* Stacked Allocation Bars */}
         {bars.map((bar, i) => {
           const x = padX + i * (barW + 8);
-          const bonusH = (bar.bonus / 5.0) * maxBonusH;
+          const bonusH = (bar.bonus / 4.0) * maxBonusH;
           const yBase = height - 20 - baseH;
           const yBonus = yBase - bonusH;
 
@@ -282,10 +282,10 @@ export const StepDiagram: React.FC<StepDiagramProps> = ({
   // Step 4: Coordinate Integration (Warped Output)
   const boundaries = [
     { x: padX, label: '12:00', showLabel: true },
-    { x: padX + 0.12 * plotW, label: '13:00', showLabel: false },
-    { x: padX + 0.26 * plotW, label: '14:00', showLabel: true },
-    { x: padX + 0.74 * plotW, label: '15:00', showLabel: true },
-    { x: padX + 0.88 * plotW, label: '16:00', showLabel: false },
+    { x: padX + 0.112 * plotW, label: '13:00', showLabel: false },
+    { x: padX + 0.256 * plotW, label: '14:00', showLabel: true },
+    { x: padX + 0.736 * plotW, label: '15:00', showLabel: true },
+    { x: padX + 0.848 * plotW, label: '16:00', showLabel: false },
     { x: padX + plotW, label: '17:00', showLabel: true },
   ];
   const burstWidth = boundaries[3].x - boundaries[2].x;
