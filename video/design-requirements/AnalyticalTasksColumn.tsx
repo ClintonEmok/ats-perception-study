@@ -1,6 +1,6 @@
 import React from 'react';
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
-import { Compass, Eye, GitCompare, Search } from 'lucide-react';
+import { Compass, Eye, GitCompare, MousePointerClick, Search } from 'lucide-react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 import { DESIGN_COLORS } from './data';
 
@@ -23,9 +23,10 @@ export const AnalyticalTasksColumn: React.FC<ColumnProps> = ({ startFrame }) => 
   const opacity = interpolate(containerSpring, [0, 1], [0, 1], clamp);
   const translateY = interpolate(containerSpring, [0, 1], [24, 0], clamp);
 
-  const item1Spring = spring({ frame: frame - (startFrame + 10), fps, config: { damping: 18, stiffness: 140 } });
-  const item2Spring = spring({ frame: frame - (startFrame + 22), fps, config: { damping: 18, stiffness: 140 } });
-  const item3Spring = spring({ frame: frame - (startFrame + 34), fps, config: { damping: 18, stiffness: 140 } });
+  const item1Spring = spring({ frame: frame - (startFrame + 8), fps, config: { damping: 18, stiffness: 140 } });
+  const item2Spring = spring({ frame: frame - (startFrame + 18), fps, config: { damping: 18, stiffness: 140 } });
+  const item3Spring = spring({ frame: frame - (startFrame + 28), fps, config: { damping: 18, stiffness: 140 } });
+  const item4Spring = spring({ frame: frame - (startFrame + 38), fps, config: { damping: 18, stiffness: 140 } });
 
   return (
     <div
@@ -36,7 +37,7 @@ export const AnalyticalTasksColumn: React.FC<ColumnProps> = ({ startFrame }) => 
         borderRadius: 16,
         border: `1.5px solid ${DESIGN_COLORS.cardBorder}`,
         boxShadow: '0 12px 36px rgba(0, 0, 0, 0.04)',
-        padding: '22px 24px 20px',
+        padding: '22px 20px 20px',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
@@ -104,15 +105,15 @@ export const AnalyticalTasksColumn: React.FC<ColumnProps> = ({ startFrame }) => 
         </span>
       </div>
 
-      {/* 3 Visual Miniatures */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, flex: 1 }}>
+      {/* 4 Visual Miniatures */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, flex: 1 }}>
         {/* Miniature 1: OVERVIEW */}
         <div
           style={{
             backgroundColor: '#f8fafc',
             borderRadius: 12,
             border: '1px solid #e2e8f0',
-            padding: '14px 10px 12px',
+            padding: '12px 6px 10px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -121,31 +122,31 @@ export const AnalyticalTasksColumn: React.FC<ColumnProps> = ({ startFrame }) => 
             transform: `translateY(${interpolate(item1Spring, [0, 1], [10, 0], clamp)}px)`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Eye size={14} color="#6366f1" />
-            <span style={{ fontSize: 13, fontWeight: 900, color: DESIGN_COLORS.textPrimary, letterSpacing: 0.6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Eye size={13} color="#6366f1" />
+            <span style={{ fontSize: 11.5, fontWeight: 900, color: DESIGN_COLORS.textPrimary, letterSpacing: 0.4 }}>
               OVERVIEW
             </span>
           </div>
 
           {/* Glyph Visual: Full temporal range with activity dots */}
           <div style={{ width: '100%', height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="100%" height="90" viewBox="0 0 160 90">
+            <svg width="100%" height="90" viewBox="0 0 120 90">
               {/* Baseline Track */}
-              <line x1="10" y1="45" x2="150" y2="45" stroke="#cbd5e1" strokeWidth="3.2" strokeLinecap="round" />
+              <line x1="8" y1="45" x2="112" y2="45" stroke="#cbd5e1" strokeWidth="2.4" strokeLinecap="round" />
               {/* Start & End ticks */}
-              <line x1="10" y1="34" x2="10" y2="56" stroke="#94a3b8" strokeWidth="2.8" strokeLinecap="round" />
-              <line x1="150" y1="34" x2="150" y2="56" stroke="#94a3b8" strokeWidth="2.8" strokeLinecap="round" />
+              <line x1="8" y1="36" x2="8" y2="54" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" />
+              <line x1="112" y1="36" x2="112" y2="54" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" />
               
               {/* Activity event dots scattered across time */}
               {[
-                { x: 26, y: 45, r: 4.2 },
-                { x: 44, y: 45, r: 4.2 },
-                { x: 72, y: 45, r: 6, active: true },
-                { x: 84, y: 45, r: 6.5, active: true },
-                { x: 94, y: 45, r: 6, active: true },
-                { x: 108, y: 45, r: 4.2 },
-                { x: 134, y: 45, r: 4.2 },
+                { x: 20, y: 45, r: 3.2 },
+                { x: 34, y: 45, r: 3.2 },
+                { x: 54, y: 45, r: 4.8, active: true },
+                { x: 64, y: 45, r: 5.2, active: true },
+                { x: 72, y: 45, r: 4.8, active: true },
+                { x: 88, y: 45, r: 3.2 },
+                { x: 100, y: 45, r: 3.2 },
               ].map((dot, i) => (
                 <circle
                   key={i}
@@ -154,28 +155,28 @@ export const AnalyticalTasksColumn: React.FC<ColumnProps> = ({ startFrame }) => 
                   r={dot.r}
                   fill={dot.active ? '#6366f1' : '#64748b'}
                   stroke="#ffffff"
-                  strokeWidth="2"
+                  strokeWidth="1.5"
                 />
               ))}
 
-              <text x="80" y="74" textAnchor="middle" fontSize="10" fill="#64748b" fontFamily={FONT_FAMILY} fontWeight="700">
+              <text x="60" y="74" textAnchor="middle" fontSize="9" fill="#64748b" fontFamily={FONT_FAMILY} fontWeight="700">
                 Full temporal range
               </text>
             </svg>
           </div>
 
-          <div style={{ fontSize: 11, color: DESIGN_COLORS.textSecondary, textAlign: 'center', fontWeight: 600 }}>
-            Macro baseline pattern
+          <div style={{ fontSize: 10, color: DESIGN_COLORS.textSecondary, textAlign: 'center', fontWeight: 600 }}>
+            Macro baseline
           </div>
         </div>
 
-        {/* Miniature 2: INSPECT */}
+        {/* Miniature 2: SELECT */}
         <div
           style={{
             backgroundColor: '#f8fafc',
             borderRadius: 12,
             border: '1px solid #e2e8f0',
-            padding: '14px 10px 12px',
+            padding: '12px 6px 10px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -184,50 +185,55 @@ export const AnalyticalTasksColumn: React.FC<ColumnProps> = ({ startFrame }) => 
             transform: `translateY(${interpolate(item2Spring, [0, 1], [10, 0], clamp)}px)`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Search size={14} color="#4338ca" />
-            <span style={{ fontSize: 13, fontWeight: 900, color: DESIGN_COLORS.textPrimary, letterSpacing: 0.6 }}>
-              INSPECT
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <MousePointerClick size={13} color="#4f46e5" />
+            <span style={{ fontSize: 11.5, fontWeight: 900, color: DESIGN_COLORS.textPrimary, letterSpacing: 0.4 }}>
+              SELECT
             </span>
           </div>
 
-          {/* Glyph Visual: Target region highlighted with zoom bracket and arrow */}
+          {/* Glyph Visual: Interactive brush window selection */}
           <div style={{ width: '100%', height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="100%" height="90" viewBox="0 0 160 90">
+            <svg width="100%" height="90" viewBox="0 0 120 90">
               {/* Baseline Track */}
-              <line x1="10" y1="40" x2="150" y2="40" stroke="#cbd5e1" strokeWidth="3.2" strokeLinecap="round" />
+              <line x1="8" y1="45" x2="112" y2="45" stroke="#cbd5e1" strokeWidth="2.4" strokeLinecap="round" />
               
-              {/* Highlighted Window Bracket */}
-              <rect x="54" y="24" width="52" height="32" rx="6" fill="rgba(99, 102, 241, 0.15)" stroke="#6366f1" strokeWidth="2.2" />
+              {/* Unselected outside dots */}
+              <circle cx="16" cy="45" r="2.8" fill="#94a3b8" />
+              <circle cx="28" cy="45" r="2.8" fill="#94a3b8" />
+              <circle cx="92" cy="45" r="2.8" fill="#94a3b8" />
+              <circle cx="104" cy="45" r="2.8" fill="#94a3b8" />
+
+              {/* Brush Bracket Selection Window */}
+              <rect x="38" y="24" width="44" height="42" rx="5" fill="rgba(99, 102, 241, 0.15)" stroke="#6366f1" strokeWidth="1.8" strokeDasharray="3 2" />
               
-              {/* Highlighted internal events */}
-              <circle cx="66" cy="40" r="4.5" fill="#4338ca" />
-              <circle cx="80" cy="40" r="6" fill="#4338ca" />
-              <circle cx="94" cy="40" r="5" fill="#4338ca" />
-              <circle cx="26" cy="40" r="3.2" fill="#94a3b8" />
-              <circle cx="134" cy="40" r="3.2" fill="#94a3b8" />
+              {/* Selected Events */}
+              <circle cx="48" cy="45" r="3.8" fill="#4f46e5" />
+              <circle cx="60" cy="45" r="4.6" fill="#4f46e5" />
+              <circle cx="72" cy="45" r="3.8" fill="#4f46e5" />
 
-              {/* Inspection Pointer Arrow */}
-              <path d="M 80 74 L 80 60 M 74 66 L 80 60 L 86 66" stroke="#6366f1" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              {/* Brush Handles */}
+              <line x1="38" y1="32" x2="38" y2="58" stroke="#6366f1" strokeWidth="2.8" strokeLinecap="round" />
+              <line x1="82" y1="32" x2="82" y2="58" stroke="#6366f1" strokeWidth="2.8" strokeLinecap="round" />
 
-              <text x="80" y="85" textAnchor="middle" fontSize="9.5" fill="#4338ca" fontFamily={MONO_FONT} fontWeight="900">
-                FOCUS
+              <text x="60" y="74" textAnchor="middle" fontSize="9" fill="#4f46e5" fontFamily={FONT_FAMILY} fontWeight="800">
+                Brush interval
               </text>
             </svg>
           </div>
 
-          <div style={{ fontSize: 11, color: DESIGN_COLORS.textSecondary, textAlign: 'center', fontWeight: 600 }}>
-            Isolate target burst
+          <div style={{ fontSize: 10, color: DESIGN_COLORS.textSecondary, textAlign: 'center', fontWeight: 600 }}>
+            Subset query
           </div>
         </div>
 
-        {/* Miniature 3: COMPARE */}
+        {/* Miniature 3: INSPECT */}
         <div
           style={{
             backgroundColor: '#f8fafc',
             borderRadius: 12,
             border: '1px solid #e2e8f0',
-            padding: '14px 10px 12px',
+            padding: '12px 6px 10px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -236,43 +242,95 @@ export const AnalyticalTasksColumn: React.FC<ColumnProps> = ({ startFrame }) => 
             transform: `translateY(${interpolate(item3Spring, [0, 1], [10, 0], clamp)}px)`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <GitCompare size={14} color="#6366f1" />
-            <span style={{ fontSize: 13, fontWeight: 900, color: DESIGN_COLORS.textPrimary, letterSpacing: 0.6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Search size={13} color="#4338ca" />
+            <span style={{ fontSize: 11.5, fontWeight: 900, color: DESIGN_COLORS.textPrimary, letterSpacing: 0.4 }}>
+              INSPECT
+            </span>
+          </div>
+
+          {/* Glyph Visual: Target region highlighted with zoom bracket and arrow */}
+          <div style={{ width: '100%', height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="100%" height="90" viewBox="0 0 120 90">
+              {/* Baseline Track */}
+              <line x1="8" y1="40" x2="112" y2="40" stroke="#cbd5e1" strokeWidth="2.4" strokeLinecap="round" />
+              
+              {/* Highlighted Window Bracket */}
+              <rect x="36" y="24" width="48" height="32" rx="6" fill="rgba(99, 102, 241, 0.15)" stroke="#6366f1" strokeWidth="2" />
+              
+              {/* Highlighted internal events */}
+              <circle cx="48" cy="40" r="4" fill="#4338ca" />
+              <circle cx="60" cy="40" r="5.2" fill="#4338ca" />
+              <circle cx="72" cy="40" r="4.2" fill="#4338ca" />
+              <circle cx="18" cy="40" r="2.8" fill="#94a3b8" />
+              <circle cx="102" cy="40" r="2.8" fill="#94a3b8" />
+
+              {/* Inspection Pointer Arrow */}
+              <path d="M 60 72 L 60 60 M 55 65 L 60 60 L 65 65" stroke="#6366f1" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+
+              <text x="60" y="84" textAnchor="middle" fontSize="9" fill="#4338ca" fontFamily={MONO_FONT} fontWeight="900">
+                FOCUS
+              </text>
+            </svg>
+          </div>
+
+          <div style={{ fontSize: 10, color: DESIGN_COLORS.textSecondary, textAlign: 'center', fontWeight: 600 }}>
+            Target detail
+          </div>
+        </div>
+
+        {/* Miniature 4: COMPARE */}
+        <div
+          style={{
+            backgroundColor: '#f8fafc',
+            borderRadius: 12,
+            border: '1px solid #e2e8f0',
+            padding: '12px 6px 10px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: interpolate(item4Spring, [0, 1], [0, 1], clamp),
+            transform: `translateY(${interpolate(item4Spring, [0, 1], [10, 0], clamp)}px)`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <GitCompare size={13} color="#6366f1" />
+            <span style={{ fontSize: 11.5, fontWeight: 900, color: DESIGN_COLORS.textPrimary, letterSpacing: 0.4 }}>
               COMPARE
             </span>
           </div>
 
           {/* Glyph Visual: Two slices side-by-side with compare arrows */}
           <div style={{ width: '100%', height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="100%" height="90" viewBox="0 0 160 90">
+            <svg width="100%" height="90" viewBox="0 0 120 90">
               {/* Slice A */}
-              <rect x="18" y="16" width="46" height="42" rx="7" fill="#ede9fe" stroke="#8b5cf6" strokeWidth="2.2" />
-              <text x="41" y="34" textAnchor="middle" fontSize="12" fontWeight="900" fill="#6d28d9" fontFamily={MONO_FONT}>
+              <rect x="10" y="18" width="36" height="38" rx="6" fill="#ede9fe" stroke="#8b5cf6" strokeWidth="1.8" />
+              <text x="28" y="34" textAnchor="middle" fontSize="10.5" fontWeight="900" fill="#6d28d9" fontFamily={MONO_FONT}>
                 T₁
               </text>
-              <circle cx="31" cy="47" r="3.5" fill="#6d28d9" />
-              <circle cx="49" cy="47" r="3.5" fill="#6d28d9" />
+              <circle cx="20" cy="46" r="3" fill="#6d28d9" />
+              <circle cx="36" cy="46" r="3" fill="#6d28d9" />
 
               {/* Comparison Arrow */}
-              <path d="M 70 37 L 90 37 M 75 32 L 70 37 L 75 42 M 85 32 L 90 37 L 85 42" stroke="#6366f1" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <path d="M 52 37 L 68 37 M 56 33 L 52 37 L 56 41 M 64 33 L 68 37 L 64 41" stroke="#6366f1" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
 
               {/* Slice B */}
-              <rect x="96" y="16" width="46" height="42" rx="7" fill="#ede9fe" stroke="#8b5cf6" strokeWidth="2.2" />
-              <text x="119" y="34" textAnchor="middle" fontSize="12" fontWeight="900" fill="#6d28d9" fontFamily={MONO_FONT}>
+              <rect x="74" y="18" width="36" height="38" rx="6" fill="#ede9fe" stroke="#8b5cf6" strokeWidth="1.8" />
+              <text x="92" y="34" textAnchor="middle" fontSize="10.5" fontWeight="900" fill="#6d28d9" fontFamily={MONO_FONT}>
                 T₂
               </text>
-              <circle cx="109" cy="47" r="3.5" fill="#6d28d9" />
-              <circle cx="127" cy="47" r="3.5" fill="#6d28d9" />
+              <circle cx="84" cy="46" r="3" fill="#6d28d9" />
+              <circle cx="100" cy="46" r="3" fill="#6d28d9" />
 
-              <text x="80" y="74" textAnchor="middle" fontSize="10" fill="#64748b" fontFamily={FONT_FAMILY} fontWeight="700">
+              <text x="60" y="74" textAnchor="middle" fontSize="9" fill="#64748b" fontFamily={FONT_FAMILY} fontWeight="700">
                 Side-by-side
               </text>
             </svg>
           </div>
 
-          <div style={{ fontSize: 11, color: DESIGN_COLORS.textSecondary, textAlign: 'center', fontWeight: 600 }}>
-            Cross-interval evaluation
+          <div style={{ fontSize: 10, color: DESIGN_COLORS.textSecondary, textAlign: 'center', fontWeight: 600 }}>
+            Cross-interval
           </div>
         </div>
       </div>
