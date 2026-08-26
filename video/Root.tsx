@@ -15,12 +15,29 @@ import { DensityApproachesAnimation } from './density-approaches';
 import { EqualTimeAnimation } from './equal-time-concept';
 import { VisualAllocationAnimation } from './visual-allocation';
 import { DBTAAnimation } from './dbta-concept';
+import { DBTAAlgorithmAnimation } from './dbta-algorithm';
 import { WangAnimation, WangGraphAnimation } from './wang-timeslicing';
 import { DesignRequirementsAnimation } from './design-requirements';
 
 export const RemotionRoot = () => {
   return (
     <>
+      <Composition
+        id="Slide17DBTAAlgorithm"
+        component={DBTAAlgorithmAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="DBTAAlgorithm"
+        component={DBTAAlgorithmAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="Slide16DBTA"
         component={DBTAAnimation}
