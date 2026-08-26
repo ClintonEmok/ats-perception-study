@@ -211,7 +211,7 @@ export function DashboardDemoCube({
       </svg>
 
       {isEvolving ? (
-        <div style={{ position: 'absolute', left: 520, top: 635, display: 'flex', alignItems: 'center', gap: 20, border: `1px solid ${DASHBOARD_COLORS.border}`, borderRadius: 999, background: 'rgba(255, 255, 255, 0.97)', padding: '13px 22px', color: DASHBOARD_COLORS.foreground, boxShadow: '0 10px 24px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'absolute', left: 555, top: 635, width: 520, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, border: `1px solid ${DASHBOARD_COLORS.border}`, borderRadius: 999, background: 'rgba(255, 255, 255, 0.97)', padding: '13px 22px', color: DASHBOARD_COLORS.foreground, boxShadow: '0 10px 24px rgba(0,0,0,0.1)' }}>
           <span style={{ fontFamily: MONO_FONT, fontSize: 11, fontWeight: 800, letterSpacing: 2 }}>EVOLUTION</span>
           <span style={{ width: 1, height: 22, background: DASHBOARD_COLORS.border }} />
           <span style={{ minWidth: 70, fontFamily: MONO_FONT, fontSize: 12, fontWeight: 800, color: DASHBOARD_COLORS.sceneActive }}>{DAY_NAMES[evolutionSlice]}</span>

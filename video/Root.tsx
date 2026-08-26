@@ -14,12 +14,37 @@ import { RealDashboardAnimation } from './real-dashboard-showcase';
 import { DensityApproachesAnimation } from './density-approaches';
 import { EqualTimeAnimation } from './equal-time-concept';
 import { VisualAllocationAnimation } from './visual-allocation';
+import { DBTAAnimation } from './dbta-concept';
 import { WangAnimation, WangGraphAnimation } from './wang-timeslicing';
 import { DesignRequirementsAnimation } from './design-requirements';
 
 export const RemotionRoot = () => {
   return (
     <>
+      <Composition
+        id="Slide16DBTA"
+        component={DBTAAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="DBTAConcept"
+        component={DBTAAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="VisualAllocationConcept"
+        component={DBTAAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="DesignRequirements"
         component={DesignRequirementsAnimation}
@@ -68,14 +93,7 @@ export const RemotionRoot = () => {
         width={1920}
         height={1080}
       />
-      <Composition
-        id="VisualAllocationConcept"
-        component={VisualAllocationAnimation}
-        durationInFrames={1800}
-        fps={30}
-        width={1920}
-        height={1080}
-      />
+
       <Composition
         id="DensityApproachesConcept"
         component={DensityApproachesAnimation}
