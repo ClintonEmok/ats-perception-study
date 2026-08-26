@@ -1,151 +1,298 @@
 import React from 'react';
-import {
-  AbsoluteFill,
-  interpolate,
-  useCurrentFrame,
-  useVideoConfig,
-} from 'remotion';
+import { interpolate, useCurrentFrame } from 'remotion';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
-import { DARK_TEXT, MUTED_TEXT, TUE_RED } from './data';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, DARK_TEXT, DBTA_STEPS, MUTED_TEXT } from './data';
+import { HeroStep0RawEvents } from './HeroStep0RawEvents';
 import { HeroStep1Partition } from './HeroStep1Partition';
 import { HeroStep2Density } from './HeroStep2Density';
 import { HeroStep3Weights } from './HeroStep3Weights';
 import { HeroStep4Integration } from './HeroStep4Integration';
 import { HeroStepSummary } from './HeroStepSummary';
-import { StepperHeader } from './StepperHeader';
 
 const clamp = { extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const };
 
 export const DBTAAlgorithmAnimation: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
-  // Clamp effective frame at 1500 (50.0s) for 100% static stillness for the remaining 10s
-  const effectiveFrame = Math.min(frame, 1500);
+  // Timeline choreography (30 fps):
+  // 0s - 10s (0..300): Step 1 Raw Event Stream
+  // 10s - 20s (300..600): Step 2 Hourly Binning
+  // 20s - 30s (600..900): Step 3 Density Estimation
+  // 30s - 40s (900..1200): Step 4 Space Reallocation
+  // 40s - 50s (1200..1500): Step 5 Coordinate Integration
+  // 50s - 65s (1500..1950): Summary View (All 5 Steps Grid)
 
-  // -------------------------------------------------------------------------
-  // Narrative Pacing (Full-Screen Hero Stages):
-  // Stage 1 (0..360 / 0.0s..12.0s): Step 1 - Temporal Partitioning
-  // Stage 2 (360..720 / 12.0s..24.0s): Step 2 - Density Estimation
-  // Stage 3 (720..1080 / 24.0s..36.0s): Step 3 - Weight Allocation & Floor
-  // Stage 4 (1080..1440 / 36.0s..48.0s): Step 4 - Coordinate Integration & Warp
-  // Stage 5 (1440..1800 / 48.0s..60.0s): Full Master Architecture Summary
-  // -------------------------------------------------------------------------
+  // Current active step index (0..4 for hero steps, 5 for master summary)
+  let activeStepIndex = 0;
+  let stepLocalProgress = 0;
 
-  let currentStepIndex = 0;
-  if (effectiveFrame >= 360 && effectiveFrame < 720) currentStepIndex = 1;
-  else if (effectiveFrame >= 720 && effectiveFrame < 1080) currentStepIndex = 2;
-  else if (effectiveFrame >= 1080 && effectiveFrame < 1440) currentStepIndex = 3;
-  else if (effectiveFrame >= 1440) currentStepIndex = 4;
+  if (frame < 300) {
+    activeStepIndex = 0;
+    stepLocalProgress = frame / 300;
+  } else if (frame < 600) {
+    activeStepIndex = 1;
+    stepLocalProgress = (frame - 300) / 300;
+  } else if (frame < 900) {
+    activeStepIndex = 2;
+    stepLocalProgress = (frame - 600) / 300;
+  } else if (frame < 1200) {
+    activeStepIndex = 3;
+    stepLocalProgress = (frame - 900) / 300;
+  } else if (frame < 1500) {
+    activeStepIndex = 4;
+    stepLocalProgress = (frame - 1200) / 300;
+  } else {
+    activeStepIndex = 5;
+    stepLocalProgress = Math.min(1, (frame - 1500) / 60);
+  }
 
-  // Local progress inside each stage (0 to 1)
-  const prog1 = interpolate(effectiveFrame, [0, 360], [0, 1], clamp);
-  const prog2 = interpolate(effectiveFrame, [360, 720], [0, 1], clamp);
-  const prog3 = interpolate(effectiveFrame, [720, 1080], [0, 1], clamp);
-  const prog4 = interpolate(effectiveFrame, [1080, 1440], [0, 1], clamp);
-  const progSummary = interpolate(effectiveFrame, [1440, 1500], [0, 1], clamp);
+  // Cross-fade opacity between hero stages
+  const step0Opacity = interpolate(frame, [0, 20, 280, 300], [0, 1, 1, 0], clamp);
+  const step1Opacity = interpolate(frame, [300, 320, 580, 600], [0, 1, 1, 0], clamp);
+  const step2Opacity = interpolate(frame, [600, 620, 880, 900], [0, 1, 1, 0], clamp);
+  const step3Opacity = interpolate(frame, [900, 920, 1180, 1200], [0, 1, 1, 0], clamp);
+  const step4Opacity = interpolate(frame, [1200, 1220, 1480, 1500], [0, 1, 1, 0], clamp);
+  const summaryOpacity = interpolate(frame, [1500, 1530], [0, 1], clamp);
 
-  // Crossfade opacity for seamless transitions
-  const opacity1 = interpolate(effectiveFrame, [0, 15, 345, 360], [1, 1, 1, 0], clamp);
-  const opacity2 = interpolate(effectiveFrame, [360, 375, 705, 720], [0, 1, 1, 0], clamp);
-  const opacity3 = interpolate(effectiveFrame, [720, 735, 1065, 1080], [0, 1, 1, 0], clamp);
-  const opacity4 = interpolate(effectiveFrame, [1080, 1095, 1425, 1440], [0, 1, 1, 0], clamp);
-  const opacitySummary = interpolate(effectiveFrame, [1440, 1455], [0, 1], clamp);
+  const activeStep = activeStepIndex < 5 ? DBTA_STEPS[activeStepIndex] : null;
 
   return (
-    <AbsoluteFill
+    <div
       style={{
-        backgroundColor: '#ffffff',
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        backgroundColor: '#f8fafc',
+        position: 'relative',
         overflow: 'hidden',
-        boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        position: 'relative',
+        padding: '30px 40px',
+        boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
       }}
     >
-      {/* 1. TOP STEPPER BREADCRUMB HEADER */}
-      <StepperHeader currentStepIndex={currentStepIndex} />
-
-      {/* 2. MAIN FULL-SCREEN HERO STAGE */}
+      {/* Dynamic Stepper Bar (visible during hero steps 0..4) */}
       <div
         style={{
-          marginTop: 25,
-          width: 1720,
-          height: 900,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          marginBottom: 16,
+          zIndex: 50,
+          opacity: activeStepIndex < 5 ? 1 : summaryOpacity,
+          transition: 'opacity 0.3s ease',
+        }}
+      >
+        {DBTA_STEPS.map((s, idx) => {
+          const isCurrent = activeStepIndex === idx;
+          const isPast = activeStepIndex > idx;
+
+          return (
+            <React.Fragment key={`stepper-${s.id}`}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 14px',
+                  borderRadius: 999,
+                  backgroundColor: isCurrent
+                    ? '#ffffff'
+                    : isPast
+                    ? 'rgba(15, 23, 42, 0.05)'
+                    : 'rgba(15, 23, 42, 0.02)',
+                  border: isCurrent
+                    ? `2px solid ${s.accentColor}`
+                    : '1px solid rgba(15, 23, 42, 0.08)',
+                  boxShadow: isCurrent ? '0 4px 14px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    backgroundColor: isCurrent
+                      ? s.accentColor
+                      : isPast
+                      ? '#0f172a'
+                      : 'rgba(15, 23, 42, 0.2)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11,
+                    fontWeight: 900,
+                    fontFamily: MONO_FONT,
+                  }}
+                >
+                  {idx + 1}
+                </div>
+
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontFamily: MONO_FONT,
+                    fontWeight: isCurrent ? 900 : 700,
+                    color: isCurrent ? DARK_TEXT : MUTED_TEXT,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {s.title}
+                </span>
+              </div>
+
+              {idx < 4 && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: 'rgba(15, 23, 42, 0.3)',
+                    userSelect: 'none',
+                  }}
+                >
+                  ➔
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Main Full-Screen Hero Visual Stage Container */}
+      <div
+        style={{
           position: 'relative',
+          width: '100%',
+          flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {/* Step 1 Hero */}
-        {effectiveFrame < 365 && (
+        {/* Step 1 Hero: Raw Event Stream */}
+        {step0Opacity > 0 && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              opacity: opacity1,
+              opacity: step0Opacity,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <HeroStep1Partition progress={prog1} width={1720} height={880} />
+            <HeroStep0RawEvents
+              progress={stepLocalProgress}
+              width={CANVAS_WIDTH - 80}
+              height={CANVAS_HEIGHT - 130}
+            />
           </div>
         )}
 
-        {/* Step 2 Hero */}
-        {effectiveFrame >= 355 && effectiveFrame < 725 && (
+        {/* Step 2 Hero: Hourly Binning */}
+        {step1Opacity > 0 && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              opacity: opacity2,
+              opacity: step1Opacity,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <HeroStep2Density progress={prog2} width={1720} height={880} />
+            <HeroStep1Partition
+              progress={stepLocalProgress}
+              width={CANVAS_WIDTH - 80}
+              height={CANVAS_HEIGHT - 130}
+            />
           </div>
         )}
 
-        {/* Step 3 Hero */}
-        {effectiveFrame >= 715 && effectiveFrame < 1085 && (
+        {/* Step 3 Hero: Density Estimation */}
+        {step2Opacity > 0 && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              opacity: opacity3,
+              opacity: step2Opacity,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <HeroStep3Weights progress={prog3} width={1720} height={880} />
+            <HeroStep2Density
+              progress={stepLocalProgress}
+              width={CANVAS_WIDTH - 80}
+              height={CANVAS_HEIGHT - 130}
+            />
           </div>
         )}
 
-        {/* Step 4 Hero */}
-        {effectiveFrame >= 1075 && effectiveFrame < 1445 && (
+        {/* Step 4 Hero: Space Reallocation */}
+        {step3Opacity > 0 && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              opacity: opacity4,
+              opacity: step3Opacity,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <HeroStep4Integration progress={prog4} width={1720} height={880} />
+            <HeroStep3Weights
+              progress={stepLocalProgress}
+              width={CANVAS_WIDTH - 80}
+              height={CANVAS_HEIGHT - 130}
+            />
           </div>
         )}
 
-        {/* Master Summary Grid */}
-        {effectiveFrame >= 1435 && (
+        {/* Step 5 Hero: Coordinate Integration */}
+        {step4Opacity > 0 && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              opacity: opacitySummary,
+              opacity: step4Opacity,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <HeroStepSummary width={1720} height={880} />
+            <HeroStep4Integration
+              progress={stepLocalProgress}
+              width={CANVAS_WIDTH - 80}
+              height={CANVAS_HEIGHT - 130}
+            />
+          </div>
+        )}
+
+        {/* Master Summary View (All 5 Cards Grid) */}
+        {summaryOpacity > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: summaryOpacity,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <HeroStepSummary
+              width={CANVAS_WIDTH - 80}
+              height={CANVAS_HEIGHT - 130}
+            />
           </div>
         )}
       </div>
-    </AbsoluteFill>
+    </div>
   );
 };

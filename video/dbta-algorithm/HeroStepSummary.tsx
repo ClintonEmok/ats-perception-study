@@ -1,6 +1,6 @@
 import React from 'react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
-import { DARK_TEXT, DBTA_STEPS, MUTED_TEXT } from './data';
+import { DBTA_STEPS, MUTED_TEXT } from './data';
 import { StepCard } from './StepCard';
 
 interface HeroStepSummaryProps {
@@ -9,10 +9,12 @@ interface HeroStepSummaryProps {
 }
 
 export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height }) => {
-  const cardWidth = 370;
-  const cardHeight = 560;
-  const cardGap = 38;
-  const totalGridWidth = 4 * cardWidth + 3 * cardGap;
+  const padX = 40;
+  const stageW = width - 2 * padX;
+
+  const cardWidth = 330;
+  const cardHeight = 440;
+  const cardGap = 24;
 
   return (
     <div
@@ -23,20 +25,18 @@ export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height 
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-start',
+        justifyContent: 'center',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
       }}
     >
-      {/* 4 Cards Grid */}
+      {/* 5 Cards Grid */}
       <div
         style={{
-          width: totalGridWidth,
-          height: cardHeight,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 10,
+          justifyContent: 'center',
+          width: stageW,
         }}
       >
         {DBTA_STEPS.map((step, idx) => (
@@ -51,7 +51,7 @@ export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height 
               height={cardHeight}
             />
 
-            {idx < 3 && (
+            {idx < 4 && (
               <div
                 style={{
                   display: 'flex',
@@ -59,7 +59,7 @@ export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height 
                   justifyContent: 'center',
                   width: cardGap,
                   color: '#0f172a',
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: 900,
                   fontFamily: MONO_FONT,
                   userSelect: 'none',

@@ -25,7 +25,7 @@ export const RemotionRoot = () => {
       <Composition
         id="Slide17DBTAAlgorithm"
         component={DBTAAlgorithmAnimation}
-        durationInFrames={1800}
+        durationInFrames={1950}
         fps={30}
         width={1920}
         height={1080}
@@ -33,7 +33,7 @@ export const RemotionRoot = () => {
       <Composition
         id="DBTAAlgorithm"
         component={DBTAAlgorithmAnimation}
-        durationInFrames={1800}
+        durationInFrames={1950}
         fps={30}
         width={1920}
         height={1080}

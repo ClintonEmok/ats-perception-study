@@ -16,29 +16,60 @@ export const HeroStep1Partition: React.FC<HeroStep1PartitionProps> = ({
   width,
   height,
 }) => {
-  const padX = 40;
+  const padX = 70;
   const stageW = width - 2 * padX;
   const stageH = height - 100;
-  
-  // Inner stage axis bounds with comfortable margins
-  const axisMargin = 50;
-  const axisW = stageW - 2 * axisMargin;
-  const sliceW = axisW / 5;
-  const axisY = stageH / 2 + 35;
 
-  // Dot drop entrance progress
-  const dotEntrance = interpolate(progress, [0.1, 0.45], [0, 1], {
+  // Timeline geometry
+  const timelinePadX = 80;
+  const timelineW = stageW - 2 * timelinePadX;
+  const sliceW = timelineW / 5;
+  const axisY = stageH / 2 + 30;
+
+  // Visual pacing beats:
+  // Beat 1 (0.00..0.30): Uniform hourly bin dividers drop in
+  // Beat 2 (0.30..0.65): Hourly bin badges reveal event counts per bin
+  // Beat 3 (0.65..1.00): Burst interval highlight (14:00–15:00)
+  const ticksEntrance = interpolate(progress, [0.05, 0.35], [0, 1], {
+    ...clamp,
+    easing: Easing.out(Easing.cubic),
+  });
+
+  const cardsEntrance = interpolate(progress, [0.35, 0.65], [0, 1], {
+    ...clamp,
+    easing: Easing.out(Easing.cubic),
+  });
+
+  const burstHighlight = interpolate(progress, [0.65, 0.85], [0, 1], {
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
 
   const intervals = [
-    { start: '12:00', end: '13:00', count: 2, isBurst: false },
-    { start: '13:00', end: '14:00', count: 6, isBurst: false },
-    { start: '14:00', end: '15:00', count: 48, isBurst: true },
-    { start: '15:00', end: '16:00', count: 2, isBurst: false },
-    { start: '16:00', end: '17:00', count: 7, isBurst: false },
+    { label: '12:00–13:00', start: '12:00', events: 2, isBurst: false, index: 0 },
+    { label: '13:00–14:00', start: '13:00', events: 6, isBurst: false, index: 1 },
+    {
+      label: '14:00–15:00',
+      start: '14:00',
+      events: 48,
+      isBurst: true,
+      index: 2,
+      note: 'BURST BUCKET',
+    },
+    { label: '15:00–16:00', start: '15:00', events: 2, isBurst: false, index: 3 },
+    { label: '16:00–17:00', start: '16:00', events: 7, isBurst: false, index: 4 },
   ];
+
+  const ticks = [
+    { label: '12:00', fraction: 0 },
+    { label: '13:00', fraction: 0.2 },
+    { label: '14:00', fraction: 0.4 },
+    { label: '15:00', fraction: 0.6 },
+    { label: '16:00', fraction: 0.8 },
+    { label: '17:00', fraction: 1.0 },
+  ];
+
+  const burstX = timelinePadX + 2 * sliceW;
 
   return (
     <div
@@ -78,10 +109,10 @@ export const HeroStep1Partition: React.FC<HeroStep1PartitionProps> = ({
               border: '1px solid rgba(37, 99, 235, 0.25)',
             }}
           >
-            {'Δt_i = [t_i, t_{i+1}]'}
+            {'Δt_i = [t_i, t_{i+1}], Δt = 1h'}
           </div>
           <span style={{ fontSize: 16, fontWeight: 700, color: DARK_TEXT }}>
-            Uniform Clock-Time Discretization
+            Uniform Temporal Discretization (Hourly Bins)
           </span>
         </div>
       </div>
@@ -99,188 +130,268 @@ export const HeroStep1Partition: React.FC<HeroStep1PartitionProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Interval Background Columns */}
-        {intervals.map((inv, idx) => {
-          const left = axisMargin + idx * sliceW;
-          const isEven = idx % 2 === 0;
+        {/* Burst Interval Highlighting Box */}
+        <div
+          style={{
+            position: 'absolute',
+            left: burstX,
+            width: sliceW,
+            top: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(200, 16, 46, 0.04)',
+            borderLeft: `1.5px dashed rgba(200, 16, 46, ${0.5 * burstHighlight})`,
+            borderRight: `1.5px dashed rgba(200, 16, 46, ${0.5 * burstHighlight})`,
+            opacity: burstHighlight,
+            zIndex: 2,
+          }}
+        />
 
-          let bg = isEven ? 'rgba(15, 23, 42, 0.015)' : 'rgba(15, 23, 42, 0.035)';
-          if (inv.isBurst) {
-            bg = 'rgba(200, 16, 46, 0.04)';
-          }
+        {/* Top Interval Badges */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 24,
+            left: timelinePadX,
+            width: timelineW,
+            display: 'flex',
+            justifyContent: 'space-between',
+            zIndex: 20,
+          }}
+        >
+          {intervals.map((inv, idx) => {
+            const isBurst = inv.isBurst;
+            const badgeOpacity = cardsEntrance;
+
+            return (
+              <div
+                key={`badge-${idx}`}
+                style={{
+                  width: sliceW - 24,
+                  opacity: badgeOpacity,
+                  transform: `translateY(${(1 - badgeOpacity) * 10}px)`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px',
+                    borderRadius: 999,
+                    backgroundColor: isBurst
+                      ? 'rgba(200, 16, 46, 0.1)'
+                      : 'rgba(15, 23, 42, 0.05)',
+                    border: `1.5px solid ${isBurst ? TUE_RED : 'rgba(15, 23, 42, 0.12)'}`,
+                    boxShadow: isBurst ? '0 4px 14px rgba(200, 16, 46, 0.18)' : 'none',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: MONO_FONT,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: isBurst ? TUE_RED : DARK_TEXT,
+                    }}
+                  >
+                    {inv.label}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: MONO_FONT,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      backgroundColor: isBurst ? TUE_RED : '#0f172a',
+                      color: '#ffffff',
+                      padding: '2px 6px',
+                      borderRadius: 999,
+                    }}
+                  >
+                    {inv.events} events
+                  </span>
+                </div>
+
+                {isBurst && (
+                  <div
+                    style={{
+                      opacity: burstHighlight,
+                      fontFamily: MONO_FONT,
+                      fontSize: 11,
+                      fontWeight: 900,
+                      color: TUE_RED,
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    PEAK DENSITY BUCKET
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Continuous Baseline Axis */}
+        <div
+          style={{
+            position: 'absolute',
+            left: timelinePadX,
+            top: axisY,
+            width: timelineW,
+            height: 3.5,
+            backgroundColor: '#0f172a',
+            zIndex: 5,
+          }}
+        />
+
+        {/* 6 Hourly Grid Ticks */}
+        {ticks.map((t, i) => {
+          const x = timelinePadX + t.fraction * timelineW;
+          const tickH = 26;
 
           return (
             <div
-              key={`inv-col-${idx}`}
+              key={`tick-${i}`}
               style={{
                 position: 'absolute',
-                left,
-                top: 0,
-                width: sliceW,
-                height: '100%',
-                backgroundColor: bg,
-                borderLeft: idx === 0 ? '1.5px dashed rgba(15, 23, 42, 0.12)' : 'none',
-                borderRight: '1.5px dashed rgba(15, 23, 42, 0.12)',
-                boxSizing: 'border-box',
-                padding: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
+                left: x,
+                top: axisY - tickH / 2 + 2,
+                width: 2.5,
+                height: tickH * ticksEntrance,
+                backgroundColor: '#0f172a',
+                zIndex: 10,
               }}
             >
-              {/* Interval Header Pill */}
-              <div
+              {/* Hourly Time Label */}
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '5px 12px',
-                  borderRadius: 999,
-                  backgroundColor: inv.isBurst ? 'rgba(200, 16, 46, 0.1)' : 'rgba(15, 23, 42, 0.06)',
-                  border: `1px solid ${inv.isBurst ? TUE_RED : 'rgba(15, 23, 42, 0.12)'}`,
+                  position: 'absolute',
+                  top: tickH + 10,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  fontFamily: MONO_FONT,
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: DARK_TEXT,
+                  opacity: ticksEntrance,
                 }}
               >
-                <span
-                  style={{
-                    fontFamily: MONO_FONT,
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: inv.isBurst ? TUE_RED : DARK_TEXT,
-                  }}
-                >
-                  {inv.start}–{inv.end}
-                </span>
-                <span
-                  style={{
-                    fontFamily: MONO_FONT,
-                    fontSize: 12,
-                    fontWeight: 800,
-                    backgroundColor: inv.isBurst ? TUE_RED : '#0f172a',
-                    color: '#ffffff',
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                  }}
-                >
-                  {inv.count} events
-                </span>
-              </div>
-
-              {inv.isBurst && (
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: '4px 10px',
-                    borderRadius: 6,
-                    backgroundColor: TUE_RED,
-                    color: '#ffffff',
-                    fontFamily: MONO_FONT,
-                    fontSize: 11,
-                    fontWeight: 800,
-                    letterSpacing: 1,
-                  }}
-                >
-                  HIGH DENSITY CLUSTER
-                </div>
-              )}
+                {t.label}
+              </span>
             </div>
           );
         })}
 
-        {/* SVG Axis & Dots */}
-        <svg
-          width={stageW}
-          height={stageH}
-          style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
-        >
-          {/* Baseline Axis */}
-          <line
-            x1={axisMargin}
-            y1={axisY}
-            x2={axisMargin + axisW}
-            y2={axisY}
-            stroke="#0f172a"
-            strokeWidth={3.5}
-            strokeLinecap="round"
+        {/* Event dots inside intervals */}
+        {/* Interval 0: 2 dots */}
+        <div
+          style={{
+            position: 'absolute',
+            left: timelinePadX + 0.3 * sliceW - 5,
+            top: axisY - 3,
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: '#0f172a',
+            zIndex: 8,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: timelinePadX + 0.7 * sliceW - 5,
+            top: axisY - 3,
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: '#0f172a',
+            zIndex: 8,
+          }}
+        />
+
+        {/* Interval 1: 6 dots */}
+        {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((f, idx) => (
+          <div
+            key={`dot-1-${idx}`}
+            style={{
+              position: 'absolute',
+              left: timelinePadX + sliceW + f * sliceW - 5,
+              top: axisY - 3,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: '#0f172a',
+              zIndex: 8,
+            }}
           />
+        ))}
 
-          {/* Ticks */}
-          {[0, 1, 2, 3, 4, 5].map((t) => {
-            const x = axisMargin + t * sliceW;
-            return (
-              <g key={`tick-${t}`}>
-                <line
-                  x1={x}
-                  y1={axisY - 14}
-                  x2={x}
-                  y2={axisY + 14}
-                  stroke="#0f172a"
-                  strokeWidth={2.5}
-                />
-                <text
-                  x={x}
-                  y={axisY + 36}
-                  textAnchor="middle"
-                  fontSize={14}
-                  fontFamily={MONO_FONT}
-                  fontWeight={800}
-                  fill={DARK_TEXT}
-                >
-                  {12 + t}:00
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Event Dots */}
-          {/* Interval 0 (2 events) */}
-          <circle cx={axisMargin + 0.3 * sliceW} cy={axisY} r={6} fill="#0f172a" opacity={dotEntrance} />
-          <circle cx={axisMargin + 0.7 * sliceW} cy={axisY} r={6} fill="#0f172a" opacity={dotEntrance} />
-
-          {/* Interval 1 (6 events) */}
-          {[0.15, 0.35, 0.5, 0.65, 0.8, 0.92].map((f, i) => (
-            <circle
-              key={`i1-dot-${i}`}
-              cx={axisMargin + sliceW + f * sliceW}
-              cy={axisY}
-              r={6}
-              fill="#0f172a"
-              opacity={dotEntrance}
+        {/* Interval 2: 48 burst dots */}
+        {Array.from({ length: 48 }).map((_, idx) => {
+          const dotX = burstX + 6 + (idx / 47) * (sliceW - 12);
+          return (
+            <div
+              key={`burst-dot-${idx}`}
+              style={{
+                position: 'absolute',
+                left: dotX - 5,
+                top: axisY - 3,
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                backgroundColor: TUE_RED,
+                border: '1px solid #ffffff',
+                boxShadow: '0 0 6px rgba(200, 16, 46, 0.4)',
+                zIndex: 12,
+              }}
             />
-          ))}
+          );
+        })}
 
-          {/* Interval 2 (48 events - Clustered tightly) */}
-          {Array.from({ length: 48 }).map((_, i) => {
-            const x = axisMargin + 2 * sliceW + 10 + (i / 47) * (sliceW - 20);
-            return (
-              <circle
-                key={`burst-dot-${i}`}
-                cx={x}
-                cy={axisY}
-                r={6}
-                fill={TUE_RED}
-                stroke="#ffffff"
-                strokeWidth={1}
-                opacity={dotEntrance}
-              />
-            );
-          })}
+        {/* Interval 3: 2 dots */}
+        <div
+          style={{
+            position: 'absolute',
+            left: timelinePadX + 3.35 * sliceW - 5,
+            top: axisY - 3,
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: '#0f172a',
+            zIndex: 8,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: timelinePadX + 3.75 * sliceW - 5,
+            top: axisY - 3,
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: '#0f172a',
+            zIndex: 8,
+          }}
+        />
 
-          {/* Interval 3 (2 events) */}
-          <circle cx={axisMargin + 3 * sliceW + 0.35 * sliceW} cy={axisY} r={6} fill="#0f172a" opacity={dotEntrance} />
-          <circle cx={axisMargin + 3 * sliceW + 0.75 * sliceW} cy={axisY} r={6} fill="#0f172a" opacity={dotEntrance} />
-
-          {/* Interval 4 (7 events) */}
-          {[0.12, 0.28, 0.44, 0.58, 0.72, 0.84, 0.94].map((f, i) => (
-            <circle
-              key={`i4-dot-${i}`}
-              cx={axisMargin + 4 * sliceW + f * sliceW}
-              cy={axisY}
-              r={6}
-              fill="#0f172a"
-              opacity={dotEntrance}
-            />
-          ))}
-        </svg>
+        {/* Interval 4: 7 dots */}
+        {[0.12, 0.25, 0.42, 0.58, 0.72, 0.85, 0.95].map((f, idx) => (
+          <div
+            key={`dot-4-${idx}`}
+            style={{
+              position: 'absolute',
+              left: timelinePadX + 4 * sliceW + f * sliceW - 5,
+              top: axisY - 3,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: '#0f172a',
+              zIndex: 8,
+            }}
+          />
+        ))}
       </div>
     </div>
   );

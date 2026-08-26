@@ -13,53 +13,58 @@ export interface AlgorithmStep {
   subtitle: string;
   formula: string;
   description: string;
-  guarantee: string;
   accentColor: string;
   icon: string;
 }
 
 export const DBTA_STEPS: AlgorithmStep[] = [
   {
-    id: 'step-1-partition',
+    id: 'step-1-raw-events',
     stepNumber: 'STEP 01',
-    title: 'TEMPORAL PARTITIONING',
+    title: 'RAW EVENT STREAM',
+    subtitle: 'Continuous Sequence',
+    formula: 'T = {t_1, t_2, ..., t_N}',
+    description: 'Raw crime events arrive with exact, irregular timestamps across continuous time.',
+    accentColor: '#475569', // Slate / Charcoal
+    icon: '⚡',
+  },
+  {
+    id: 'step-2-hourly-binning',
+    stepNumber: 'STEP 02',
+    title: 'HOURLY BINNING',
     subtitle: 'Domain Discretization',
-    formula: 'Δt_i = [t_i, t_{i+1}]',
-    description: 'Partitions continuous time domain into fixed, uniform reference intervals.',
-    guarantee: 'Fixed clock-time invariant',
+    formula: 'Δt_i = [t_i, t_{i+1}], Δt = 1h',
+    description: 'Discretizes continuous time into uniform 1-hour reference intervals.',
     accentColor: '#2563eb', // Royal Blue
     icon: '⊞',
   },
   {
-    id: 'step-2-density',
-    stepNumber: 'STEP 02',
+    id: 'step-3-density',
+    stepNumber: 'STEP 03',
     title: 'DENSITY ESTIMATION',
     subtitle: 'Signal Measurement',
     formula: 'ρ_i = N_i / |Δt_i|',
-    description: 'Computes event distribution signal across each interval to quantify burstiness.',
-    guarantee: 'Continuous allocation input',
+    description: 'Counts events per hour to compute the continuous temporal density signal.',
     accentColor: TUE_RED, // TU/e Red
     icon: '📈',
   },
   {
-    id: 'step-3-weights',
-    stepNumber: 'STEP 03',
+    id: 'step-4-weights',
+    stepNumber: 'STEP 04',
     title: 'SPACE REALLOCATION',
-    subtitle: 'Conserved Space Redistribution',
+    subtitle: 'Conserved Redistribution',
     formula: 's_i = (w_i / Σ w_j) · 100%',
-    description: 'Reallocates visual space from uniform 20%: bursts expand up to 48%, sparse bins compress to 11.2%.',
-    guarantee: 'Conserved 100% space & floor guarantee',
+    description: 'Reallocates visual space from uniform 20%: bursts expand to 48%, sparse bins compress.',
     accentColor: '#8b5cf6', // Violet
     icon: '⚖️',
   },
   {
-    id: 'step-4-integrate',
-    stepNumber: 'STEP 04',
+    id: 'step-5-integrate',
+    stepNumber: 'STEP 05',
     title: 'COORDINATE INTEGRATION',
     subtitle: 'Cumulative Mapping',
     formula: 'x_k = W · (Σ_{i=1}^k s_i) / 100%',
     description: 'Prefix-sum integration maps reallocated space to exact monotonic visual coordinates.',
-    guarantee: 'Fixed width W & strict order',
     accentColor: '#10b981', // Emerald
     icon: '🗺️',
   },
