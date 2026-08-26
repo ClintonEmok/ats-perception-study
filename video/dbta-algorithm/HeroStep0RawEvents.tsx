@@ -123,7 +123,7 @@ export const HeroStep0RawEvents: React.FC<HeroStep0RawEventsProps> = ({
             {'T = {t_1, t_2, ..., t_N}'}
           </div>
           <span style={{ fontSize: 16, fontWeight: 700, color: DARK_TEXT }}>
-            Raw Continuous Temporal Event Stream (Unbinned Timestamps)
+            Raw Continuous Temporal Event Sequence (Unbinned Timestamps)
           </span>
         </div>
       </div>
