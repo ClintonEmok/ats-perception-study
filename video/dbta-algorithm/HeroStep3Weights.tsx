@@ -21,16 +21,16 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
   const stageH = height - 100;
   const barColW = stageW / 5;
 
-  // Visual pacing beats:
-  // Beat 1 (0.00..0.25): Equal 20% shares across all 5 intervals
-  // Beat 2 (0.25..0.70): Dynamic reallocation up and down based on event density
-  // Beat 3 (0.70..1.00): Delta indicators & conservation guarantee hold steady
-  const reallocateMorph = interpolate(progress, [0.22, 0.7], [0, 1], {
+  // Silky smooth interpolation using standard smooth cubic bezier:
+  // Beat 1 (0.00..0.18): 20% Initial uniform share hold
+  // Beat 2 (0.18..0.76): Smooth, continuous redistribution up and down
+  // Beat 3 (0.76..1.00): Stable final shares & delta badges
+  const reallocateMorph = interpolate(progress, [0.18, 0.76], [0, 1], {
     ...clamp,
-    easing: Easing.inOut(Easing.cubic),
+    easing: Easing.bezier(0.25, 0.1, 0.25, 1.0),
   });
 
-  const deltaReveal = interpolate(progress, [0.65, 0.85], [0, 1], {
+  const deltaReveal = interpolate(progress, [0.68, 0.88], [0, 1], {
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
@@ -91,7 +91,6 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
   // Visual scaling: 50% max share corresponds to maxPlotH
   const maxPlotH = stageH - 180;
   const uniformH = (20.0 / 50.0) * maxPlotH; // Height for 20%
-  const baselineY = stageH - 70;
 
   return (
     <div
@@ -105,6 +104,8 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
         justifyContent: 'flex-start',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
       }}
     >
       {/* 1. Header Info Bar */}
@@ -157,38 +158,6 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
           boxSizing: 'border-box',
         }}
       >
-        {/* Top Legend */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 20,
-            right: 30,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 20,
-            zIndex: 20,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#64748b' }} />
-            <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: DARK_TEXT }}>
-              Initial Uniform (20%)
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: TUE_RED }} />
-            <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: TUE_RED }}>
-              Burst Expansion (↑ 48.0%)
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: '#8b5cf6' }} />
-            <span style={{ fontSize: 12, fontFamily: MONO_FONT, fontWeight: 800, color: '#8b5cf6' }}>
-              Sparse Compression (↓ 11.2%)
-            </span>
-          </div>
-        </div>
-
         {/* Uniform 20% Dashed Benchmark Line */}
         <div
           style={{
@@ -305,7 +274,6 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   position: 'relative',
-                  transition: 'height 0.05s linear',
                 }}
               >
                 {/* Visual indicator inside bar */}

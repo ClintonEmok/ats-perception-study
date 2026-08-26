@@ -24,10 +24,10 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
   const axisW = stageW - 2 * axisMargin;
   const axisY = stageH / 2 + 35;
 
-  // Warp transformation progress (0 to 1)
-  const warpProgress = interpolate(progress, [0.15, 0.7], [0, 1], {
+  // Warp transformation progress (0 to 1) - smooth continuous cubic-bezier
+  const warpProgress = interpolate(progress, [0.15, 0.78], [0, 1], {
     ...clamp,
-    easing: Easing.inOut(Easing.cubic),
+    easing: Easing.bezier(0.25, 0.1, 0.25, 1.0),
   });
 
   // Mathematically exact prefix-sum cumulative bounds from Step 3:
@@ -59,6 +59,8 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
         justifyContent: 'flex-start',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
       }}
     >
       {/* 1. Header Info Bar */}
