@@ -22,6 +22,7 @@ export const CANVAS_WIDTH = 1920;
 export const CANVAS_HEIGHT = 1080;
 export const TIMELINE_WIDTH = 1760;
 export const TIMELINE_X = (CANVAS_WIDTH - TIMELINE_WIDTH) / 2; // 80
+export const TIMELINE_Y = CANVAS_HEIGHT / 2; // 540
 
 // Uniform 1-hour slice boundaries on 1760px width
 export const UNIFORM_BOUNDARIES = [0, 352, 704, 1056, 1408, 1760];

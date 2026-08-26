@@ -15,10 +15,27 @@ import { DensityApproachesAnimation } from './density-approaches';
 import { EqualTimeAnimation } from './equal-time-concept';
 import { VisualAllocationAnimation } from './visual-allocation';
 import { WangAnimation, WangGraphAnimation } from './wang-timeslicing';
+import { DesignRequirementsAnimation } from './design-requirements';
 
 export const RemotionRoot = () => {
   return (
     <>
+      <Composition
+        id="DesignRequirements"
+        component={DesignRequirementsAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="Slide15DesignRequirements"
+        component={DesignRequirementsAnimation}
+        durationInFrames={1800}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="RealDashboardShowcase"
         component={RealDashboardAnimation}

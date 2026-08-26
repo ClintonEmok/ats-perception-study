@@ -3,6 +3,7 @@ import { interpolate } from 'remotion';
 import { ChevronUp } from 'lucide-react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 import {
+  buildAdaptiveDayLayout,
   buildAdaptiveHourLayout,
   CUBE_CELLS,
   SELECTED_START,
@@ -12,18 +13,18 @@ import {
 const DAY_NAMES = ['Mon 28', 'Tue 29', 'Wed 30', 'Thu 31', 'Fri 01', 'Sat 02', 'Sun 03'];
 const SELECTED_DAY_INDEX = 3;
 
-// Color types matching crime classification
+// Crime category colors matching LIGHT palette in src/lib/palettes.ts
 const COLOR_BY_TYPE: Record<string, string> = {
-  THEFT: '#3b82f6',
-  BATTERY: '#ef4444',
-  ASSAULT: '#f59e0b',
-  'CRIMINAL DAMAGE': '#8b5cf6',
+  THEFT: '#b8860b',
+  BATTERY: '#b45309',
+  ASSAULT: '#cc3700',
+  'CRIMINAL DAMAGE': '#be123c',
   OTHER: '#64748b',
 };
 
 const colorForType = (type?: string) => (type ? COLOR_BY_TYPE[type] || '#64748b' : '#64748b');
 
-// Authentic STKDE color stops copied directly from src/app/stkde-3d/lib/palette.ts
+// Canonical STKDE color stops from src/app/stkde-3d/lib/palette.ts
 const STKDE_GRADIENT_CSS =
   'linear-gradient(90deg, #faf4d7 0%, #f4d788 25%, #e29147 50%, #be462d 75%, #842b20 90%, #4f1b1b 100%)';
 
@@ -33,11 +34,11 @@ interface ScreenPoint {
   depth: number;
 }
 
-// 3D Perspective Projection Function (matches Three.js camera transformation)
+// 3D Perspective Projection Function (matches Three.js CameraControls)
 const project3D = (
-  x: number,
-  y: number,
-  timeZ: number,
+  x: number, // East-West: -50 to +50
+  z: number, // North-South: -50 to +50
+  timeY: number, // Time Axis: 0 to 100
   yawDeg: number,
   pitchDeg: number,
   centerX = 800,
@@ -49,8 +50,8 @@ const project3D = (
   const pitch = (pitchDeg * Math.PI) / 180;
 
   const cX = x;
-  const cY = y;
-  const cZ = timeZ - 50;
+  const cY = z;
+  const cZ = timeY - 50;
 
   const x1 = cX * Math.cos(yaw) - cY * Math.sin(yaw);
   const y1 = cX * Math.sin(yaw) + cY * Math.cos(yaw);
@@ -70,18 +71,39 @@ const project3D = (
 const polygon = (points: ScreenPoint[]) => points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
 const cornersAt = (
-  timeZ: number,
+  timeY: number,
   yaw: number,
   pitch: number,
-  size = 55,
+  size = 50,
   centerX = 800,
   centerY = 355,
   scale = 4.2
 ): ScreenPoint[] => [
-  project3D(-size, -size, timeZ, yaw, pitch, centerX, centerY, scale),
-  project3D(size, -size, timeZ, yaw, pitch, centerX, centerY, scale),
-  project3D(size, size, timeZ, yaw, pitch, centerX, centerY, scale),
-  project3D(-size, size, timeZ, yaw, pitch, centerX, centerY, scale),
+  project3D(-size, -size, timeY, yaw, pitch, centerX, centerY, scale),
+  project3D(size, -size, timeY, yaw, pitch, centerX, centerY, scale),
+  project3D(size, size, timeY, yaw, pitch, centerX, centerY, scale),
+  project3D(-size, size, timeY, yaw, pitch, centerX, centerY, scale),
+];
+
+// Major Chicago Arterial Street network lines for authentic ground plane
+const CHICAGO_STREETS: Array<Array<[number, number]>> = [
+  // Lake Shore Drive (Coastline Curve)
+  [[12, -48], [16, -30], [20, -10], [22, 5], [26, 25], [32, 45]],
+  // I-90/I-94 Kennedy / Dan Ryan Expressway (NW to S diagonal)
+  [[-38, -48], [-25, -28], [-10, -15], [3, -5], [5, 10], [-2, 30], [-10, 48]],
+  // I-290 Eisenhower Expressway (West into Loop)
+  [[-48, -4], [-30, -4], [-15, -4], [6, -4]],
+  // North-South Arterials (Western Ave, Halsted, Michigan Ave, State St)
+  [[-25, -48], [-25, 48]], // Western Ave
+  [[-5, -48], [-5, 48]],   // Halsted St
+  [[6, -45], [6, 45]],     // State St / Michigan Ave
+  // East-West Arterials (North Ave, Chicago Ave, Madison, Roosevelt, 31st, 55th, 79th)
+  [[-48, -25], [16, -25]], // North Ave
+  [[-48, -12], [20, -12]], // Chicago Ave
+  [[-48, 0], [22, 0]],     // Madison St (Zero Baseline)
+  [[-48, 12], [24, 12]],   // Roosevelt Rd
+  [[-48, 24], [26, 24]],   // 31st / Pershing
+  [[-48, 36], [30, 36]],   // 55th / Garfield
 ];
 
 export function RealDashboardCube({
@@ -101,6 +123,7 @@ export function RealDashboardCube({
   topDownProgress?: number;
   scanDayProgress?: number;
 }) {
+  const dayLayout = buildAdaptiveDayLayout(warpProgress, multiplier);
   const hourLayout = buildAdaptiveHourLayout(warpProgress, multiplier);
   const selectedDay = SELECTED_DAY_INDEX;
 
@@ -110,30 +133,16 @@ export function RealDashboardCube({
     )
   );
 
-  const trajectoryPoints = Array.from({ length: 7 }, (_, dayIndex) => {
-    const cells = dayCells[dayIndex];
-    if (!cells || cells.length === 0) return { x: 0, y: 0 };
-    let sumX = 0;
-    let sumZ = 0;
-    let total = 0;
-    for (const c of cells) {
-      sumX += c.x * c.count;
-      sumZ += c.z * c.count;
-      total += c.count;
-    }
-    return { x: sumX / total, y: sumZ / total };
-  });
-
   const selectedTimeLayers = Array.from(
     new Set(dayCells[selectedDay].map((c) => c.time))
   ).sort((a, b) => a - b);
 
-  // Camera Orbit Angles
-  const baseYaw = interpolate(cameraProgress, [0, 0.25, 0.5, 0.75, 1], [-36, -26, -20, -28, -24], {
+  // Camera Orbit Angles (Matches Three.js CameraControls smoothly)
+  const baseYaw = interpolate(cameraProgress, [0, 0.25, 0.5, 0.75, 1], [-32, -24, -18, -26, -22], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const basePitch = interpolate(cameraProgress, [0, 0.25, 0.5, 0.75, 1], [32, 26, 22, 28, 25], {
+  const basePitch = interpolate(cameraProgress, [0, 0.25, 0.5, 0.75, 1], [30, 25, 20, 27, 24], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -157,34 +166,9 @@ export function RealDashboardCube({
     extrapolateRight: 'clamp',
   });
 
-  const domainProgress = interpolate(selectionProgress, [0.35, 1], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  const contextOpacity =
-    interpolate(selectionProgress, [0.12, 0.8], [0.7, 0.08], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    }) *
-    (1 - domainProgress);
-
-  const selectedOpacity = interpolate(selectionProgress, [0.2, 0.75], [0.55, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
   const cubeHeight = 100;
-  const base = cornersAt(0, yaw, pitch, 55, centerX, centerY, scale);
-  const top = cornersAt(cubeHeight, yaw, pitch, 55, centerX, centerY, scale);
-
-  const adaptiveHourPosition = (hour: number) => {
-    const index = Math.max(0, Math.min(23, Math.floor(hour)));
-    return hourLayout[index].start + (hour - index) * hourLayout[index].width;
-  };
-
-  const detailDomainTime = (localTime: number) =>
-    interpolate(domainProgress, [0, 1], [(selectedDay + localTime) / 7, localTime]) * cubeHeight;
+  const base = cornersAt(0, yaw, pitch, 50, centerX, centerY, scale);
+  const top = cornersAt(cubeHeight, yaw, pitch, 50, centerX, centerY, scale);
 
   const visibleLayersCount = interpolate(buildProgress, [0.15, 0.85], [1, 7], {
     extrapolateLeft: 'clamp',
@@ -200,318 +184,189 @@ export function RealDashboardCube({
         width: '100%',
         height: '100%',
         position: 'relative',
-        background: '#090d16',
+        background: '#f4f1eb',
         overflow: 'hidden',
         fontFamily: FONT_FAMILY,
       }}
     >
       <svg width="100%" height="100%" viewBox="0 0 1600 710" preserveAspectRatio="xMidYMid meet">
         <defs>
-          {/* Authentic STKDE Gradients matching StkdeSliceStack and StkdeIntensityLegend */}
-          <radialGradient id="stkde-intensity-low">
-            <stop offset="0%" stopColor="#f4d788" stopOpacity="0.85" />
-            <stop offset="50%" stopColor="#faf4d7" stopOpacity="0.5" />
+          {/* Authentic Continuous STKDE Gaussian Radial Multi-Stop Gradients */}
+          <radialGradient id="stkde-gaussian-low" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#faf4d7" stopOpacity="0.95" />
+            <stop offset="35%" stopColor="#f4d788" stopOpacity="0.8" />
+            <stop offset="70%" stopColor="#f4d788" stopOpacity="0.25" />
             <stop offset="100%" stopColor="#faf4d7" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="stkde-intensity-mid">
-            <stop offset="0%" stopColor="#e29147" stopOpacity="0.9" />
-            <stop offset="45%" stopColor="#f4d788" stopOpacity="0.65" />
-            <stop offset="85%" stopColor="#faf4d7" stopOpacity="0.25" />
+          <radialGradient id="stkde-gaussian-mid" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#e29147" stopOpacity="0.98" />
+            <stop offset="35%" stopColor="#f4d788" stopOpacity="0.85" />
+            <stop offset="70%" stopColor="#faf4d7" stopOpacity="0.35" />
             <stop offset="100%" stopColor="#faf4d7" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="stkde-intensity-high">
-            <stop offset="0%" stopColor="#7f1d1d" stopOpacity="0.95" />
-            <stop offset="35%" stopColor="#be462d" stopOpacity="0.8" />
-            <stop offset="70%" stopColor="#e29147" stopOpacity="0.45" />
+          <radialGradient id="stkde-gaussian-high" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#4f1b1b" stopOpacity="1" />
+            <stop offset="25%" stopColor="#842b20" stopOpacity="0.95" />
+            <stop offset="50%" stopColor="#be462d" stopOpacity="0.85" />
+            <stop offset="75%" stopColor="#e29147" stopOpacity="0.55" />
             <stop offset="100%" stopColor="#faf4d7" stopOpacity="0" />
           </radialGradient>
 
-          {/* Carto Positron Ground Plane Grid Gradient */}
-          <linearGradient id="ground-basemap-fill" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="rgba(15, 23, 42, 0.85)" />
-            <stop offset="100%" stopColor="rgba(30, 41, 59, 0.95)" />
+          {/* Pedestal Base Face Gradients */}
+          <linearGradient id="pedestal-side-front" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#dedbd2" />
+            <stop offset="100%" stopColor="#cbd5e1" />
           </linearGradient>
-
-          {/* Adaptive Warp Axis Gradient (COLOR_STOPS from AdaptiveWarpAxis.tsx) */}
-          <linearGradient id="warp-axis-gradient" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#5c4635" />
-            <stop offset="40%" stopColor="#b78f5b" />
-            <stop offset="75%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#993723" />
+          <linearGradient id="pedestal-side-left" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e2e8f0" />
+            <stop offset="100%" stopColor="#d1d5db" />
           </linearGradient>
         </defs>
 
-        {/* 1. Base Geographic Map Plane (Ground Plane matching MAP_PLANE_Y) */}
-        <polygon points={polygon(base)} fill="url(#ground-basemap-fill)" stroke="#334155" strokeWidth="1.6" />
+        {/* ============================================================ */}
+        {/* 1. BEVELED BASE PEDESTAL BLOCK (MAP_PLANE_Y = -38 in 3D)     */}
+        {/* ============================================================ */}
+        <g opacity={1 - topDownProgress * 0.4}>
+          {/* Front Bevel Edge (Y: -3 to 0, Z: 50) */}
+          {(() => {
+            const p1 = project3D(-50, 50, -3, yaw, pitch, centerX, centerY, scale);
+            const p2 = project3D(50, 50, -3, yaw, pitch, centerX, centerY, scale);
+            const p3 = project3D(50, 50, 0, yaw, pitch, centerX, centerY, scale);
+            const p4 = project3D(-50, 50, 0, yaw, pitch, centerX, centerY, scale);
+            return (
+              <polygon
+                points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                fill="url(#pedestal-side-front)"
+                stroke="#cbd5e1"
+                strokeWidth="1"
+              />
+            );
+          })()}
 
-        {/* Base Cartographic Grid Lines */}
-        {[-0.6, -0.3, 0, 0.3, 0.6].map((factor) => {
-          const a = project3D(-50, factor * 50, 0, yaw, pitch, centerX, centerY, scale);
-          const b = project3D(50, factor * 50, 0, yaw, pitch, centerX, centerY, scale);
-          const c = project3D(factor * 50, -50, 0, yaw, pitch, centerX, centerY, scale);
-          const d = project3D(factor * 50, 50, 0, yaw, pitch, centerX, centerY, scale);
-          return (
-            <g key={`dark-grid-${factor}`} opacity="0.4">
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#475569" strokeWidth="0.8" strokeDasharray="3 3" />
-              <line x1={c.x} y1={c.y} x2={d.x} y2={d.y} stroke="#475569" strokeWidth="0.8" strokeDasharray="3 3" />
-            </g>
-          );
-        })}
+          {/* Left Bevel Edge (Y: -3 to 0, X: -50) */}
+          {(() => {
+            const p1 = project3D(-50, -50, -3, yaw, pitch, centerX, centerY, scale);
+            const p2 = project3D(-50, 50, -3, yaw, pitch, centerX, centerY, scale);
+            const p3 = project3D(-50, 50, 0, yaw, pitch, centerX, centerY, scale);
+            const p4 = project3D(-50, -50, 0, yaw, pitch, centerX, centerY, scale);
+            return (
+              <polygon
+                points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                fill="url(#pedestal-side-left)"
+                stroke="#cbd5e1"
+                strokeWidth="1"
+              />
+            );
+          })()}
+        </g>
 
-        {/* Lake Michigan Water Body Silhouette on East side */}
+        {/* ============================================================ */}
+        {/* 2. GROUND MAPLIBRE BASEMAP PLANE (Y = 0)                     */}
+        {/* ============================================================ */}
+        <polygon points={polygon(base)} fill="#f8f7f4" stroke="#b8a99a" strokeWidth="1.5" />
+
+        {/* Lake Michigan Water Body on East Edge */}
         {(() => {
-          const w1 = project3D(20, -50, 0, yaw, pitch, centerX, centerY, scale);
+          const w1 = project3D(18, -50, 0, yaw, pitch, centerX, centerY, scale);
           const w2 = project3D(50, -50, 0, yaw, pitch, centerX, centerY, scale);
           const w3 = project3D(50, 50, 0, yaw, pitch, centerX, centerY, scale);
-          const w4 = project3D(35, 50, 0, yaw, pitch, centerX, centerY, scale);
-          const w5 = project3D(18, 10, 0, yaw, pitch, centerX, centerY, scale);
+          const w4 = project3D(34, 50, 0, yaw, pitch, centerX, centerY, scale);
+          const w5 = project3D(28, 25, 0, yaw, pitch, centerX, centerY, scale);
+          const w6 = project3D(22, 5, 0, yaw, pitch, centerX, centerY, scale);
+          const w7 = project3D(16, -30, 0, yaw, pitch, centerX, centerY, scale);
           return (
             <polygon
-              points={`${w1.x},${w1.y} ${w2.x},${w2.y} ${w3.x},${w3.y} ${w4.x},${w4.y} ${w5.x},${w5.y}`}
-              fill="rgba(56, 189, 248, 0.08)"
-              stroke="rgba(56, 189, 248, 0.25)"
-              strokeWidth="1"
+              points={`${w1.x},${w1.y} ${w2.x},${w2.y} ${w3.x},${w3.y} ${w4.x},${w4.y} ${w5.x},${w5.y} ${w6.x},${w6.y} ${w7.x},${w7.y}`}
+              fill="rgba(186, 230, 253, 0.65)"
+              stroke="rgba(59, 130, 246, 0.45)"
+              strokeWidth="1.2"
             />
           );
         })()}
 
-        {/* 2. Glass Bounding Pillars (Fade out when in Top-Down view) */}
-        <g opacity={1 - topDownProgress * 0.85}>
-          {base.map((point, index) => (
-            <line
-              key={`dark-pillar-${index}`}
-              x1={point.x}
-              y1={point.y}
-              x2={top[index].x}
-              y2={top[index].y}
-              stroke="#334155"
-              strokeWidth="1.2"
-              opacity="0.6"
-            />
-          ))}
-          <polygon points={polygon(top)} fill="none" stroke="#334155" strokeWidth="1" strokeDasharray="4 4" opacity="0.6" />
-        </g>
-
-        {/* 3. Hotspot Trajectory 3D Splines (Matching HotspotTrajectoryOverlay.tsx) */}
-        <g opacity={1 - topDownProgress * 0.6}>
-          {trajectoryPoints.map((pt, idx) => {
-            if (idx === trajectoryPoints.length - 1) return null;
-            const nextPt = trajectoryPoints[idx + 1];
-
-            const timeA = ((idx + 0.5) / 7) * cubeHeight;
-            const timeB = ((idx + 1.5) / 7) * cubeHeight;
-
-            const screenA = project3D(pt.x, pt.y, timeA, yaw, pitch, centerX, centerY, scale);
-            const screenB = project3D(nextPt.x, nextPt.y, timeB, yaw, pitch, centerX, centerY, scale);
-
-            return (
-              <g key={`traj-segment-${idx}`}>
-                <line
-                  x1={screenA.x}
-                  y1={screenA.y}
-                  x2={screenB.x}
-                  y2={screenB.y}
-                  stroke="#fbbf24"
-                  strokeWidth="2.2"
-                  strokeDasharray="4 2"
-                  opacity="0.75"
-                />
-                <circle cx={screenA.x} cy={screenA.y} r="3" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
-              </g>
-            );
+        {/* Authentic Chicago Arterial Street Network Lines */}
+        <g stroke="#cbd5e1" strokeWidth="0.9" fill="none" opacity="0.8">
+          {CHICAGO_STREETS.map((street, sIdx) => {
+            const pts = street.map(([sx, sz]) => project3D(sx, sz, 0, yaw, pitch, centerX, centerY, scale));
+            const pathStr = pts.map((p, pIdx) => `${pIdx === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+            return <path key={`street-${sIdx}`} d={pathStr} strokeDasharray={sIdx === 0 ? undefined : '3 2'} />;
           })}
         </g>
 
-        {/* 4. Weekly Context STKDE Slices (7 Rising Slices) */}
-        {Array.from({ length: 7 }, (_, day) => {
-          if (day >= visibleLayersCount) return null;
-          const layerRise = interpolate(visibleLayersCount, [day, day + 1], [0, 1], {
-            extrapolateLeft: 'clamp',
-            extrapolateRight: 'clamp',
-          });
-
-          const normalizedTime = (((day + 0.5) / 7) * cubeHeight) * layerRise;
-          const points = cornersAt(normalizedTime, yaw, pitch, 55, centerX, centerY, scale);
-          const selected = day === selectedDay && !isScanning;
-
-          const isCurrentScan = isScanning && day === currentScanDay;
-          const layerOpacity = isScanning
-            ? isCurrentScan
-              ? 1
-              : 0.12
-            : contextOpacity * layerRise;
-
-          if (selected) return null;
-
+        {/* Ground 10x10 Coordinate Grid Lines */}
+        {[-40, -30, -20, -10, 0, 10, 20, 30, 40].map((coord) => {
+          const a = project3D(-50, coord, 0, yaw, pitch, centerX, centerY, scale);
+          const b = project3D(50, coord, 0, yaw, pitch, centerX, centerY, scale);
+          const c = project3D(coord, -50, 0, yaw, pitch, centerX, centerY, scale);
+          const d = project3D(coord, 50, 0, yaw, pitch, centerX, centerY, scale);
           return (
-            <g key={`dark-week-stkde-slice-${day}`} opacity={layerOpacity}>
-              <polygon
-                points={polygon(points)}
-                fill={isCurrentScan ? 'rgba(56, 189, 248, 0.08)' : 'rgba(30, 41, 59, 0.25)'}
-                stroke={isCurrentScan ? '#38bdf8' : '#334155'}
-                strokeWidth={isCurrentScan ? 2.2 : 0.8}
-              />
-
-              {dayCells[day].map((cell, index) => {
-                const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, centerX, centerY, scale);
-                const intensity = Math.min(1, cell.count / 7);
-                const gradient =
-                  intensity > 0.66
-                    ? 'url(#stkde-intensity-high)'
-                    : intensity > 0.32
-                    ? 'url(#stkde-intensity-mid)'
-                    : 'url(#stkde-intensity-low)';
-                const radius = (8 + Math.sqrt(cell.count) * 5.2) * (isCurrentScan ? 1.25 : 1);
-
-                return (
-                  <g key={`dark-stkde-cell-${day}-${index}`}>
-                    <circle cx={pt.x} cy={pt.y} r={radius} fill={gradient} opacity={isCurrentScan ? 0.95 : 0.75} />
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={radius * 0.65}
-                      fill="none"
-                      stroke={intensity > 0.66 ? '#ef4444' : intensity > 0.32 ? '#f59e0b' : '#38bdf8'}
-                      strokeWidth={isCurrentScan ? 1.2 : 0.6}
-                      opacity={isCurrentScan ? 0.9 : 0.4}
-                    />
-                  </g>
-                );
-              })}
+            <g key={`ground-grid-${coord}`} opacity="0.35">
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#b8a99a" strokeWidth="0.6" strokeDasharray="2 2" />
+              <line x1={c.x} y1={c.y} x2={d.x} y2={d.y} stroke="#b8a99a" strokeWidth="0.6" strokeDasharray="2 2" />
             </g>
           );
         })}
 
-        {/* 5. Active Selected STKDE Slab (Thursday 31 July) */}
-        {!isScanning ? (
-          <g opacity={selectedOpacity}>
-            {/* Glass Enclosure Slabs */}
-            <polygon
-              points={polygon(cornersAt(detailDomainTime(0), yaw, pitch, 55, centerX, centerY, scale))}
-              fill="rgba(56, 189, 248, 0.06)"
-              stroke="#38bdf8"
-              strokeWidth="2"
-            />
-            <polygon
-              points={polygon(cornersAt(detailDomainTime(1), yaw, pitch, 55, centerX, centerY, scale))}
-              fill="rgba(56, 189, 248, 0.06)"
-              stroke="#38bdf8"
-              strokeWidth="2"
-            />
-            {cornersAt(detailDomainTime(0), yaw, pitch, 55, centerX, centerY, scale).map((point, index) => {
-              const end = cornersAt(detailDomainTime(1), yaw, pitch, 55, centerX, centerY, scale)[index];
-              return (
-                <line
-                  key={`dark-slab-wall-${index}`}
-                  x1={point.x}
-                  y1={point.y}
-                  x2={end.x}
-                  y2={end.y}
-                  stroke="#38bdf8"
-                  strokeWidth="1.6"
-                  opacity="0.75"
-                />
-              );
-            })}
-
-            {/* Hourly STKDE Density Slices */}
-            {selectedTimeLayers.map((time) => {
-              const hour = (time - SELECTED_START) / 3600;
-              const normalizedTime = detailDomainTime(adaptiveHourPosition(hour));
-              const cells = dayCells[selectedDay].filter((c) => c.time === time);
-              const sliceCorners = cornersAt(normalizedTime, yaw, pitch, 55, centerX, centerY, scale);
-
-              return (
-                <g key={`dark-stkde-layer-${time}`}>
-                  <polygon
-                    points={polygon(sliceCorners)}
-                    fill="rgba(30, 41, 59, 0.35)"
-                    stroke="rgba(56, 189, 248, 0.4)"
-                    strokeWidth="0.85"
-                  />
-
-                  {cells.map((cell, index) => {
-                    const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, centerX, centerY, scale);
-                    const intensity = Math.min(1, cell.count / 7);
-                    const gradient =
-                      intensity > 0.66
-                        ? 'url(#stkde-intensity-high)'
-                        : intensity > 0.32
-                        ? 'url(#stkde-intensity-mid)'
-                        : 'url(#stkde-intensity-low)';
-                    const radius = 9 + Math.sqrt(cell.count) * 5.5;
-
-                    return (
-                      <g key={`dark-active-stkde-kernel-${cell.x}-${cell.z}-${index}`}>
-                        <circle cx={pt.x} cy={pt.y} r={radius} fill={gradient} opacity="0.9" />
-                        <circle
-                          cx={pt.x}
-                          cy={pt.y}
-                          r={radius * 0.65}
-                          fill="none"
-                          stroke={intensity > 0.66 ? '#ef4444' : intensity > 0.32 ? '#f59e0b' : '#38bdf8'}
-                          strokeWidth={0.8}
-                          opacity="0.8"
-                        />
-                        <circle cx={pt.x} cy={pt.y} r="2.5" fill="#ffffff" opacity="0.95" />
-                      </g>
-                    );
-                  })}
-
-                  {/* 3D Spatiotemporal Incident Extrusions */}
-                  {selectionProgress > 0.45
-                    ? cells
-                        .filter((c) => c.count >= 3)
-                        .map((cell, index) => {
-                          const pt = project3D(cell.x, cell.z, normalizedTime, yaw, pitch, centerX, centerY, scale);
-                          const colHeight = 10 + cell.count * 2.4;
-                          return (
-                            <g key={`dark-col-${cell.x}-${cell.z}-${index}`}>
-                              <line
-                                x1={pt.x}
-                                y1={pt.y}
-                                x2={pt.x}
-                                y2={pt.y - colHeight}
-                                stroke={colorForType(cell.dominantType)}
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                opacity="0.9"
-                              />
-                              <circle
-                                cx={pt.x}
-                                cy={pt.y - colHeight}
-                                r="4.2"
-                                fill={colorForType(cell.dominantType)}
-                                stroke="#ffffff"
-                                strokeWidth="1.4"
-                                style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.6))' }}
-                              />
-                            </g>
-                          );
-                        })
-                    : null}
-                </g>
-              );
-            })}
-          </g>
-        ) : null}
-
-        {/* 6. Left Vertical Adaptive Warp Timeline Axis (Matching AdaptiveWarpAxis.tsx) */}
-        <g opacity={1 - topDownProgress}>
+        {/* ============================================================ */}
+        {/* 3. REAR WALL BACKDROP & SLICE BOUNDARIES (Z = -50)           */}
+        {/* ============================================================ */}
+        <g opacity={1 - topDownProgress * 0.9}>
+          {/* Rear Wall Plane Quad */}
           {(() => {
-            const axisOrigin = project3D(-65, -55, 0, yaw, pitch, centerX, centerY, scale);
-            const axisPeak = project3D(-65, -55, cubeHeight, yaw, pitch, centerX, centerY, scale);
+            const r1 = project3D(-50, -50, 0, yaw, pitch, centerX, centerY, scale);
+            const r2 = project3D(50, -50, 0, yaw, pitch, centerX, centerY, scale);
+            const r3 = project3D(50, -50, cubeHeight, yaw, pitch, centerX, centerY, scale);
+            const r4 = project3D(-50, -50, cubeHeight, yaw, pitch, centerX, centerY, scale);
+            return (
+              <polygon
+                points={`${r1.x},${r1.y} ${r2.x},${r2.y} ${r3.x},${r3.y} ${r4.x},${r4.y}`}
+                fill="rgba(214, 211, 209, 0.05)"
+                stroke="#b8a99a"
+                strokeWidth="0.8"
+                strokeDasharray="4 4"
+              />
+            );
+          })()}
+
+          {/* Horizontal Slice Boundary Reference Lines on Rear Wall */}
+          {dayLayout.map((day, dayIdx) => {
+            const timeVal = day.center * cubeHeight;
+            const b1 = project3D(-50, -50, timeVal, yaw, pitch, centerX, centerY, scale);
+            const b2 = project3D(50, -50, timeVal, yaw, pitch, centerX, centerY, scale);
+            return (
+              <line
+                key={`backdrop-line-${dayIdx}`}
+                x1={b1.x}
+                y1={b1.y}
+                x2={b2.x}
+                y2={b2.y}
+                stroke="#78716c"
+                strokeWidth="0.75"
+                opacity="0.35"
+              />
+            );
+          })}
+        </g>
+
+        {/* ============================================================ */}
+        {/* 4. ADAPTIVE WARP AXIS COLUMN (Instanced Bins along Z = -50)  */}
+        {/* ============================================================ */}
+        <g opacity={1 - topDownProgress}>
+          {/* Main Axis Spine Line */}
+          {(() => {
+            const origin = project3D(-54, -50, 0, yaw, pitch, centerX, centerY, scale);
+            const peak = project3D(-54, -50, cubeHeight, yaw, pitch, centerX, centerY, scale);
             return (
               <g>
-                <line x1={axisOrigin.x} y1={axisOrigin.y} x2={axisPeak.x} y2={axisPeak.y} stroke="#38bdf8" strokeWidth="2.4" />
-                <circle cx={axisPeak.x} cy={axisPeak.y} r="3.5" fill="#38bdf8" />
+                <line x1={origin.x} y1={origin.y} x2={peak.x} y2={peak.y} stroke="#2563eb" strokeWidth="2.5" />
+                <circle cx={peak.x} cy={peak.y} r="4" fill="#2563eb" />
                 <text
-                  x={axisPeak.x - 38}
-                  y={axisPeak.y - 10}
-                  fill="#38bdf8"
+                  x={peak.x - 36}
+                  y={peak.y - 12}
+                  fill="#0f172a"
                   fontSize="12"
                   fontWeight="900"
-                  fontFamily={FONT_FAMILY}
+                  fontFamily={MONO_FONT}
                 >
                   TIME (Z)
                 </text>
@@ -519,57 +374,271 @@ export function RealDashboardCube({
             );
           })()}
 
-          {/* Dynamic Axis Ticks & Time Labels */}
-          <g opacity={1 - domainProgress}>
-            {DAY_NAMES.map((day, index) => {
-              const timeVal = ((index + 0.5) / 7) * cubeHeight;
-              const pt = project3D(-65, -55, timeVal, yaw, pitch, centerX, centerY, scale);
-              const isSel = index === selectedDay;
-              return (
-                <g key={`dark-axis-day-${day}`}>
-                  <line x1={pt.x - 6} y1={pt.y} x2={pt.x + 6} y2={pt.y} stroke={isSel ? '#38bdf8' : '#475569'} strokeWidth="1.5" />
-                  <text
-                    x={pt.x - 12}
-                    y={pt.y + 4}
-                    textAnchor="end"
-                    fill={isSel ? '#38bdf8' : '#94a3b8'}
-                    fontSize="9"
-                    fontWeight={isSel ? 850 : 600}
-                    fontFamily={FONT_FAMILY}
-                  >
-                    {day}
-                  </text>
-                </g>
-              );
-            })}
-          </g>
+          {/* Instanced Vertical Day/Hour Bins on Axis */}
+          {dayLayout.map((day, dayIdx) => {
+            const timeA = day.start * cubeHeight;
+            const timeB = day.end * cubeHeight;
+            const isSelected = dayIdx === selectedDay;
 
-          <g opacity={domainProgress}>
-            {[0, 4, 8, 12, 16, 20, 24].map((hour) => {
-              const localTime = hour === 24 ? 1 : hourLayout[hour].start;
-              const timeVal = detailDomainTime(localTime);
-              const pt = project3D(-65, -55, timeVal, yaw, pitch, centerX, centerY, scale);
-              return (
-                <g key={`dark-axis-hour-${hour}`}>
-                  <line x1={pt.x - 6} y1={pt.y} x2={pt.x + 6} y2={pt.y} stroke="#38bdf8" strokeWidth="1.8" />
+            const p1 = project3D(-54, -50, timeA, yaw, pitch, centerX, centerY, scale);
+            const p2 = project3D(-51, -50, timeA, yaw, pitch, centerX, centerY, scale);
+            const p3 = project3D(-51, -50, timeB, yaw, pitch, centerX, centerY, scale);
+            const p4 = project3D(-54, -50, timeB, yaw, pitch, centerX, centerY, scale);
+
+            const binColor =
+              warpProgress > 0.1
+                ? isSelected
+                  ? '#dc2626'
+                  : '#2563eb'
+                : isSelected
+                ? '#2563eb'
+                : '#7c6858';
+
+            return (
+              <polygon
+                key={`warp-axis-day-${dayIdx}`}
+                points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                fill={binColor}
+                opacity={isSelected ? 0.9 : 0.4}
+                stroke={binColor}
+                strokeWidth="0.5"
+              />
+            );
+          })}
+
+          {/* Floating Label Tick Chips (7 Days Mon-Sun consistently positioned) */}
+          {DAY_NAMES.map((dayName, index) => {
+            const timeVal = dayLayout[index].center * cubeHeight;
+            const pt = project3D(-54, -50, timeVal, yaw, pitch, centerX, centerY, scale);
+            const isSel = index === selectedDay;
+
+            return (
+              <g key={`axis-day-label-${dayName}`}>
+                <line x1={pt.x - 8} y1={pt.y} x2={pt.x} y2={pt.y} stroke={isSel ? '#2563eb' : '#94a3b8'} strokeWidth="1.5" />
+                <g transform={`translate(${pt.x - 12}, ${pt.y})`}>
+                  <rect
+                    x={-48}
+                    y={-9}
+                    width={46}
+                    height={18}
+                    rx={4}
+                    fill="rgba(255, 255, 255, 0.95)"
+                    stroke={isSel ? '#2563eb' : '#e2e8f0'}
+                    strokeWidth="1"
+                  />
                   <text
-                    x={pt.x - 12}
-                    y={pt.y + 4}
-                    textAnchor="end"
-                    fill="#38bdf8"
-                    fontSize="9.5"
-                    fontWeight="850"
-                    fontFamily={FONT_FAMILY}
+                    x={-25}
+                    y={3.5}
+                    textAnchor="middle"
+                    fill={isSel ? '#2563eb' : '#475569'}
+                    fontSize="9"
+                    fontWeight={isSel ? 900 : 700}
+                    fontFamily={MONO_FONT}
                   >
-                    {String(hour).padStart(2, '0')}:00
+                    {dayName}
                   </text>
                 </g>
-              );
-            })}
-          </g>
+              </g>
+            );
+          })}
         </g>
 
-        {/* 7. Top-Down Day Navigation Pill (Visible during Act 3 Scan) */}
+        {/* ============================================================ */}
+        {/* 5. GLASS BOUNDING PILLARS & CORNER POSTS                     */}
+        {/* ============================================================ */}
+        <g opacity={1 - topDownProgress * 0.85}>
+          {base.map((point, index) => (
+            <line
+              key={`pillar-${index}`}
+              x1={point.x}
+              y1={point.y}
+              x2={top[index].x}
+              y2={top[index].y}
+              stroke="#94a3b8"
+              strokeWidth="1.2"
+              opacity="0.45"
+            />
+          ))}
+          <polygon points={polygon(top)} fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+        </g>
+
+        {/* ============================================================ */}
+        {/* 6. CONSISTENT 7 DAILY STKDE DENSITY SLICES (Mon 28 – Sun 03) */}
+        {/* ============================================================ */}
+        {Array.from({ length: 7 }, (_, day) => {
+          if (day >= visibleLayersCount) return null;
+          const layerRise = interpolate(visibleLayersCount, [day, day + 1], [0, 1], {
+            extrapolateLeft: 'clamp',
+            extrapolateRight: 'clamp',
+          });
+
+          const dayInfo = dayLayout[day];
+          const sliceTime = dayInfo.center * cubeHeight * layerRise;
+          const points = cornersAt(sliceTime, yaw, pitch, 50, centerX, centerY, scale);
+          const isSelected = day === selectedDay && !isScanning;
+          const isCurrentScan = isScanning && day === currentScanDay;
+
+          // Slices remain consistent and fully visible throughout the video
+          const sliceOpacity = isScanning
+            ? isCurrentScan
+              ? 1.0
+              : 0.15
+            : isSelected
+            ? 0.98
+            : 0.72;
+
+          return (
+            <g key={`slice-day-${day}`} opacity={sliceOpacity * layerRise}>
+              {/* Slice Plane Surface Mesh (Matching PlaneGeometry in Three.js) */}
+              <polygon
+                points={polygon(points)}
+                fill={
+                  isCurrentScan || isSelected
+                    ? 'rgba(37, 99, 235, 0.08)'
+                    : 'rgba(255, 255, 255, 0.75)'
+                }
+                stroke={isCurrentScan || isSelected ? '#2563eb' : '#b8a99a'}
+                strokeWidth={isCurrentScan || isSelected ? 1.8 : 0.8}
+              />
+
+              {/* Internal Coordinate Grid Helper (Matching gridHelper in Three.js) */}
+              {[-30, -10, 10, 30].map((gridLine) => {
+                const g1 = project3D(-50, gridLine, sliceTime, yaw, pitch, centerX, centerY, scale);
+                const g2 = project3D(50, gridLine, sliceTime, yaw, pitch, centerX, centerY, scale);
+                const g3 = project3D(gridLine, -50, sliceTime, yaw, pitch, centerX, centerY, scale);
+                const g4 = project3D(gridLine, 50, sliceTime, yaw, pitch, centerX, centerY, scale);
+                return (
+                  <g key={`slice-grid-${day}-${gridLine}`} opacity="0.18">
+                    <line x1={g1.x} y1={g1.y} x2={g2.x} y2={g2.y} stroke="#b8a99a" strokeWidth="0.5" />
+                    <line x1={g3.x} y1={g3.y} x2={g4.x} y2={g4.y} stroke="#b8a99a" strokeWidth="0.5" />
+                  </g>
+                );
+              })}
+
+              {/* Continuous STKDE Heatmap Texture Kernels (Smooth Blended Gaussian Plumes) */}
+              {dayCells[day].map((cell, index) => {
+                const pt = project3D(cell.x, cell.z, sliceTime, yaw, pitch, centerX, centerY, scale);
+                const intensity = Math.min(1, cell.count / 7);
+                const gradient =
+                  intensity > 0.66
+                    ? 'url(#stkde-gaussian-high)'
+                    : intensity > 0.32
+                    ? 'url(#stkde-gaussian-mid)'
+                    : 'url(#stkde-gaussian-low)';
+                const radius = (12 + Math.sqrt(cell.count) * 6.5) * (isCurrentScan ? 1.35 : 1);
+
+                return (
+                  <circle
+                    key={`stkde-gaussian-${day}-${index}`}
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={radius}
+                    fill={gradient}
+                    opacity={isCurrentScan ? 0.95 : 0.85}
+                  />
+                );
+              })}
+            </g>
+          );
+        })}
+
+        {/* ============================================================ */}
+        {/* 7. ACTIVE THURSDAY DURATION SLAB VOLUME & SPATIOTEMPORAL STALKS */}
+        {/* ============================================================ */}
+        {!isScanning && visibleLayersCount >= 4 ? (
+          <g>
+            {/* Glass Duration Volume Enclosure (Y_start to Y_end for Thursday) */}
+            {(() => {
+              const thuStart = dayLayout[selectedDay].start * cubeHeight;
+              const thuEnd = dayLayout[selectedDay].end * cubeHeight;
+
+              const botCorners = cornersAt(thuStart, yaw, pitch, 50, centerX, centerY, scale);
+              const topCorners = cornersAt(thuEnd, yaw, pitch, 50, centerX, centerY, scale);
+
+              return (
+                <g opacity={0.85}>
+                  <polygon
+                    points={polygon(botCorners)}
+                    fill="rgba(37, 99, 235, 0.04)"
+                    stroke="#2563eb"
+                    strokeWidth="1.2"
+                    strokeDasharray="3 3"
+                  />
+                  <polygon
+                    points={polygon(topCorners)}
+                    fill="rgba(37, 99, 235, 0.04)"
+                    stroke="#2563eb"
+                    strokeWidth="1.2"
+                    strokeDasharray="3 3"
+                  />
+                  {botCorners.map((p, idx) => (
+                    <line
+                      key={`thu-post-${idx}`}
+                      x1={p.x}
+                      y1={p.y}
+                      x2={topCorners[idx].x}
+                      y2={topCorners[idx].y}
+                      stroke="#2563eb"
+                      strokeWidth="1.4"
+                      opacity="0.75"
+                    />
+                  ))}
+
+                  {/* Inset Resize Handle Spheres (Matching StkdeSliceStack.tsx) */}
+                  {(() => {
+                    const topH = project3D(50, 0, thuEnd, yaw, pitch, centerX, centerY, scale);
+                    const botH = project3D(50, 0, thuStart, yaw, pitch, centerX, centerY, scale);
+                    return (
+                      <g>
+                        <circle cx={topH.x} cy={topH.y} r="4" fill="#b45309" stroke="#ffffff" strokeWidth="1.2" />
+                        <circle cx={botH.x} cy={botH.y} r="4" fill="#b45309" stroke="#ffffff" strokeWidth="1.2" />
+                      </g>
+                    );
+                  })()}
+                </g>
+              );
+            })()}
+
+            {/* 3D Spatiotemporal Incident Stalks Rising from Map Plane into Thursday */}
+            {selectionProgress > 0.2
+              ? dayCells[selectedDay]
+                  .filter((c) => c.count >= 3)
+                  .map((cell, index) => {
+                    const thuSliceTime = dayLayout[selectedDay].center * cubeHeight;
+                    const pt = project3D(cell.x, cell.z, thuSliceTime, yaw, pitch, centerX, centerY, scale);
+                    const groundPt = project3D(cell.x, cell.z, 0, yaw, pitch, centerX, centerY, scale);
+
+                    return (
+                      <g key={`stalk-${cell.x}-${cell.z}-${index}`} opacity={interpolate(selectionProgress, [0.2, 0.6], [0, 0.9])}>
+                        <line
+                          x1={pt.x}
+                          y1={groundPt.y}
+                          x2={pt.x}
+                          y2={pt.y}
+                          stroke={colorForType(cell.dominantType)}
+                          strokeWidth="2.0"
+                          strokeDasharray="3 2"
+                          opacity="0.65"
+                        />
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r="3.8"
+                          fill={colorForType(cell.dominantType)}
+                          stroke="#ffffff"
+                          strokeWidth="1.2"
+                          style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.25))' }}
+                        />
+                      </g>
+                    );
+                  })
+              : null}
+          </g>
+        ) : null}
+
+        {/* ============================================================ */}
+        {/* 8. TOP-DOWN DAY NAVIGATION PILL (Active in Act 3 Scan)       */}
+        {/* ============================================================ */}
         {isScanning ? (
           <g transform="translate(800, 640)">
             <rect
@@ -578,9 +647,10 @@ export function RealDashboardCube({
               width={360}
               height={36}
               rx={8}
-              fill="rgba(15, 23, 42, 0.9)"
-              stroke="#334155"
+              fill="rgba(255, 255, 255, 0.95)"
+              stroke="#e2e8f0"
               strokeWidth="1"
+              style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.08))' }}
             />
             {DAY_NAMES.map((name, idx) => {
               const isCurrent = idx === currentScanDay;
@@ -595,7 +665,6 @@ export function RealDashboardCube({
                       height={24}
                       rx={5}
                       fill="#2563eb"
-                      box-shadow="0 0 10px rgba(37,99,235,0.5)"
                     />
                   ) : null}
                   <text
@@ -616,42 +685,44 @@ export function RealDashboardCube({
         ) : null}
       </svg>
 
-      {/* 8. Floating STKDE Intensity Legend Pill (Matching StkdeIntensityLegend.tsx) */}
+      {/* ============================================================ */}
+      {/* 9. FLOATING STKDE INTENSITY LEGEND PILL                      */}
+      {/* ============================================================ */}
       <aside
         style={{
           position: 'absolute',
           right: 20,
           bottom: 20,
           zIndex: 30,
-          background: 'rgba(15, 23, 42, 0.9)',
-          border: '1px solid #1e293b',
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '1px solid #e2e8f0',
           borderRadius: 12,
           padding: '10px 14px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
           backdropFilter: 'blur(12px)',
           minWidth: 200,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 9, fontWeight: 850, letterSpacing: 1.5, color: '#e2e8f0', fontFamily: MONO_FONT }}>
+          <span style={{ fontSize: 9, fontWeight: 850, letterSpacing: 1.5, color: '#0f172a', fontFamily: MONO_FONT }}>
             STKDE INTENSITY
           </span>
-          <ChevronUp style={{ width: 13, height: 13, color: '#94a3b8' }} />
+          <ChevronUp style={{ width: 13, height: 13, color: '#64748b' }} />
         </div>
 
-        {/* Gradient Bar */}
+        {/* Continuous Gradient Bar */}
         <div
           style={{
             height: 8,
             borderRadius: 99,
             marginTop: 6,
             background: STKDE_GRADIENT_CSS,
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
           }}
         />
 
         {/* Min / Max Labels */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 8.5, color: '#94a3b8', fontFamily: MONO_FONT }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 8.5, color: '#64748b', fontFamily: MONO_FONT }}>
           <span>0.00 Low</span>
           <span>1.00 High</span>
         </div>

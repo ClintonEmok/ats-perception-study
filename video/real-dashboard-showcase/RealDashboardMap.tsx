@@ -80,13 +80,13 @@ export function RealDashboardMap({
   selectionProgress?: number;
   revealProgress?: number;
 }) {
-  const selectedOpacity = interpolate(selectionProgress, [0.15, 0.7], [0.55, 1], {
+  const selectedOpacity = interpolate(selectionProgress, [0.15, 0.7], [0.65, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
   const contextOpacity =
-    interpolate(selectionProgress, [0.15, 0.75], [0.75, 0.15], {
+    interpolate(selectionProgress, [0.15, 0.75], [0.8, 0.2], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     }) * revealProgress;
@@ -97,12 +97,12 @@ export function RealDashboardMap({
         width: '100%',
         height: '100%',
         position: 'relative',
-        background: '#090d16',
+        background: '#ffffff',
         overflow: 'hidden',
         fontFamily: FONT_FAMILY,
       }}
     >
-      {/* 1. Authentic 2D MapLibre Flat Basemap */}
+      {/* 1. Authentic 2D MapLibre Flat Basemap (Carto Positron) */}
       <Img
         src={staticFile('chicago-positron-basemap.png')}
         style={{
@@ -112,7 +112,6 @@ export function RealDashboardMap({
           width: '100%',
           height: '100%',
           objectFit: 'fill',
-          filter: 'brightness(0.92) contrast(1.05)',
         }}
       />
 
@@ -125,7 +124,7 @@ export function RealDashboardMap({
         style={{ position: 'absolute', inset: 0 }}
       >
         {/* Community Area Boundaries */}
-        <g stroke="#475569" strokeWidth="0.85" strokeLinejoin="round" fill="none" opacity="0.35">
+        <g stroke="#94a3b8" strokeWidth="0.85" strokeLinejoin="round" fill="none" opacity="0.45">
           {areaPaths.map((area) => (
             <path key={area.number} d={area.path} />
           ))}
@@ -150,9 +149,9 @@ export function RealDashboardMap({
                 d={selectedPath}
                 fill="none"
                 stroke={colorForType(type)}
-                strokeWidth="9"
+                strokeWidth="8"
                 strokeLinecap="round"
-                opacity={0.25 * selectedOpacity * revealProgress}
+                opacity={0.3 * selectedOpacity * revealProgress}
               />
             ) : null}
 
@@ -169,40 +168,18 @@ export function RealDashboardMap({
         ))}
       </svg>
 
-      {/* Top Left Viewport Title Tag */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 16,
-          top: 16,
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          borderRadius: 8,
-          background: 'rgba(15, 23, 42, 0.85)',
-          backdropFilter: 'blur(12px)',
-          padding: '7px 12px',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-        }}
-      >
-        <div style={{ color: '#94a3b8', fontSize: 8.5, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 700, fontFamily: MONO_FONT }}>
-          SPATIAL OVERVIEW
-        </div>
-        <div style={{ color: '#f8fafc', fontSize: 12.5, fontWeight: 800, marginTop: 1 }}>
-          2D MapLibre Geographic Map
-        </div>
-      </div>
-
       {/* Bottom Right Crime Category Legend */}
       <div
         style={{
           position: 'absolute',
           right: 16,
           bottom: 16,
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid #e2e8f0',
           borderRadius: 8,
-          background: 'rgba(15, 23, 42, 0.88)',
+          background: 'rgba(255, 255, 255, 0.92)',
           backdropFilter: 'blur(12px)',
           padding: '7px 12px',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
           display: 'flex',
           alignItems: 'center',
           gap: 12,
@@ -217,7 +194,7 @@ export function RealDashboardMap({
         ].map(([label, color]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ width: 7, height: 7, borderRadius: 99, background: color }} />
-            <span style={{ fontSize: 9, fontWeight: 750, fontFamily: MONO_FONT, color: '#cbd5e1' }}>
+            <span style={{ fontSize: 9, fontWeight: 750, fontFamily: MONO_FONT, color: '#334155' }}>
               {label}
             </span>
           </div>

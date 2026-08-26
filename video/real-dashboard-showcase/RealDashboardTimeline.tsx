@@ -18,7 +18,7 @@ const DENSITY_COLOR_STOPS = [
   { offset: 0.8, color: [255, 214, 64] as [number, number, number] },
   { offset: 1, color: [255, 64, 96] as [number, number, number] },
 ];
-const TIME_CURSOR_COLOR = '#10b981';
+const TIME_CURSOR_COLOR = '#059669';
 
 const OVERVIEW_MARGIN = { top: 8, right: 12, bottom: 10, left: 12 };
 const DETAIL_MARGIN = { top: 8, right: 12, bottom: 12, left: 12 };
@@ -78,8 +78,8 @@ export function RealDashboardTimeline({
       style={{
         width: '100%',
         height: '100%',
-        background: '#090d16',
-        color: '#f8fafc',
+        background: '#ffffff',
+        color: '#0f172a',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
         display: 'flex',
@@ -104,11 +104,11 @@ export function RealDashboardTimeline({
             position: 'relative',
             width: '100%',
             border: highlightDensity
-              ? '1.5px solid #38bdf8'
+              ? '1.5px solid #2563eb'
               : '1px solid transparent',
             borderRadius: 8,
             boxShadow: highlightDensity
-              ? '0 0 24px rgba(56, 189, 248, 0.25)'
+              ? '0 0 20px rgba(37, 99, 235, 0.18)'
               : 'none',
             transition: 'all 0.2s ease',
           }}
@@ -127,14 +127,14 @@ export function RealDashboardTimeline({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 fontSize: 10,
-                color: '#94a3b8',
+                color: '#64748b',
                 fontFamily: MONO_FONT,
                 marginBottom: 4,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 6, height: 6, borderRadius: 99, background: '#38bdf8' }} />
-                <span style={{ fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#e2e8f0' }}>
+                <span style={{ width: 6, height: 6, borderRadius: 99, background: '#2563eb' }} />
+                <span style={{ fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#1e293b' }}>
                   OVERVIEW TEMPORAL RESOLUTION (7 DAYS · DENSITY STRIP)
                 </span>
               </div>
@@ -146,7 +146,7 @@ export function RealDashboardTimeline({
                     height: 6,
                     width: 96,
                     borderRadius: 3,
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    border: '1px solid rgba(0, 0, 0, 0.15)',
                     background: densityGradientCss,
                     display: 'inline-block',
                   }}
@@ -163,7 +163,7 @@ export function RealDashboardTimeline({
                   width: '100%',
                   height: '100%',
                   background: densityGradientCss,
-                  opacity: 0.85,
+                  opacity: 0.9,
                 }}
               />
               {/* Density Strip Selection Box */}
@@ -175,9 +175,9 @@ export function RealDashboardTimeline({
                   left: currentBrushLeft,
                   width: currentBrushWidth,
                   borderRadius: 2,
-                  border: '1px solid #38bdf8',
-                  background: 'rgba(56, 189, 248, 0.25)',
-                  boxShadow: '0 0 12px rgba(56, 189, 248, 0.5)',
+                  border: '1px solid #2563eb',
+                  background: 'rgba(37, 99, 235, 0.25)',
+                  boxShadow: '0 0 10px rgba(37, 99, 235, 0.35)',
                 }}
               />
             </div>
@@ -187,8 +187,8 @@ export function RealDashboardTimeline({
           <svg width={width} height={OVERVIEW_HEIGHT + AXIS_HEIGHT} style={{ display: 'block' }}>
             <defs>
               <linearGradient id="overviewAdaptiveAxisGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.04" />
-                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.12" />
+                <stop offset="0%" stopColor="#2563eb" stopOpacity="0.04" />
+                <stop offset="100%" stopColor="#2563eb" stopOpacity="0.12" />
               </linearGradient>
             </defs>
 
@@ -209,8 +209,8 @@ export function RealDashboardTimeline({
                       width={barWidth}
                       height={barHeight}
                       rx={3}
-                      fill={isThu ? 'rgba(239, 68, 68, 0.35)' : 'rgba(56, 189, 248, 0.22)'}
-                      stroke={isThu ? 'rgba(239, 68, 68, 0.85)' : 'rgba(56, 189, 248, 0.55)'}
+                      fill={isThu ? 'rgba(239, 68, 68, 0.22)' : 'rgba(59, 130, 246, 0.18)'}
+                      stroke={isThu ? '#ef4444' : '#3b82f6'}
                       strokeWidth={1}
                     />
                     <text
@@ -220,7 +220,7 @@ export function RealDashboardTimeline({
                       fontSize={9}
                       fontWeight={800}
                       fontFamily={MONO_FONT}
-                      fill={isThu ? '#f87171' : '#94a3b8'}
+                      fill={isThu ? '#dc2626' : '#64748b'}
                     >
                       {count}
                     </text>
@@ -237,25 +237,25 @@ export function RealDashboardTimeline({
                   y={0}
                   width={currentBrushWidth}
                   height={OVERVIEW_HEIGHT}
-                  fill="rgba(56, 189, 248, 0.16)"
-                  stroke="#38bdf8"
+                  fill="rgba(37, 99, 235, 0.12)"
+                  stroke="#2563eb"
                   strokeWidth={2}
                   rx={4}
                   style={{
-                    filter: 'drop-shadow(0 0 10px rgba(56, 189, 248, 0.4))',
+                    filter: 'drop-shadow(0 1px 4px rgba(37, 99, 235, 0.25))',
                   }}
                 />
                 {/* West Resize Handle Grip */}
                 <g transform={`translate(${currentBrushLeft - 4}, 0)`}>
-                  <rect width={8} height={OVERVIEW_HEIGHT} fill="#38bdf8" rx={3} opacity={0.9} />
-                  <line x1={3} y1={14} x2={3} y2={28} stroke="#0f172a" strokeWidth={1.2} />
-                  <line x1={5} y1={14} x2={5} y2={28} stroke="#0f172a" strokeWidth={1.2} />
+                  <rect width={8} height={OVERVIEW_HEIGHT} fill="#2563eb" rx={3} opacity={0.9} />
+                  <line x1={3} y1={14} x2={3} y2={28} stroke="#ffffff" strokeWidth={1.2} />
+                  <line x1={5} y1={14} x2={5} y2={28} stroke="#ffffff" strokeWidth={1.2} />
                 </g>
                 {/* East Resize Handle Grip */}
                 <g transform={`translate(${currentBrushLeft + currentBrushWidth - 4}, 0)`}>
-                  <rect width={8} height={OVERVIEW_HEIGHT} fill="#38bdf8" rx={3} opacity={0.9} />
-                  <line x1={3} y1={14} x2={3} y2={28} stroke="#0f172a" strokeWidth={1.2} />
-                  <line x1={5} y1={14} x2={5} y2={28} stroke="#0f172a" strokeWidth={1.2} />
+                  <rect width={8} height={OVERVIEW_HEIGHT} fill="#2563eb" rx={3} opacity={0.9} />
+                  <line x1={3} y1={14} x2={3} y2={28} stroke="#ffffff" strokeWidth={1.2} />
+                  <line x1={5} y1={14} x2={5} y2={28} stroke="#ffffff" strokeWidth={1.2} />
                 </g>
               </g>
 
@@ -268,14 +268,14 @@ export function RealDashboardTimeline({
 
                   return (
                     <g key={`overview-tick-${index}`} transform={`translate(${x}, 0)`}>
-                      <line y2={6} stroke={isThu ? '#38bdf8' : 'rgba(255, 255, 255, 0.2)'} strokeWidth={1.2} />
+                      <line y2={6} stroke={isThu ? '#2563eb' : '#cbd5e1'} strokeWidth={1.2} />
                       <text
                         y={16}
                         textAnchor="middle"
                         fontSize={10}
                         fontWeight={isThu ? 850 : 600}
                         fontFamily={MONO_FONT}
-                        fill={isThu ? '#38bdf8' : '#94a3b8'}
+                        fill={isThu ? '#2563eb' : '#64748b'}
                       >
                         {day}
                       </text>
@@ -295,11 +295,11 @@ export function RealDashboardTimeline({
             position: 'relative',
             width: '100%',
             border: highlightDetail
-              ? '1.5px solid #ef4444'
+              ? '1.5px solid #dc2626'
               : '1px solid transparent',
             borderRadius: 8,
             boxShadow: highlightDetail
-              ? '0 0 24px rgba(239, 68, 68, 0.25)'
+              ? '0 0 20px rgba(220, 38, 38, 0.18)'
               : 'none',
             transition: 'all 0.2s ease',
           }}
@@ -318,23 +318,23 @@ export function RealDashboardTimeline({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 fontSize: 10,
-                color: '#94a3b8',
+                color: '#64748b',
                 fontFamily: MONO_FONT,
                 marginBottom: 4,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 6, height: 6, borderRadius: 99, background: warpProgress > 0.1 ? '#ef4444' : '#38bdf8' }} />
-                <span style={{ fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#e2e8f0' }}>
+                <span style={{ width: 6, height: 6, borderRadius: 99, background: warpProgress > 0.1 ? '#dc2626' : '#2563eb' }} />
+                <span style={{ fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#1e293b' }}>
                   DETAIL TEMPORAL RESOLUTION · THURSDAY 31 JULY (24 HOURS)
                 </span>
                 <span
                   style={{
                     padding: '2px 6px',
                     borderRadius: 4,
-                    background: 'rgba(239, 68, 68, 0.15)',
+                    background: 'rgba(239, 68, 68, 0.12)',
                     border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#f87171',
+                    color: '#dc2626',
                     fontSize: 8.5,
                     fontWeight: 800,
                     fontFamily: MONO_FONT,
@@ -349,7 +349,7 @@ export function RealDashboardTimeline({
                   fontSize: 10,
                   fontFamily: MONO_FONT,
                   fontWeight: 800,
-                  color: warpProgress > 0.1 ? '#ef4444' : '#38bdf8',
+                  color: warpProgress > 0.1 ? '#dc2626' : '#2563eb',
                 }}
               >
                 {warpProgress > 0.1
@@ -365,7 +365,7 @@ export function RealDashboardTimeline({
                   width: '100%',
                   height: '100%',
                   background: 'linear-gradient(90deg, #224cff 0%, #00d4ff 45%, #ffd640 70%, #ff4060 85%, #00d4ff 100%)',
-                  opacity: 0.85,
+                  opacity: 0.9,
                 }}
               />
             </div>
@@ -374,12 +374,9 @@ export function RealDashboardTimeline({
           {/* Detail SVG Surface (Adaptive Hourly Bins + Slices + Time Cursor + Axis) */}
           <svg width={width} height={DETAIL_HEIGHT + AXIS_HEIGHT} style={{ display: 'block' }}>
             <defs>
-              <filter id="timeCursorGlow" x="-50%" y="-10%" width="200%" height="120%">
-                <feDropShadow dx="0" dy="0" stdDeviation="1.4" floodColor={TIME_CURSOR_COLOR} floodOpacity="0.75" />
+              <filter id="timeCursorGlowLight" x="-50%" y="-10%" width="200%" height="120%">
+                <feDropShadow dx="0" dy="0" stdDeviation="1.4" floodColor={TIME_CURSOR_COLOR} floodOpacity="0.45" />
               </filter>
-              <pattern id="sliceOverlapHatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(35)">
-                <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(148, 163, 184, 0.5)" strokeWidth="2" />
-              </pattern>
             </defs>
 
             <g transform={`translate(${DETAIL_MARGIN.left},${DETAIL_MARGIN.top})`}>
@@ -407,12 +404,9 @@ export function RealDashboardTimeline({
                       width={barWidth}
                       height={barHeight}
                       rx={2}
-                      fill={isBurst ? 'rgba(239, 68, 68, 0.35)' : 'rgba(56, 189, 248, 0.2)'}
-                      stroke={isBurst ? 'rgba(239, 68, 68, 0.9)' : 'rgba(56, 189, 248, 0.5)'}
+                      fill={isBurst ? 'rgba(239, 68, 68, 0.22)' : 'rgba(59, 130, 246, 0.16)'}
+                      stroke={isBurst ? '#ef4444' : '#3b82f6'}
                       strokeWidth={1}
-                      style={{
-                        boxShadow: isBurst ? '0 0 12px rgba(239, 68, 68, 0.5)' : 'none',
-                      }}
                     />
                     {hourBin.width > 0.032 ? (
                       <text
@@ -422,7 +416,7 @@ export function RealDashboardTimeline({
                         fontSize={8.5}
                         fontWeight={850}
                         fontFamily={MONO_FONT}
-                        fill={isBurst ? '#f87171' : '#cbd5e1'}
+                        fill={isBurst ? '#dc2626' : '#475569'}
                       >
                         {count}
                       </text>
@@ -439,11 +433,11 @@ export function RealDashboardTimeline({
                   width={burstWidth}
                   height={DETAIL_HEIGHT - 4}
                   rx={4}
-                  fill="rgba(251, 146, 60, 0.18)"
-                  stroke="rgba(251, 146, 60, 0.85)"
-                  strokeWidth={2}
+                  fill="rgba(251, 146, 60, 0.14)"
+                  stroke="rgba(234, 88, 12, 0.85)"
+                  strokeWidth={1.8}
                   strokeDasharray={warpProgress > 0.1 ? undefined : '5 3'}
-                  opacity={0.8}
+                  opacity={0.9}
                 />
                 {warpProgress > 0.1 ? (
                   <rect
@@ -453,14 +447,14 @@ export function RealDashboardTimeline({
                     height={DETAIL_HEIGHT - 2}
                     rx={4}
                     fill="none"
-                    stroke="rgba(253, 186, 116, 0.95)"
-                    strokeWidth={2.4}
-                    opacity={0.9}
+                    stroke="#ea580c"
+                    strokeWidth={2.2}
+                    opacity={0.95}
                   />
                 ) : null}
               </g>
 
-              {/* Time Cursor Line & Head Indicator (Exact matching DualTimelineSurface) */}
+              {/* Time Cursor Line & Head Indicator */}
               <g key="time-cursor-indicator">
                 <line
                   x1={cursorX}
@@ -469,14 +463,14 @@ export function RealDashboardTimeline({
                   y2={DETAIL_HEIGHT}
                   stroke={TIME_CURSOR_COLOR}
                   strokeWidth={2}
-                  filter="url(#timeCursorGlow)"
+                  filter="url(#timeCursorGlowLight)"
                 />
                 <circle
                   cx={cursorX}
                   cy={0}
                   r={8}
-                  fill="rgba(16,185,129,0.2)"
-                  stroke="rgba(16,185,129,0.45)"
+                  fill="rgba(5, 150, 105, 0.15)"
+                  stroke="rgba(5, 150, 105, 0.4)"
                   strokeWidth={1}
                 />
                 <circle
@@ -484,9 +478,9 @@ export function RealDashboardTimeline({
                   cy={0}
                   r={5.5}
                   fill={TIME_CURSOR_COLOR}
-                  stroke="rgba(255,255,255,0.95)"
+                  stroke="#ffffff"
                   strokeWidth={2}
-                  filter="url(#timeCursorGlow)"
+                  filter="url(#timeCursorGlowLight)"
                 />
               </g>
 
@@ -504,7 +498,7 @@ export function RealDashboardTimeline({
                     <g key={`detail-tick-${hour}`} transform={`translate(${x}, 0)`}>
                       <line
                         y2={isBurstTick ? 8 : 5}
-                        stroke={isBurstTick ? '#ef4444' : 'rgba(255, 255, 255, 0.25)'}
+                        stroke={isBurstTick ? '#dc2626' : '#cbd5e1'}
                         strokeWidth={isBurstTick ? 1.6 : 1}
                       />
                       <text
@@ -513,7 +507,7 @@ export function RealDashboardTimeline({
                         fontSize={9}
                         fontWeight={isBurstTick ? 900 : 600}
                         fontFamily={MONO_FONT}
-                        fill={isBurstTick ? '#ef4444' : '#94a3b8'}
+                        fill={isBurstTick ? '#dc2626' : '#64748b'}
                       >
                         {String(hour).padStart(2, '0')}:00
                       </text>

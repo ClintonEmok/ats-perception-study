@@ -93,24 +93,24 @@ export function RealDashboardAnimation() {
 
   const currentBadge =
     badge1 > 0
-      ? { text: '1. SPATIAL FOUNDATION', title: '2D MapLibre Basemap & Incident Points', color: '#38bdf8', opacity: badge1 }
+      ? { text: '1. SPATIAL FOUNDATION', title: '2D MapLibre Basemap & Incident Points', color: '#2563eb', opacity: badge1 }
       : badge2 > 0
-      ? { text: '2. 3D SPATIAL VIEW', title: '7 Daily STKDE Density Slices in Perspective Space', color: '#ef4444', opacity: badge2 }
+      ? { text: '2. 3D SPATIAL VIEW', title: '7 Daily STKDE Density Slices in Perspective Space', color: '#dc2626', opacity: badge2 }
       : badge3 > 0
-      ? { text: '3. TOP-DOWN EVOLUTION', title: 'Overhead Scan Reveals Hotspot Migration Across Days', color: '#a855f7', opacity: badge3 }
+      ? { text: '3. TOP-DOWN EVOLUTION', title: 'Overhead Scan Reveals Hotspot Migration Across Days', color: '#7c3aed', opacity: badge3 }
       : badge4 > 0
-      ? { text: '4. DUAL TIMELINE NAVIGATION', title: 'Overview Density Strip + 24-Hour Detail Multi-Scale Brushing', color: '#38bdf8', opacity: badge4 }
+      ? { text: '4. DUAL TIMELINE NAVIGATION', title: 'Overview Density Strip + 24-Hour Detail Multi-Scale Brushing', color: '#2563eb', opacity: badge4 }
       : badge5 > 0
-      ? { text: '5. COORDINATED CONVERGENCE', title: 'Brushing Thursday 31 July Synchronizes Map, Cube & Sidebar', color: '#10b981', opacity: badge5 }
+      ? { text: '5. COORDINATED CONVERGENCE', title: 'Brushing Thursday 31 July Synchronizes Map, Cube & Sidebar', color: '#059669', opacity: badge5 }
       : badge6 > 0
-      ? { text: '6. GLOBAL ADAPTIVE WARP', title: `Z-Axis Dynamically Expands Dense Crime Burst (${multiplier.toFixed(1)}×)`, color: '#ef4444', opacity: badge6 }
-      : { text: '', title: '', color: '#38bdf8', opacity: 0 };
+      ? { text: '6. GLOBAL ADAPTIVE WARP', title: `Z-Axis Dynamically Expands Dense Crime Burst (${multiplier.toFixed(1)}×)`, color: '#dc2626', opacity: badge6 }
+      : { text: '', title: '', color: '#2563eb', opacity: 0 };
 
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: '#020617',
-        color: '#f8fafc',
+        backgroundColor: '#ffffff',
+        color: '#0f172a',
         fontFamily: FONT_FAMILY,
         overflow: 'hidden',
         boxSizing: 'border-box',
@@ -118,20 +118,31 @@ export function RealDashboardAnimation() {
     >
       <div style={{ display: 'flex', width: '100%', height: '100%' }}>
         {/* ---------------------------------------------------- */}
-        {/* LEFT COLUMN: MAIN WORKSPACE (Width: 1600px)          */}
+        {/* LEFT / CENTER REGION: 1600px width (pr-80 / 320px)   */}
         {/* ---------------------------------------------------- */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0, position: 'relative' }}>
-          
-          {/* A. UPPER SHARED VIEWPORT (Height: 710px) */}
+        <div
+          style={{
+            width: 1600,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+          }}
+        >
+          {/* ================================================== */}
+          {/* UPPER SECTION: Shared Viewport (1600 x 710)        */}
+          {/* ================================================== */}
           <section
             style={{
-              flex: 1,
               position: 'relative',
+              width: '100%',
+              height: 710,
               overflow: 'hidden',
-              background: '#090d16',
+              background: '#ffffff',
             }}
+            aria-label="dashboard demo shared viewport"
           >
-            {/* 1. Top Left: DemoPresetSelect Dropdown Pill */}
+            {/* 1. Floating Top-Left Preset Selector (DemoPresetSelect) */}
             <div
               style={{
                 position: 'absolute',
@@ -141,62 +152,71 @@ export function RealDashboardAnimation() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                background: 'rgba(15, 23, 42, 0.85)',
-                border: '1px solid #1e293b',
                 borderRadius: 8,
-                padding: '7px 12px',
-                color: '#f8fafc',
-                fontSize: 12,
-                fontWeight: 700,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                border: '1px solid #e2e8f0',
+                background: 'rgba(255, 255, 255, 0.92)',
+                padding: '6px 12px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
                 backdropFilter: 'blur(12px)',
+                cursor: 'pointer',
               }}
             >
-              <Sparkles style={{ width: 14, height: 14, color: '#38bdf8' }} />
-              <span>Chicago Crime Burst · July 28 – Aug 4, 2025</span>
-              <ChevronDown style={{ width: 13, height: 13, color: '#94a3b8' }} />
+              <Sparkles style={{ width: 14, height: 14, color: '#2563eb' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
+                Chicago Crime Burst · July 28 – Aug 4, 2025
+              </span>
+              <ChevronDown style={{ width: 13, height: 13, color: '#64748b' }} />
             </div>
 
-            {/* 2. Top Center: Chapter Narrative Explanation Chip */}
-            <div
-              style={{
-                position: 'absolute',
-                left: '50%',
-                top: 16,
-                transform: 'translateX(-50%)',
-                zIndex: 40,
-                opacity: currentBadge.opacity,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                pointerEvents: 'none',
-                padding: '6px 20px',
-                borderRadius: 8,
-                background: 'rgba(15, 23, 42, 0.95)',
-                border: '1px solid #1e293b',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(12px)',
-                transition: 'all 0.2s ease',
-              }}
-            >
+            {/* 2. Floating Top-Center Narrative Chapter Badge */}
+            {currentBadge.opacity > 0 ? (
               <div
                 style={{
-                  color: currentBadge.color,
-                  fontSize: 9.5,
-                  fontWeight: 850,
-                  letterSpacing: 1.8,
-                  textTransform: 'uppercase',
-                  fontFamily: MONO_FONT,
+                  position: 'absolute',
+                  top: 16,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 45,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '8px 18px',
+                  borderRadius: 10,
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+                  backdropFilter: 'blur(12px)',
+                  opacity: currentBadge.opacity,
+                  transition: 'opacity 0.2s ease',
+                  textAlign: 'center',
                 }}
               >
-                {currentBadge.text}
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 900,
+                    letterSpacing: 1.5,
+                    fontFamily: MONO_FONT,
+                    color: currentBadge.color,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {currentBadge.text}
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    marginTop: 2,
+                  }}
+                >
+                  {currentBadge.title}
+                </span>
               </div>
-              <div style={{ color: '#ffffff', fontSize: 13.5, fontWeight: 750, marginTop: 2 }}>
-                {currentBadge.title}
-              </div>
-            </div>
+            ) : null}
 
-            {/* 3. Top Right: Viewport Mode Switcher Pill (Matching DashboardDemoShell) */}
+            {/* 3. Floating Top-Right Viewport Switcher Pill */}
             <div
               style={{
                 position: 'absolute',
@@ -206,15 +226,15 @@ export function RealDashboardAnimation() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
-                borderRadius: 9999,
-                border: '1px solid #1e293b',
-                background: 'rgba(15, 23, 42, 0.8)',
+                borderRadius: 99,
+                border: '1px solid #e2e8f0',
+                background: 'rgba(241, 245, 249, 0.85)',
                 padding: 4,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
                 backdropFilter: 'blur(12px)',
               }}
             >
-              {/* Map Button */}
+              {/* [Map] Button */}
               <div
                 style={{
                   display: 'flex',
@@ -222,17 +242,17 @@ export function RealDashboardAnimation() {
                   justifyContent: 'center',
                   width: 28,
                   height: 28,
-                  borderRadius: 9999,
-                  background: !cubeIsActive ? '#1e293b' : 'transparent',
-                  color: !cubeIsActive ? '#f8fafc' : '#94a3b8',
-                  transition: 'all 0.15s ease',
+                  borderRadius: 99,
+                  background: !cubeIsActive ? '#ffffff' : 'transparent',
+                  color: !cubeIsActive ? '#0f172a' : '#64748b',
+                  boxShadow: !cubeIsActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 }}
                 title="Map"
               >
                 <Map style={{ width: 14, height: 14 }} />
               </div>
 
-              {/* 3D Button */}
+              {/* [3D Cube] Button */}
               <div
                 style={{
                   display: 'flex',
@@ -240,17 +260,17 @@ export function RealDashboardAnimation() {
                   justifyContent: 'center',
                   width: 28,
                   height: 28,
-                  borderRadius: 9999,
-                  background: cubeIsActive ? '#1e293b' : 'transparent',
-                  color: cubeIsActive ? '#f8fafc' : '#94a3b8',
-                  transition: 'all 0.15s ease',
+                  borderRadius: 99,
+                  background: cubeIsActive ? '#ffffff' : 'transparent',
+                  color: cubeIsActive ? '#0f172a' : '#64748b',
+                  boxShadow: cubeIsActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                 }}
                 title="3D"
               >
                 <Box style={{ width: 14, height: 14 }} />
               </div>
 
-              {/* Compare Button */}
+              {/* [Compare] Button */}
               <div
                 style={{
                   display: 'flex',
@@ -258,19 +278,19 @@ export function RealDashboardAnimation() {
                   justifyContent: 'center',
                   width: 28,
                   height: 28,
-                  borderRadius: 9999,
+                  borderRadius: 99,
                   background: 'transparent',
-                  color: '#64748b',
+                  color: '#94a3b8',
                 }}
                 title="Compare"
               >
                 <GitCompareArrows style={{ width: 14, height: 14 }} />
               </div>
 
-              {/* Separator & Map Layer Toggles when Map is active */}
               {!cubeIsActive ? (
                 <>
-                  <div style={{ width: 1, height: 16, background: '#334155', margin: '0 2px' }} />
+                  <div style={{ width: 1, height: 18, background: '#cbd5e1', margin: '0 2px' }} />
+                  {/* POI Toggle */}
                   <div
                     style={{
                       display: 'flex',
@@ -278,14 +298,16 @@ export function RealDashboardAnimation() {
                       justifyContent: 'center',
                       width: 28,
                       height: 28,
-                      borderRadius: 9999,
-                      background: 'transparent',
-                      color: '#94a3b8',
+                      borderRadius: 99,
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     }}
-                    title="POIs"
+                    title="POI"
                   >
                     <MapPin style={{ width: 14, height: 14 }} />
                   </div>
+                  {/* STKDE Flame Toggle */}
                   <div
                     style={{
                       display: 'flex',
@@ -293,14 +315,16 @@ export function RealDashboardAnimation() {
                       justifyContent: 'center',
                       width: 28,
                       height: 28,
-                      borderRadius: 9999,
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      color: '#f87171',
+                      borderRadius: 99,
+                      background: '#ffffff',
+                      color: '#ef4444',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     }}
-                    title="STKDE"
+                    title="STKDE Flame"
                   >
                     <Flame style={{ width: 14, height: 14 }} />
                   </div>
+                  {/* Heatmap Toggle */}
                   <div
                     style={{
                       display: 'flex',
@@ -308,9 +332,9 @@ export function RealDashboardAnimation() {
                       justifyContent: 'center',
                       width: 28,
                       height: 28,
-                      borderRadius: 9999,
-                      background: 'rgba(56, 189, 248, 0.2)',
-                      color: '#38bdf8',
+                      borderRadius: 99,
+                      background: 'transparent',
+                      color: '#64748b',
                     }}
                     title="Heatmap"
                   >
@@ -320,15 +344,15 @@ export function RealDashboardAnimation() {
               ) : null}
             </div>
 
-            {/* Viewport Content with Smooth Crossfade */}
+            {/* 4. Shared Viewport Canvas: 2D Map -> 3D Space-Time Cube Crossfade */}
             <div style={{ position: 'absolute', inset: 0 }}>
-              {/* 2D Map Layer */}
+              {/* 2D Map View */}
               <div
                 style={{
                   position: 'absolute',
                   inset: 0,
                   opacity: 1 - cubeFade,
-                  pointerEvents: cubeFade >= 1 ? 'none' : 'auto',
+                  pointerEvents: !cubeIsActive ? 'auto' : 'none',
                 }}
               >
                 <RealDashboardMap
@@ -337,13 +361,13 @@ export function RealDashboardAnimation() {
                 />
               </div>
 
-              {/* 3D Space-Time Cube Layer */}
+              {/* 3D Space-Time Cube View */}
               <div
                 style={{
                   position: 'absolute',
                   inset: 0,
                   opacity: cubeFade,
-                  pointerEvents: cubeFade <= 0 ? 'none' : 'auto',
+                  pointerEvents: cubeIsActive ? 'auto' : 'none',
                 }}
               >
                 <RealDashboardCube
@@ -359,14 +383,19 @@ export function RealDashboardAnimation() {
             </div>
           </section>
 
-          {/* B. LOWER TIMELINE PANEL (Height: 370px) */}
+          {/* ================================================== */}
+          {/* LOWER SECTION: Dual Timeline Panel (1600 x 370)    */}
+          {/* ================================================== */}
           <div
             style={{
+              width: '100%',
               height: 370,
-              borderTop: '1px solid #1e293b',
-              background: '#0f172a',
+              borderTop: '1px solid #e2e8f0',
+              background: 'rgba(255, 255, 255, 0.75)',
+              backdropFilter: 'blur(16px)',
               position: 'relative',
-              zIndex: 20,
+              zIndex: 30,
+              boxSizing: 'border-box',
             }}
           >
             <RealDashboardTimeline
@@ -380,9 +409,16 @@ export function RealDashboardAnimation() {
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* RIGHT COLUMN: FIXED WORKFLOW RAIL (Width: 320px)     */}
+        {/* RIGHT SECTION: Fixed 320px Workflow Rail             */}
         {/* ---------------------------------------------------- */}
-        <div style={{ width: 320, height: '100%', flexShrink: 0, position: 'relative', zIndex: 30 }}>
+        <div
+          style={{
+            width: 320,
+            height: '100%',
+            position: 'relative',
+            zIndex: 50,
+          }}
+        >
           <RealDashboardRail
             cubeActive={cubeIsActive}
             warpProgress={warpProgress}

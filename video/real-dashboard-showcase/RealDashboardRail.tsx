@@ -13,11 +13,9 @@ import {
   MapPin,
   Sliders,
   Sparkles,
-  Zap,
 } from 'lucide-react';
 import { FONT_FAMILY, MONO_FONT } from '../theme';
 import {
-  HOURLY_COUNTS_NORMALIZED,
   SELECTED_HOURLY_COUNTS,
   SELECTED_PEAK_HOUR,
   SELECTED_RECORD_COUNT,
@@ -55,14 +53,14 @@ export function RealDashboardRail({
       style={{
         width: '100%',
         height: '100%',
-        background: '#0f172a',
-        color: '#f8fafc',
+        background: '#ffffff',
+        color: '#0f172a',
         boxSizing: 'border-box',
         fontFamily: FONT_FAMILY,
         display: 'flex',
         flexDirection: 'column',
-        borderLeft: '1px solid #1e293b',
-        boxShadow: '-8px 0 32px rgba(0,0,0,0.3)',
+        borderLeft: '1px solid #e2e8f0',
+        boxShadow: '-4px 0 20px rgba(0,0,0,0.04)',
       }}
     >
       {/* 1. Header with Collapse Arrow */}
@@ -71,14 +69,14 @@ export function RealDashboardRail({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 12px',
-          background: 'rgba(30, 41, 59, 0.6)',
-          borderBottom: '1px solid #1e293b',
+          padding: '10px 14px',
+          background: '#f8fafc',
+          borderBottom: '1px solid #e2e8f0',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Sparkles style={{ width: 13, height: 13, color: '#38bdf8' }} />
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>
+          <Sparkles style={{ width: 14, height: 14, color: '#2563eb' }} />
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: '#0f172a' }}>
             Workflow Rail
           </span>
         </div>
@@ -90,8 +88,9 @@ export function RealDashboardRail({
             width: 24,
             height: 24,
             borderRadius: 6,
-            background: 'rgba(255, 255, 255, 0.05)',
-            color: '#94a3b8',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            color: '#64748b',
           }}
         >
           <ChevronRight style={{ width: 14, height: 14 }} />
@@ -99,15 +98,16 @@ export function RealDashboardRail({
       </div>
 
       {/* 2. Tabs List Grid */}
-      <div style={{ padding: '8px 10px 0 10px' }}>
+      <div style={{ padding: '10px 12px 0 12px' }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
             gap: 2,
-            background: '#1e293b',
+            background: '#f1f5f9',
             borderRadius: 8,
             padding: 3,
+            border: '1px solid #e2e8f0',
           }}
         >
           {TAB_SPECS.map(({ id, label, icon: Icon }) => {
@@ -121,9 +121,9 @@ export function RealDashboardRail({
                   justifyContent: 'center',
                   padding: '6px 0',
                   borderRadius: 6,
-                  background: active ? '#0f172a' : 'transparent',
-                  color: active ? '#f8fafc' : '#94a3b8',
-                  boxShadow: active ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                  background: active ? '#ffffff' : 'transparent',
+                  color: active ? '#0f172a' : '#64748b',
+                  boxShadow: active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
                 title={label}
@@ -146,54 +146,54 @@ export function RealDashboardRail({
           justifyContent: 'space-between',
         }}
       >
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Active Brush Window Card */}
           <div
             style={{
-              border: '1px solid #1e293b',
+              border: '1px solid #e2e8f0',
               borderRadius: 8,
               padding: '10px 12px',
-              background: 'rgba(30, 41, 59, 0.35)',
+              background: '#f8fafc',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Calendar style={{ width: 13, height: 13, color: '#38bdf8' }} />
-              <span style={{ fontSize: 9, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
+              <Calendar style={{ width: 13, height: 13, color: '#2563eb' }} />
+              <span style={{ fontSize: 9, color: '#64748b', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
                 ACTIVE BRUSH WINDOW
               </span>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4, color: '#f8fafc' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4, color: '#0f172a' }}>
               Thursday, 31 July 2025
             </div>
-            <div style={{ fontSize: 10, color: '#38bdf8', marginTop: 2, fontFamily: MONO_FONT, fontWeight: 700 }}>
+            <div style={{ fontSize: 10, color: '#2563eb', marginTop: 2, fontFamily: MONO_FONT, fontWeight: 700 }}>
               00:00 – 24:00 · Synchronized
             </div>
           </div>
 
           {/* 2x2 Metric Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {[
-              ['INCIDENTS', SOURCE_RECORD_COUNT.toLocaleString(), Activity, '#38bdf8'],
-              ['SELECTED', SELECTED_RECORD_COUNT.toLocaleString(), Flame, '#ef4444'],
-              ['PEAK HOUR', `${String(SELECTED_PEAK_HOUR).padStart(2, '0')}:00`, Clock, '#f59e0b'],
-              ['TOP CRIME', SELECTED_TOP_CRIME, MapPin, '#10b981'],
+              ['INCIDENTS', SOURCE_RECORD_COUNT.toLocaleString(), Activity, '#2563eb'],
+              ['SELECTED', SELECTED_RECORD_COUNT.toLocaleString(), Flame, '#dc2626'],
+              ['PEAK HOUR', `${String(SELECTED_PEAK_HOUR).padStart(2, '0')}:00`, Clock, '#d97706'],
+              ['TOP CRIME', SELECTED_TOP_CRIME, MapPin, '#059669'],
             ].map(([label, value, Icon, accentColor]) => (
               <div
                 key={label as string}
                 style={{
-                  border: '1px solid #1e293b',
+                  border: '1px solid #e2e8f0',
                   borderRadius: 8,
                   padding: '8px 10px',
-                  background: 'rgba(30, 41, 59, 0.35)',
+                  background: '#f8fafc',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <Icon style={{ width: 11, height: 11, color: accentColor as string }} />
-                  <span style={{ fontSize: 8.5, color: '#94a3b8', letterSpacing: 1, fontWeight: 700, fontFamily: MONO_FONT }}>
+                  <span style={{ fontSize: 8.5, color: '#64748b', letterSpacing: 1, fontWeight: 700, fontFamily: MONO_FONT }}>
                     {label as string}
                   </span>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 800, marginTop: 3, color: '#f8fafc' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, marginTop: 3, color: '#0f172a' }}>
                   {value as string}
                 </div>
               </div>
@@ -203,23 +203,22 @@ export function RealDashboardRail({
           {/* Hourly Distribution Sparkline */}
           <div
             style={{
-              marginTop: 10,
-              border: '1px solid #1e293b',
+              border: '1px solid #e2e8f0',
               borderRadius: 8,
               padding: '10px 12px',
-              background: 'rgba(30, 41, 59, 0.35)',
+              background: '#f8fafc',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: 8.5, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
+              <span style={{ fontSize: 8.5, color: '#64748b', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
                 HOURLY CRIME PULSE
               </span>
-              <span style={{ fontSize: 9, color: '#38bdf8', fontFamily: MONO_FONT, fontWeight: 700 }}>
+              <span style={{ fontSize: 9, color: '#2563eb', fontFamily: MONO_FONT, fontWeight: 700 }}>
                 24 Hours
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-end', height: 38, gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: 42, gap: 2 }}>
               {SELECTED_HOURLY_COUNTS.map((count, idx) => {
                 const max = Math.max(...SELECTED_HOURLY_COUNTS);
                 const heightPct = Math.max(12, (count / max) * 100);
@@ -232,8 +231,8 @@ export function RealDashboardRail({
                       flex: 1,
                       height: `${heightPct}%`,
                       borderRadius: 2,
-                      background: isPeak ? '#ef4444' : '#38bdf8',
-                      opacity: isPeak ? 1 : 0.45,
+                      background: isPeak ? '#ef4444' : '#3b82f6',
+                      opacity: isPeak ? 1 : 0.65,
                     }}
                   />
                 );
@@ -246,15 +245,15 @@ export function RealDashboardRail({
         <div
           style={{
             border: warpProgress > 0.1
-              ? '1.5px solid rgba(239, 68, 68, 0.5)'
-              : '1px solid #1e293b',
+              ? '1.5px solid rgba(239, 68, 68, 0.6)'
+              : '1px solid #e2e8f0',
             borderRadius: 10,
             padding: '12px 14px',
             background: warpProgress > 0.1
-              ? 'rgba(239, 68, 68, 0.08)'
-              : 'rgba(30, 41, 59, 0.5)',
+              ? 'rgba(239, 68, 68, 0.04)'
+              : '#f8fafc',
             boxShadow: warpProgress > 0.1
-              ? '0 0 24px rgba(239, 68, 68, 0.2)'
+              ? '0 0 16px rgba(239, 68, 68, 0.12)'
               : 'none',
             transition: 'all 0.2s ease',
           }}
@@ -262,8 +261,8 @@ export function RealDashboardRail({
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Sliders style={{ width: 13, height: 13, color: warpProgress > 0.1 ? '#ef4444' : '#38bdf8' }} />
-              <span style={{ fontSize: 9, color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
+              <Sliders style={{ width: 13, height: 13, color: warpProgress > 0.1 ? '#dc2626' : '#2563eb' }} />
+              <span style={{ fontSize: 9, color: '#64748b', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 800, fontFamily: MONO_FONT }}>
                 GLOBAL WARP CONTROL
               </span>
             </div>
@@ -272,7 +271,7 @@ export function RealDashboardRail({
                 fontSize: 12,
                 fontWeight: 900,
                 fontFamily: MONO_FONT,
-                color: warpProgress > 0.1 ? '#ef4444' : '#38bdf8',
+                color: warpProgress > 0.1 ? '#dc2626' : '#2563eb',
               }}
             >
               {multiplier.toFixed(1)}× ({warpPercent}%)
@@ -283,11 +282,11 @@ export function RealDashboardRail({
           <div
             style={{
               display: 'flex',
-              background: '#0f172a',
+              background: '#e2e8f0',
               borderRadius: 6,
               padding: 2,
               marginTop: 8,
-              border: '1px solid #1e293b',
+              border: '1px solid #cbd5e1',
             }}
           >
             <div
@@ -299,8 +298,9 @@ export function RealDashboardRail({
                 fontSize: 9.5,
                 fontWeight: 800,
                 fontFamily: MONO_FONT,
-                background: warpProgress <= 0.1 ? '#1e293b' : 'transparent',
-                color: warpProgress <= 0.1 ? '#f8fafc' : '#64748b',
+                background: warpProgress <= 0.1 ? '#ffffff' : 'transparent',
+                color: warpProgress <= 0.1 ? '#0f172a' : '#64748b',
+                boxShadow: warpProgress <= 0.1 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               }}
             >
               Linear Mode
@@ -316,6 +316,7 @@ export function RealDashboardRail({
                 fontFamily: MONO_FONT,
                 background: warpProgress > 0.1 ? '#ef4444' : 'transparent',
                 color: warpProgress > 0.1 ? '#ffffff' : '#64748b',
+                boxShadow: warpProgress > 0.1 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               }}
             >
               Adaptive Warp
@@ -323,7 +324,7 @@ export function RealDashboardRail({
           </div>
 
           {/* Warp Slider Track */}
-          <div style={{ position: 'relative', height: 6, width: '100%', background: '#0f172a', borderRadius: 99, marginTop: 10 }}>
+          <div style={{ position: 'relative', height: 6, width: '100%', background: '#e2e8f0', borderRadius: 99, marginTop: 10 }}>
             <div
               style={{
                 position: 'absolute',
@@ -332,8 +333,8 @@ export function RealDashboardRail({
                 bottom: 0,
                 width: `${((multiplier - 1.0) / 1.5) * 100}%`,
                 background: warpProgress > 0.1
-                  ? 'linear-gradient(90deg, #38bdf8, #ef4444)'
-                  : '#38bdf8',
+                  ? 'linear-gradient(90deg, #3b82f6, #ef4444)'
+                  : '#3b82f6',
                 borderRadius: 99,
               }}
             />
@@ -347,8 +348,8 @@ export function RealDashboardRail({
                 height: 14,
                 borderRadius: 99,
                 background: '#ffffff',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                border: `2px solid ${warpProgress > 0.1 ? '#ef4444' : '#38bdf8'}`,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                border: `2px solid ${warpProgress > 0.1 ? '#ef4444' : '#3b82f6'}`,
               }}
             />
           </div>
@@ -357,20 +358,20 @@ export function RealDashboardRail({
           <div
             style={{
               marginTop: 8,
-              padding: '4px 8px',
+              padding: '5px 8px',
               borderRadius: 6,
-              background: '#0f172a',
-              border: '1px solid #1e293b',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               fontSize: 8.5,
               fontFamily: MONO_FONT,
-              color: '#94a3b8',
+              color: '#64748b',
             }}
           >
             <span>WARP CONTRACT</span>
-            <span style={{ color: '#38bdf8', fontWeight: 800 }}>Δt′ = Δt · w(t)</span>
+            <span style={{ color: '#2563eb', fontWeight: 800 }}>Δt′ = Δt · w(t)</span>
           </div>
         </div>
       </div>
