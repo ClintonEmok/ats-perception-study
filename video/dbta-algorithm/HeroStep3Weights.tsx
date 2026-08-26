@@ -137,24 +137,6 @@ export const HeroStep3Weights: React.FC<HeroStep3WeightsProps> = ({
             Temporal Space Redistribution (From Uniform 20% to Density Shares)
           </span>
         </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 14px',
-            borderRadius: 8,
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-            fontSize: 14,
-            fontWeight: 700,
-            color: DARK_TEXT,
-          }}
-        >
-          <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Conservation: Σ s_i = 100% · Guaranteed Non-Zero Width</span>
-        </div>
       </div>
 
       {/* 2. Full-Width Interactive Stage */}

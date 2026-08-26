@@ -85,29 +85,11 @@ export const HeroStep4Integration: React.FC<HeroStep4IntegrationProps> = ({
               border: `1px solid rgba(16, 185, 129, 0.25)`,
             }}
           >
-            {'x_k = W · (Σ_{i=1}^k w_i) / W_total'}
+            {'x_k = W · (Σ_{i=1}^k s_i) / 100%'}
           </div>
           <span style={{ fontSize: 16, fontWeight: 700, color: DARK_TEXT }}>
             Prefix-Sum Cumulative Coordinate Mapping
           </span>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 14px',
-            borderRadius: 8,
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-            fontSize: 14,
-            fontWeight: 700,
-            color: DARK_TEXT,
-          }}
-        >
-          <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Guarantee: Strict Monotonicity & Fixed Canvas Extent W</span>
         </div>
       </div>
 

@@ -157,51 +157,16 @@ export const StepCard: React.FC<StepCardProps> = ({
       {/* Short Description */}
       <p
         style={{
-          margin: '0 0 12px 0',
-          fontSize: 13,
+          margin: '0',
+          fontSize: 13.5,
           fontFamily: FONT_FAMILY,
           fontWeight: 500,
           color: MUTED_TEXT,
           lineHeight: 1.4,
-          minHeight: 38,
         }}
       >
         {step.description}
       </p>
-
-      {/* Bottom Guarantee Badge */}
-      <div
-        style={{
-          marginTop: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '6px 10px',
-          borderRadius: 8,
-          backgroundColor: isActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(15, 23, 42, 0.03)',
-          border: `1px solid ${isActive ? 'rgba(16, 185, 129, 0.25)' : 'rgba(15, 23, 42, 0.08)'}`,
-        }}
-      >
-        <div
-          style={{
-            width: 7,
-            height: 7,
-            borderRadius: '50%',
-            backgroundColor: isActive ? '#10b981' : '#94a3b8',
-          }}
-        />
-        <span
-          style={{
-            fontSize: 12,
-            fontFamily: FONT_FAMILY,
-            fontWeight: 700,
-            color: isActive ? DARK_TEXT : MUTED_TEXT,
-            letterSpacing: -0.2,
-          }}
-        >
-          {step.guarantee}
-        </span>
-      </div>
     </div>
   );
 };

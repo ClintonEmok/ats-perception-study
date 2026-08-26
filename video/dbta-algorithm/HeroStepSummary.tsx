@@ -75,22 +75,17 @@ export const HeroStepSummary: React.FC<HeroStepSummaryProps> = ({ width, height 
       {/* Subtle Footer */}
       <div
         style={{
-          marginTop: 24,
+          marginTop: 26,
           display: 'flex',
           alignItems: 'center',
-          gap: 28,
-          fontSize: 14,
+          fontSize: 15,
           fontFamily: MONO_FONT,
-          fontWeight: 700,
+          fontWeight: 800,
           color: MUTED_TEXT,
           userSelect: 'none',
         }}
       >
-        <span>Deterministic O(N) Complexity</span>
-        <span>·</span>
-        <span>Strict Invariants Preserved</span>
-        <span>·</span>
-        <span>Continuous Cross-View Synchronization</span>
+        <span>Time Complexity: O(N)</span>
       </div>
     </div>
   );

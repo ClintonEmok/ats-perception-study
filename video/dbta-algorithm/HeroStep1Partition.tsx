@@ -84,24 +84,6 @@ export const HeroStep1Partition: React.FC<HeroStep1PartitionProps> = ({
             Uniform Clock-Time Discretization
           </span>
         </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 14px',
-            borderRadius: 8,
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-            fontSize: 14,
-            fontWeight: 700,
-            color: DARK_TEXT,
-          }}
-        >
-          <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Invariant: Clock-Time Identity & Monotonic Bounds</span>
-        </div>
       </div>
 
       {/* 2. Full-Width Interactive Stage */}
