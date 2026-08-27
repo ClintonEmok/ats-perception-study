@@ -59,7 +59,6 @@ This is a Next.js prototype for exploring crime patterns with an adaptive space-
 - lodash.debounce 4.0.8 - Debounce utility
 - clsx 2.1.1 - Conditional classNames
 - tailwind-merge 3.4.0 - Tailwind class merging
-- driver.js 1.4.0 - Interactive tour/guide library
 - Vitest 4.0.18 - Unit testing framework
 - React Test Renderer 19.1.0 - Component testing
 - jsdom 28.0.0 - DOM environment for tests
