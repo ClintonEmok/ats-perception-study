@@ -79,7 +79,6 @@ describe('/dashboard-demo shell', () => {
       new URL('../../components/timeline/hooks/useDemoTimelineSummary.ts', import.meta.url),
       'utf8'
     );
-    const timeslicingModeStoreSource = readFileSync(new URL('../../store/useTimeslicingModeStore.ts', import.meta.url), 'utf8');
     const demoTimeslicingModeStoreSource = readFileSync(
       new URL('../../store/useDashboardDemoTimeslicingModeStore.ts', import.meta.url),
       'utf8'
@@ -292,8 +291,6 @@ describe('/dashboard-demo shell', () => {
     expect(demoTimeslicingModeStoreSource).toMatch(/buildNonUniformDraftBinsFromSelection/);
     expect(demoTimeslicingModeStoreSource).toMatch(/\/api\/crimes\/range/);
     expect(demoTimeslicingModeStoreSource).toMatch(/maxSlices/);
-    expect(timeslicingModeStoreSource).not.toMatch(/presetBiases|setPresetBias|resetPresetBias|resetAllPresetBiases/);
-    expect(timeslicingModeStoreSource).not.toMatch(/generateBinsFromActivePresetBias|PRESET_GENERATION_PROFILES|resolvePresetBiasBinTarget/);
     expect(demoDualTimelineSource).toMatch(/DemoDualTimeline/);
     expect(demoDualTimelineSource).toMatch(/buildDemoSliceAuthoredWarpMap/);
     expect(demoDualTimelineSource).toMatch(/useDashboardDemoCoordinationStore/);
@@ -322,36 +319,6 @@ describe('/dashboard-demo shell', () => {
     expect(demoBurstWindowsSource).toMatch(/useDashboardDemoCoordinationStore/);
     expect(demoBurstWindowsSource).toMatch(/useDashboardDemoCoordinationStore/);
     expect(demoTimeslicingModeStoreSource).not.toMatch(/buildTimelineEvents|useTimelineDataStore\.getState|getCrimeTypeName/);
-  });
-
-  test('keeps non-dashboard routes separate from the demo shell', () => {
-    const statsRouteSource = readFileSync(new URL('../stats/lib/StatsRouteShell.tsx', import.meta.url), 'utf8');
-    const stkdeRouteSource = readFileSync(new URL('../stkde/lib/StkdeRouteShell.tsx', import.meta.url), 'utf8');
-    const timeslicingPageSource = readFileSync(new URL('../timeslicing/page.tsx', import.meta.url), 'utf8');
-
-    expect(statsRouteSource).not.toMatch(/useDashboardDemoCoordinationStore/);
-    expect(stkdeRouteSource).not.toMatch(/useDashboardDemoCoordinationStore/);
-    expect(timeslicingPageSource).not.toMatch(/DashboardDemoShell|DemoTimelinePanel|DemoDualTimeline|useDashboardDemoCoordinationStore|buildDemoSliceAuthoredWarpMap/);
-  });
-
-  test('keeps applied-state text inside the STKDE panel instead of the viewport shell', () => {
-    const stkdePanelSource = readFileSync(new URL('../../components/stkde/DashboardStkdePanel.tsx', import.meta.url), 'utf8');
-
-    expect(stkdePanelSource).toMatch(/Applied state carried forward|No applied state yet/);
-    expect(stkdePanelSource).not.toMatch(/Ready for applied state handoff/);
-  });
-
-  test('keeps the timeslicing workflow shell separate from the demo chrome', () => {
-    const timeslicingPageSource = readFileSync(new URL('../timeslicing/page.tsx', import.meta.url), 'utf8');
-    const workflowShellSource = readFileSync(
-      new URL('../timeslicing/components/TimeslicingWorkflowShell.tsx', import.meta.url),
-      'utf8'
-    );
-
-    expect(workflowShellSource).toMatch(/Workflow shell/);
-    expect(workflowShellSource).toMatch(/Generate → Review → Apply/);
-    expect(timeslicingPageSource).not.toMatch(/DashboardDemoShell|Map-first shared viewport|WorkflowSkeleton/);
-    expect(timeslicingPageSource).not.toMatch(/Generate burst drafts|generateBurstDraftBinsFromWindows|Burst draft/);
   });
 
   test('Phase 86: DemoPresetSelect wires through the demo filter / time / coordination stores via applyDemoPreset', () => {

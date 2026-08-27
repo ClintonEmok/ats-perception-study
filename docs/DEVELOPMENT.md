@@ -42,26 +42,24 @@ This document describes the project's development conventions, architecture patt
 ```
 src/
 ├── app/              # Next.js App Router pages and API routes
-│   ├── dashboard/    # Main dashboard page
-│   ├── timeline-test/# Timeline testing interface
-│   ├── timeline-test-3d/ # 3D timeline visualization
-│   ├── timeslicing/  # Time slicing controls
-│   ├── stkde/        # STKDE hotspot analysis
-│   ├── stats/        # Statistics dashboard
+│   ├── page.tsx      # Dashboard demo root
+│   ├── dashboard-demo/ # Direct dashboard demo alias
+│   ├── stkde/        # Shared STKDE view models
+│   ├── stkde-3d/     # Shared 3D STKDE components and math
+│   ├── stats/        # Shared statistics view model
 │   ├── api/          # Route handlers (crime, stkde, adaptive, neighbourhood, study)
-│   ├── layout.tsx    # Root layout (theme, query client, toaster, tour)
+│   ├── layout.tsx    # Root layout (theme, query client, toaster)
 │   └── globals.css   # Tailwind CSS v4 + shadcn/ui theme variables
 ├── components/       # React components organized by feature
-│   ├── dashboard/    # Dashboard header and layout elements
-│   ├── layout/       # DashboardLayout, ThemeProvider, TopBar
+│   ├── dashboard-demo/ # Dashboard demo shell and workflow panels
+│   ├── layout/       # ThemeProvider
 │   ├── map/          # MapLibre GL components (MapBase, layers, overlays)
-│   ├── timeline/     # Timeline components (DualTimeline, DensityTrack, brush)
-│   ├── viz/          # 3D visualization (Cube, Scene, MainScene, Cluster)
+│   ├── timeline/     # Demo timeline and shared density surface
+│   ├── viz/          # Shared 3D scene primitives and overlays
 │   ├── ui/           # shadcn/ui primitives (button, dialog, slider, etc.)
 │   ├── stkde/        # STKDE-specific components
-│   ├── settings/     # Settings panel, feature flags
 │   ├── study/        # Study controls and logging
-│   └── onboarding/   # Interactive tour (driver.js)
+│   └── ui/            # shadcn/ui primitives
 ├── store/            # Zustand state stores
 │   ├── slice-domain/ # Slice domain state slices (core, selection, creation, adjustment)
 │   ├── useXxxStore.ts # Individual stores by domain

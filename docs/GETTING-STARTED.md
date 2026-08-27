@@ -139,25 +139,13 @@ pnpm run start
 └── docs/                 # Project documentation
 ```
 
-## Available Routes
+## Available Route
 
 | Route | Description |
 |-------|-------------|
-| `/` | Landing page with links to demo and STKDE 3D |
-| `/dashboard` | Main synchronized workspace with map, 3D cube, and dual timeline |
-| `/dashboard-demo` | Presentation/demo shell for workflow handoff |
-| `/dashboard-v2` | Updated dashboard with guided workflow rail (generate → review → apply → refine → analyze) |
-| `/timeline-test` | 2D timeline sandbox for brush behavior, tick labels, and temporal QA |
-| `/timeline-test-3d` | 3D companion for spatial-temporal alignment experiments |
-| `/timeslicing` | Manual controls for time resolution, bin generation, and slice inspection |
-| `/timeslicing-algos` | Algorithm lab for alternative binning strategies and slice generation rules |
-| `/demo/non-uniform-time-slicing` | Showcase for granularity-aware brushed partition selection |
-| `/stkde` | Hotspot analysis with kernel density estimation and burst detection |
-| `/stkde-3d` | 3D STKDE evolution with KDE heatmaps stacked through time |
-| `/stats` | Summary dashboard for totals, breakdowns, and trend inspection |
-| `/cube-sandbox` | Focused playground for 3D cube interactions and spatial debugging |
-| `/algorithms` | Time and space complexity analysis for every algorithm |
-| `/docs` | In-app feature atlas documenting all surfaces |
+| `/` | Dashboard demo with synchronized map, 3D cube, dual timeline, STKDE, slices, inspect, and compare views |
+
+The former exploratory routes were removed from the prototype surface. The `/dashboard-demo` path remains available as a direct alias for bookmarked links.
 
 ## Common Issues
 

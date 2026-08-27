@@ -30,7 +30,7 @@ pnpm install
 pnpm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). The root route is the dashboard demo.
 
 The `.env` file sets `USE_MOCK_DATA=false` (DuckDB enabled). To force mock data, set `USE_MOCK_DATA=true` or `DISABLE_DUCKDB=true`.
 
@@ -51,6 +51,8 @@ The `.env` file sets `USE_MOCK_DATA=false` (DuckDB enabled). To force mock data,
 - [Testing](docs/TESTING.md) — Test patterns, running tests
 - [Configuration](docs/CONFIGURATION.md) — Environment variables, config files
 - [API](docs/API.md) — API route reference
+
+The application has one user-facing route: `/`. It renders the dashboard demo with synchronized map, 3D cube, timeline, STKDE, slice, inspect, and compare views. The `/dashboard-demo` path remains available as a direct alias.
 
 ## License
 

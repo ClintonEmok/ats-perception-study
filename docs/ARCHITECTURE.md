@@ -36,21 +36,13 @@ The application is a desktop-first Next.js 16 prototype with a client-heavy visu
 ```
 src/
 ├── app/                    # Next.js App Router pages and API routes
-│   ├── page.tsx            # Landing page (Quiet Tiger home)
-│   ├── layout.tsx          # Root layout (ThemeProvider, QueryProvider, Toaster, OnboardingTour)
-│   ├── dashboard/          # Main visualization dashboard (map + cube + timeline)
-│   ├── dashboard-demo/     # Guided demo shell with step-by-step workflow panels
-│   ├── stkde/              # STKDE hotspot analysis page
-│   ├── stkde-3d/           # 3D STKDE spatial-temporal visualization
-│   ├── timeline-test/      # Timeline testing interface
-│   ├── timeline-test-3d/   # 3D timeline visualization
-│   ├── timeslicing/        # Time slicing controls page
-│   ├── timeslicing-algos/  # Algorithm comparison for time slicing
-│   ├── stats/              # Statistical dashboard
-│   ├── algorithms/         # Algorithm documentation page
-│   ├── cube-sandbox/       # Isolated 3D cube testing
-│   ├── demo/               # Demo pages
-│   ├── docs/               # Documentation pages
+│   ├── page.tsx            # Dashboard demo root
+│   ├── layout.tsx          # Root layout (ThemeProvider, QueryProvider, Toaster)
+│   ├── dashboard-demo/     # Direct alias for the dashboard demo
+│   ├── stkde/               # Shared STKDE view models
+│   ├── stkde-3d/            # Shared 3D STKDE components and math
+│   ├── stats/               # Shared statistics view model
+│   ├── timeline-test/       # Shared slice-adjustment math
 │   └── api/                # Route Handlers
 │       ├── crime/          # Crime data endpoints (stream, bins, facets, meta, overview, stats-summary)
 │       ├── crimes/range/   # Viewport-based crime range query
@@ -60,39 +52,25 @@ src/
 │       └── study/log/      # Study session logging
 │
 ├── components/             # React components
-│   ├── dashboard/          # Dashboard header
-│   ├── dashboard-demo/     # Demo workflow panels (Configure, Detect, Inspect) and shell
-│   ├── layout/             # DashboardLayout (resizable panels), ThemeProvider, TopBar
+│   ├── dashboard-demo/     # Demo workflow panels and shell
+│   ├── layout/             # ThemeProvider
 │   ├── map/                # MapBase, MapVisualization, overlay layers (heatmap, STKDE, trajectory, cluster, POI)
-│   ├── timeline/           # DualTimeline, TimelinePanel, DensityAreaChart, DensityHeatStrip, etc.
-│   ├── viz/                # CubeVisualization, MainScene, Scene (Three.js), data points, slice planes, grids
+│   ├── timeline/           # DemoDualTimeline, shared timeline surface, density tracks
+│   ├── viz/                # Three.js scene primitives, data points, slice planes, grids
 │   ├── ui/                 # shadcn/ui primitives (button, card, slider, select, dialog, etc.)
-│   ├── onboarding/         # OnboardingTour (driver.js)
 │   ├── study/              # StudyControls
-│   ├── settings/           # Feature flags, settings panel
-│   ├── binning/            # Binning strategy display components
-│   ├── stkde/              # STKDE-specific visualization components
-│   └── timeslicing/        # Time slicing controls UI
+│   └── stkde/              # STKDE-specific visualization components
 │
 ├── store/                  # Zustand state stores (~35 stores)
 │   ├── slice-domain/       # Slice state slices (core, creation, selection, adjustment)
-│   ├── useCoordinationStore.ts  # Cross-panel coordination (selection, sync, brush)
-│   ├── useAdaptiveStore.ts      # Adaptive time scaling parameters
-│   ├── useFilterStore.ts        # Crime type, district, time, spatial filters
-│   ├── useTimeStore.ts          # Playback time, range, resolution, scale mode
-│   ├── useSliceDomainStore.ts   # Time slice CRUD (aliased as useSliceStore)
-│   ├── useAggregationStore.ts   # Aggregated data caching
-│   ├── useClusterStore.ts       # DBSCAN cluster analysis state
-│   ├── useStkdeStore.ts         # STKDE hotspot computation state
-│   ├── useIntervalProposalStore.ts  # Auto-proposal interval management
-│   ├── useSuggestionStore.ts    # Interactive suggestion state
-│   ├── useWarpProposalStore.ts  # Warp proposal management
+│   ├── useDashboardDemoCoordinationStore.ts # Demo cross-view coordination
+│   ├── useDashboardDemoTimeStore.ts         # Demo time range and resolution
+│   ├── useDashboardDemoFilterStore.ts       # Demo filters
+│   ├── useSliceDomainStore.ts               # Demo time slice CRUD
 │   ├── useTimelineDataStore.ts  # Timeline series data
-│   ├── useLayoutStore.ts        # Panel layout persistence
-│   ├── useStatsStore.ts         # Statistical summary state
-│   ├── useMapLayerStore.ts      # Map overlay layer toggles
-│   ├── useTimeslicingModeStore.ts # Time slicing mode controls
-│   └── ...                 # Additional stores (study, trajectory, heatmap, suggestions, etc.)
+│   ├── useDashboardDemoTimeslicingModeStore.ts # Demo slice generation state
+│   ├── useDashboardDemoMapLayerStore.ts        # Demo map layer toggles
+│   └── ...                                     # Supporting study and visualization stores
 │
 ├── lib/                    # Business logic and data layer
 │   ├── db.ts               # DuckDB initialization, CSV path resolution, mock data detection
@@ -100,7 +78,7 @@ src/
 │   ├── binning/            # Time binning engine (strategies, rules, burst taxonomy, warp scaling)
 │   ├── stkde/              # STKDE computation (grid config, heatmap, hotspots, burst evolution, contracts)
 │   ├── kde/                # Slice-level KDE computation
-│   ├── adaptive/           # Adaptive binning mode logic (route-binning-mode)
+│   ├── adaptive/           # Adaptive scaling helpers
 │   ├── clustering/         # DBSCAN cluster analysis
 │   ├── neighbourhood/      # Chicago neighbourhood data, OSM integration
 │   ├── context-diagnostics/ # Spatial/temporal profile comparison
