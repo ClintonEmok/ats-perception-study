@@ -43,6 +43,62 @@ The `.env` file sets `USE_MOCK_DATA=false` (DuckDB enabled). To force mock data,
 - **Slice System** — Create, detect, and manage time slices with burst analysis
 - **STKDE** — Spatiotemporal KDE for hotspot detection
 
+## DBTA Method
+
+The central technique is **Density-Based Temporal Allocation (DBTA)**. DBTA
+allocates visual time according to observed event density instead of giving
+every equal-duration interval the same screen width. Dense periods expand so
+their internal structure can be inspected; sparse periods compress while
+remaining present in the time domain.
+
+The implemented pipeline is:
+
+1. Filter finite event timestamps to the active time domain.
+2. Assign timestamps to `b` temporal bins in one pass.
+3. Optionally smooth the bin signal with a bounded neighborhood of width `k`.
+4. Normalize density by the maximum bin value.
+5. Convert each normalized density value `d_i` into a contrast-weighted value:
+   `w_i = 1 + 5d_i^3`.
+6. Normalize the weights and integrate them as a cumulative map of temporal
+   boundaries.
+7. Use the same mapping for the timeline and 3D cube so visual position still
+   refers to the same underlying event time.
+
+The dashboard uses `b = 1024` adaptive samples, a kernel width of `k = 3`, and
+pure density weighting by default. Burstiness can be blended into the worker
+signal for ablation studies, but the thesis DBTA path uses density alone.
+
+### Running Time And Memory
+
+Let `n` be the number of valid events, `b` the number of temporal bins, `k`
+the smoothing neighborhood width, and `m` the number of displayed slices.
+
+| Stage | Time | Extra space |
+|-------|------|-------------|
+| Timestamp filtering and bin accumulation | `O(n)` | `O(b)` |
+| Bounded density smoothing | `O(bk)` | `O(b)` |
+| Weighting and cumulative boundary map | `O(b)` | `O(b)` |
+| Slice boundary allocation | `O(m log m + m)` | `O(m)` |
+
+Therefore, the active uniform-time DBTA implementation is `O(n + bk)` time
+and `O(b)` additional space. With fixed `b = 1024` and `k = 3`, this is
+linear, `O(n)`, in the number of input events. The active dashboard path does
+not sort timestamps; it accumulates density bins in one pass and then builds
+the cumulative allocation map. The cubic contrast transform changes the
+allocation strength, not the asymptotic running time.
+
+The general-purpose adaptive worker in `src/workers/adaptiveTime.worker.ts`
+currently sorts a copy of the timestamps before binning, so that path is
+`O(n log n + bk)` time and `O(n + b)` space. Its uniform-event mode also uses
+binary-search boundary assignment, adding `O(n log b)`. That sorted worker
+path is separate from the linear density-only DBTA path described above.
+
+These are algorithmic bounds, not hardware benchmarks. DuckDB handles the
+server-side filtering and aggregation before the client receives the event
+timestamps or summaries. Optional spatial burst scoring has separate costs;
+the average-nearest-neighbor formula is `O(p^2)` for `p` points in a scored
+bin, so it is not part of the core density-only DBTA bound.
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — System design, data flow, key abstractions
