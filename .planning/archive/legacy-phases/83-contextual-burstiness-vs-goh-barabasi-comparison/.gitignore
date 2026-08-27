@@ -1,6 +1,0 @@
-output/
-!output/figures/.gitkeep
-.venv/
-__pycache__/
-*.pyc
-.pytest_cache/

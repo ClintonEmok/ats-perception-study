@@ -1,9 +1,0 @@
-# STKDE Experiment Dependencies
-# Install: pip install -r requirements.txt
-numpy>=2.0
-pandas>=2.0
-matplotlib>=3.8
-seaborn>=0.13
-scipy>=1.11
-jupyter>=1.0
-ipykernel>=6.0
