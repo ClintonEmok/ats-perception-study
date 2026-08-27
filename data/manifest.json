@@ -1,0 +1,9 @@
+{
+  "dataset": "Chicago crime records",
+  "snapshotDate": "2026-01-14",
+  "sourceUrl": "https://data.cityofchicago.org/api/views/ijzp-q8t2/rows.csv?accessType=DOWNLOAD",
+  "filename": "Crimes_-_2001_to_Present_20260114.csv",
+  "sha256": "52954849a2afaacd41de3f092115b725cf6c32ce54c08e75854ea0520e894812",
+  "bytes": 2355941663,
+  "notes": "Chicago crime records snapshot used by the thesis prototype. The source CSV is not committed to Git."
+}

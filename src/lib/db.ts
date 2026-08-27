@@ -13,6 +13,8 @@ type DuckDbInstance = {
 declare global {
   var __quietTigerDuckDb: DuckDbInstance | undefined;
   var __quietTigerDuckDbInitPromise: Promise<DuckDbInstance> | undefined;
+  var __quietTigerDuckDbSortedTablePromise: Promise<string> | undefined;
+  var __quietTigerDuckDbSummaryPromise: Promise<void> | undefined;
 }
 
 const DEFAULT_DB_PATH = join(process.cwd(), 'data', 'cache', 'crime.duckdb');
@@ -51,6 +53,13 @@ export const isMockDataEnabled = (): boolean => {
  * The CSV contains ~8.5M rows from 2001-2026.
  */
 export const getDataPath = (): string => {
+  const configuredPath = process.env.DATASET_PATH?.trim();
+  if (configuredPath) {
+    return isAbsolute(configuredPath)
+      ? configuredPath
+      : resolve(/* turbopackIgnore: true */ process.cwd(), configuredPath);
+  }
+
   return join(process.cwd(), 'data', 'sources', 'Crimes_-_2001_to_Present_20260114.csv');
 };
 
@@ -198,7 +207,7 @@ export const getDb = async (): Promise<DuckDbInstance> => {
  * 
  * @returns The table name to use for queries ('crimes_sorted')
  */
-export const ensureSortedCrimesTable = async (): Promise<string> => {
+const materializeSortedCrimesTable = async (): Promise<string> => {
   const database = await getDb();
   const dataPath = getDataPath();
 
@@ -243,7 +252,19 @@ export const ensureSortedCrimesTable = async (): Promise<string> => {
   });
 };
 
-const ensureSummaryMaterialization = async (): Promise<void> => {
+export const ensureSortedCrimesTable = async (): Promise<string> => {
+  if (globalThis.__quietTigerDuckDbSortedTablePromise) {
+    return globalThis.__quietTigerDuckDbSortedTablePromise;
+  }
+
+  globalThis.__quietTigerDuckDbSortedTablePromise = materializeSortedCrimesTable().finally(() => {
+    globalThis.__quietTigerDuckDbSortedTablePromise = undefined;
+  });
+
+  return globalThis.__quietTigerDuckDbSortedTablePromise;
+};
+
+const materializeSummaryTables = async (): Promise<void> => {
   if (isMockDataEnabled()) {
     return;
   }
@@ -326,10 +347,20 @@ const ensureSummaryMaterialization = async (): Promise<void> => {
   );
 };
 
-export const ensureCrimeSummaryTables = ensureSummaryMaterialization;
+export const ensureCrimeSummaryTables = async (): Promise<void> => {
+  if (globalThis.__quietTigerDuckDbSummaryPromise) {
+    return globalThis.__quietTigerDuckDbSummaryPromise;
+  }
+
+  globalThis.__quietTigerDuckDbSummaryPromise = materializeSummaryTables().finally(() => {
+    globalThis.__quietTigerDuckDbSummaryPromise = undefined;
+  });
+
+  return globalThis.__quietTigerDuckDbSummaryPromise;
+};
 
 export const readDatasetMetadata = async (): Promise<DatasetMetadata> => {
-  await ensureSummaryMaterialization();
+  await ensureCrimeSummaryTables();
 
   const database = await getDb();
   const rows = await queryRows<{
@@ -371,7 +402,7 @@ export const readDatasetMetadata = async (): Promise<DatasetMetadata> => {
 };
 
 export const readOverviewBins = async (maxPoints: number, filters?: { crimeTypes?: string[]; districts?: string[] }): Promise<OverviewSummaryBin[]> => {
-  await ensureSummaryMaterialization();
+  await ensureCrimeSummaryTables();
 
   const database = await getDb();
   const safeMaxPoints = Math.max(1, Math.floor(maxPoints));

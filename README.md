@@ -10,7 +10,7 @@ Help users understand dense vs sparse spatiotemporal crime patterns by keeping t
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 16.1.6, React 19.2.3 |
+| Framework | Next.js 16.2.9, React 19.2.7 |
 | Language | TypeScript 5.9 (strict mode) |
 | Package Manager | pnpm 9.x |
 | 3D Rendering | Three.js 0.182, React Three Fiber 9.5 |
@@ -53,6 +53,37 @@ The `.env` file sets `USE_MOCK_DATA=false` (DuckDB enabled). To force mock data,
 - [API](docs/API.md) — API route reference
 
 The application has one user-facing route: `/`. It renders the dashboard demo with synchronized map, 3D cube, timeline, STKDE, slice, inspect, and compare views. The `/dashboard-demo` path remains available as a direct alias.
+
+## Repository Structure
+
+```text
+src/app/                    Next.js routes and API handlers only
+src/components/dashboard-demo/  Dashboard UI and dashboard-specific view logic
+src/components/             Shared UI components
+src/hooks/                  Reusable React hooks
+src/lib/                    Domain logic and view models; keep server-only modules isolated here
+src/store/                  Zustand state stores
+src/types/                  Shared TypeScript types
+src/workers/                Web Workers for expensive client-side computation
+```
+
+Keep route files thin: validate request parameters, call domain/server code, and return the response. Do not add reusable components or analytics logic under `src/app`. Local datasets, generated DuckDB files, exported figures, and video work stay outside the production source tree and are ignored by Git.
+
+## Development Commands
+
+```bash
+pnpm dev             # Start the development server
+pnpm typecheck       # Check TypeScript without emitting files
+pnpm test -- --run   # Run the complete Vitest suite once
+pnpm build           # Create a production build
+pnpm dataset:verify  # Verify the local CSV against data/manifest.json
+pnpm dataset:build   # Materialize the DuckDB cache before serving
+```
+
+The dashboard uses DuckDB for local analytical queries. The raw Chicago CSV and
+generated DuckDB cache are intentionally ignored by Git. Reviewers can download
+the pinned dataset described in `data/manifest.json`, run `pnpm dataset:verify`,
+and then start the app. Set `DATASET_PATH` when the CSV is stored elsewhere.
 
 ## License
 

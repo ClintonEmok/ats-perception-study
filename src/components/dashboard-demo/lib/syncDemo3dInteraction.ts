@@ -2,7 +2,7 @@ import type { DemoBurstWindowSelection } from '@/store/useDashboardDemoCoordinat
 import type {
   Stkde3DBurstInteractionPayload,
   Stkde3DClusterInteractionPayload,
-} from '@/app/stkde-3d/components/Stkde3DSceneProvider';
+} from '@/components/dashboard-demo/stkde-3d/components/Stkde3DSceneProvider';
 
 export interface Demo3dMapFocus {
   centroidLat: number;

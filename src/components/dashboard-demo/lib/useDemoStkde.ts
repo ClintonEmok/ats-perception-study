@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildStkdeViewModel, type StkdeHotspotRowModel } from '@/app/stkde/lib/stkde-view-model';
-import { DEFAULT_STKDE_BBOX, type StkdeQueryState } from '@/app/stkde/lib/stkde-query-state';
+import { buildStkdeViewModel, type StkdeHotspotRowModel } from '@/lib/stkde/stkde-view-model';
+import { DEFAULT_STKDE_BBOX, type StkdeQueryState } from '@/lib/stkde/stkde-query-state';
 import type { StkdeResponse } from '@/lib/stkde/contracts';
 import { padDistrict } from '@/lib/stats/aggregation';
-import { getDistrictDisplayName } from '@/app/stats/lib/stats-view-model';
+import { getDistrictDisplayName } from '@/lib/stats/stats-view-model';
 import type { StkdeParams } from '@/store/useStkdeStore';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';

@@ -3,7 +3,7 @@ import { useCrimeData } from '@/hooks/useCrimeData';
 import { aggregateStats, padDistrict, type NeighborhoodStats } from '@/lib/stats/aggregation';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useViewportStore } from '@/lib/stores/viewportStore';
-import { transformStatsSummary, type StatsSummary } from '@/app/stats/lib/stats-view-model';
+import { transformStatsSummary, type StatsSummary } from '@/lib/stats/stats-view-model';
 
 export interface UseDemoNeighborhoodStatsResult {
   stats: NeighborhoodStats | null;

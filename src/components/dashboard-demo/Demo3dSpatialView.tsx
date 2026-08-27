@@ -9,11 +9,11 @@ import { normalizedToEpochSeconds } from '@/lib/time-domain';
 import { epochSecondsToNormalized } from '@/lib/time-domain';
 import { normalizeTimeRange } from '@/lib/time-range';
 import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
-import { Stkde3DScene } from '@/app/stkde-3d/components/Stkde3DScene';
-import { StkdeIntensityLegend } from '@/app/stkde-3d/components/StkdeIntensityLegend';
-import { createStkde3DSceneRuntime } from '@/app/stkde-3d/components/Stkde3DSceneProvider';
-import { buildDurationVolumeProfile } from '@/app/stkde-3d/lib/volume-encoding';
-import { resolveEpochFromWarpedY, resolveWarpedEpochY } from '@/app/stkde-3d/lib/timeline-axis';
+import { Stkde3DScene } from '@/components/dashboard-demo/stkde-3d/components/Stkde3DScene';
+import { StkdeIntensityLegend } from '@/components/dashboard-demo/stkde-3d/components/StkdeIntensityLegend';
+import { createStkde3DSceneRuntime } from '@/components/dashboard-demo/stkde-3d/components/Stkde3DSceneProvider';
+import { buildDurationVolumeProfile } from '@/components/dashboard-demo/stkde-3d/lib/volume-encoding';
+import { resolveEpochFromWarpedY, resolveWarpedEpochY } from '@/components/dashboard-demo/stkde-3d/lib/timeline-axis';
 import { computeDensityMap } from '@/components/timeline/hooks/useDensityStripDerivation';
 import { buildDensityWarpMap } from '@/lib/adaptive-warp-utils';
 import { ADAPTIVE_BIN_COUNT, ADAPTIVE_KERNEL_WIDTH } from '@/lib/adaptive-utils';
@@ -22,11 +22,11 @@ import { buildDemoSliceAuthoredWarpMap } from '@/components/dashboard-demo/lib/d
 import { dashboardWarpFactorToBlend } from '@/components/dashboard-demo/lib/warp-contract';
 import { useDashboardDemo3d } from '@/components/dashboard-demo/DashboardDemo3dProvider';
 import { useDashboardDemoTimeslicingModeStore } from '@/store/useDashboardDemoTimeslicingModeStore';
-import { START_Y } from '@/app/stkde-3d/lib/timeline-axis';
+import { START_Y } from '@/components/dashboard-demo/stkde-3d/lib/timeline-axis';
 import { applyRangeToStoresContract } from '@/components/timeline/DemoDualTimeline';
 import { deriveDemo3dInteractionCommand } from '@/components/dashboard-demo/lib/syncDemo3dInteraction';
 import { lonLatToNormalized } from '@/lib/coordinate-normalization';
-import { toMockCrimeEvents } from '@/app/stkde-3d/lib/event-data';
+import { toMockCrimeEvents } from '@/components/dashboard-demo/stkde-3d/lib/event-data';
 import { projectStkdeResponseToSceneSlices } from '@/components/dashboard-demo/lib/adaptStkdeSurfaceToKdeCells';
 import { buildSliceEventCountMap, resolveSliceEventCount } from '@/components/dashboard-demo/lib/stkde-slice-accounting';
 import type { SpatialBounds } from '@/store/useDashboardDemoFilterStore';
@@ -34,7 +34,7 @@ import type {
   Stkde3DBurstInteractionPayload,
   Stkde3DClusterInteractionPayload,
   Stkde3DTemporalWindowPayload,
-} from '@/app/stkde-3d/components/Stkde3DSceneProvider';
+} from '@/components/dashboard-demo/stkde-3d/components/Stkde3DSceneProvider';
 import type { CrimeRecord } from '@/types/crime';
 import type { TimeSlice } from '@/store/useSliceDomainStore';
 

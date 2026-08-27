@@ -48,6 +48,13 @@ next-env.d.ts
 !/data/.gitkeep
 /datapreprocessing/data/
 
+# local analytics and generated exports
+/*.duckdb
+/*.duckdb.wal
+/tmp/
+/video/output/
+/video/renders/
+
 # study logs
 /logs/*.jsonl
 

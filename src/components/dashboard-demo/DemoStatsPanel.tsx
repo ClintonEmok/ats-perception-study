@@ -14,7 +14,7 @@ import { useDashboardDemoTimeStore } from '@/store/useDashboardDemoTimeStore';
 import { useTimelineDataStore } from '@/store/useTimelineDataStore';
 import { epochSecondsToNormalized } from '@/lib/time-domain';
 import { useDemoStatsSummary } from '@/components/dashboard-demo/lib/useDemoStatsSummary';
-import { formatHour, getDistrictDisplayName } from '@/app/stats/lib/stats-view-model';
+import { formatHour, getDistrictDisplayName } from '@/lib/stats/stats-view-model';
 import { useCrimeData } from '@/hooks/useCrimeData';
 import type { CrimeRecord } from '@/types/crime';
 

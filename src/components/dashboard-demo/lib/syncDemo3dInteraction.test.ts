@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import { applyRangeToStoresContract } from '@/components/timeline/DemoDualTimeline';
-import type { Stkde3DClusterInteractionPayload, Stkde3DBurstInteractionPayload } from '@/app/stkde-3d/components/Stkde3DSceneProvider';
+import type { Stkde3DClusterInteractionPayload, Stkde3DBurstInteractionPayload } from '@/components/dashboard-demo/stkde-3d/components/Stkde3DSceneProvider';
 import { deriveDemo3dInteractionCommand } from './syncDemo3dInteraction';
 
 const burstPayload: Stkde3DBurstInteractionPayload = {

@@ -9,7 +9,7 @@ import {
 import {
   getStkdeIntensityColor,
   getStkdeSignedDifferenceColor,
-} from '@/app/stkde-3d/lib/palette';
+} from '@/components/dashboard-demo/stkde-3d/lib/palette';
 
 type ColorScheme = 'intensity' | 'difference';
 type BorderTone = 'a' | 'difference' | 'b';

@@ -48,7 +48,7 @@ describe('/dashboard-demo shell', () => {
       'utf8'
     );
     const intensityLegendSource = readFileSync(
-      new URL('../stkde-3d/components/StkdeIntensityLegend.tsx', import.meta.url),
+      new URL('../../components/dashboard-demo/stkde-3d/components/StkdeIntensityLegend.tsx', import.meta.url),
       'utf8'
     );
     const demoCompareHookSource = readFileSync(

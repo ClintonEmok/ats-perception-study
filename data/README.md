@@ -21,8 +21,24 @@ DuckDB cache files generated on first request. Contains:
 
 The cache is invalidated automatically when the source CSV fingerprint changes (`size:mtime`).
 
+## Reproducible Setup
+
+The expected snapshot is described in `data/manifest.json`. After downloading the
+source CSV, verify the exact file before starting the application:
+
+```bash
+pnpm dataset:verify
+pnpm dataset:build
+```
+
+To use a different local copy, set `DATASET_PATH` to an absolute path or a path
+relative to the repository root. The file must have the Chicago crime CSV schema
+described above.
+
 ## Pipeline
 
 CSV in `sources/` → DuckDB auto-materializes `crimes_sorted` on first request → API routes query the table directly → responses stream as Apache Arrow IPC to the client.
 
-No pre-processing step is required; the application bootstraps its data on first load.
+The build command creates the cache before the application starts. The application
+still bootstraps missing tables for local convenience, but thesis runs should
+verify and build first, then use one server process per DuckDB cache file.

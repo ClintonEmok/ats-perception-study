@@ -138,7 +138,7 @@ function ExpandedRail({
   return (
     <aside
       aria-label="dashboard demo sidebar"
-      className="fixed right-0 top-0 z-20 h-full w-80 overflow-y-auto border-l border-border bg-card/95 shadow-2xl backdrop-blur"
+       className="fixed right-0 top-0 z-20 h-full w-full overflow-y-auto border-l border-border bg-card/95 shadow-2xl backdrop-blur sm:w-80"
     >
       {isEvaluationLocked ? (
         <div

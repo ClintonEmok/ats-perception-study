@@ -3,7 +3,7 @@
 import { Focus, Pause, Play, RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { SliceScrubber } from '@/app/stkde-3d/components/SliceScrubber';
+import { SliceScrubber } from '@/components/dashboard-demo/stkde-3d/components/SliceScrubber';
 import { useDashboardDemo3d } from './DashboardDemo3dProvider';
 import { normalizedToEpochSeconds } from '@/lib/time-domain';
 import { useSliceDomainStore } from '@/store/useSliceDomainStore';

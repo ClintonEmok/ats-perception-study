@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useDashboardDemoCoordinationStore } from '@/store/useDashboardDemoCoordinationStore';
 import { useDashboardDemoFilterStore } from '@/store/useDashboardDemoFilterStore';
 import { useViewportStore } from '@/lib/stores/viewportStore';
-import { getDistrictDisplayName, transformStatsSummary, type StatsSummary } from '@/app/stats/lib/stats-view-model';
+import { getDistrictDisplayName, transformStatsSummary, type StatsSummary } from '@/lib/stats/stats-view-model';
 import { normalizeTimeRange } from '@/lib/time-range';
 import { buildTemporalPulseSeries, type TemporalPulseSeries } from '@/lib/stats/temporal-pulses';
 import { useDemoTimelineSummary } from '@/components/timeline/hooks/useDemoTimelineSummary';

@@ -9,6 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
+    "dataset:verify": "node tools/verify-dataset.mjs",
+    "dataset:build": "node tools/build-dataset.mjs",
     "postinstall": "patch-package && mkdir -p node_modules/duckdb/lib/binding/3 && ln -sf ../duckdb.node node_modules/duckdb/lib/binding/3/duckdb.node"
   },
   "dependencies": {

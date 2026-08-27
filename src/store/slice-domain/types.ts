@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { TimeBin } from '@/lib/binning/types';
-import type { AdjustmentHandle, LimitCue, SnapMode } from '@/app/timeline-test/lib/slice-adjustment';
+import type { AdjustmentHandle, LimitCue, SnapMode } from '@/lib/slice-adjustment';
 
 export type TimeSliceSource = 'manual' | 'generated-applied' | 'suggestion';
 

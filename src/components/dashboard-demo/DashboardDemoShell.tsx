@@ -77,7 +77,7 @@ export function DashboardDemoShell() {
         className="relative h-screen w-screen overflow-hidden bg-background text-foreground"
         aria-label="dashboard demo workspace"
       >
-        <div className={`flex h-full min-w-0 flex-col transition-[padding] duration-200 ${railCollapsed ? 'pr-12' : 'pr-80'}`}>
+         <div className={`flex h-full min-w-0 flex-col transition-[padding] duration-200 ${railCollapsed ? 'pr-12' : 'pr-0 sm:pr-80'}`}>
          <section className="relative min-h-0 flex-1 overflow-hidden bg-background" aria-label="dashboard demo shared viewport">
             {activeViewport !== 'compare' ? (
               <div className="absolute left-4 top-4 z-40">

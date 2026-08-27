@@ -7,7 +7,7 @@ import { easeInOutCubic, interpolateKdeCells } from '@/lib/motion/easing';
 import { resolveTemporalSlabBounds, START_Y, SLICE_SPACING } from '../lib/timeline-axis';
 import { getLegacyStkdeIntensityColor, getStkdeIntensityColor } from '../lib/palette';
 import type { KdeCell } from '../lib/types';
-import { convertKdeFieldToDisplayCells } from '@/app/stkde-3d/lib/comparison-difference';
+import { convertKdeFieldToDisplayCells } from '@/components/dashboard-demo/stkde-3d/lib/comparison-difference';
 import type { KdeField } from '@/lib/kde';
 import type { DurationVolumeProfileEntry } from '../lib/volume-encoding';
 import { createCameraFocusTarget, useStkde3DSceneRuntime, type Stkde3DSceneSlice } from './Stkde3DSceneProvider';
